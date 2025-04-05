@@ -11,6 +11,7 @@ requires-python = ">=3.11"
 dependencies = [
    "matplotlib",
    "numpy",
+   "tomsutils@git+https://github.com/tomsilver/toms-utils.git",
 ]
 
 [project.optional-dependencies]

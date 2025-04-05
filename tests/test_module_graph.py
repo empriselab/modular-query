@@ -92,6 +92,12 @@ def test_module_graph():
     }
 
     graph = ModuleGraph(module_to_parents)
+
+    # Uncomment to create a visualization of the graph.
+    # from modular_query.utils import draw_module_graph
+    # from pathlib import Path
+    # draw_module_graph(graph, Path("tests/test_graph.png"))
+
     values, query_cost = graph.compute_values(expert_query_module_names=set())
     assert (
         abs(query_cost - 0.0) < 1e-6
