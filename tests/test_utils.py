@@ -2,14 +2,14 @@
 
 import numpy as np
 
-from modular_query.utils import generate_random_and_gate_module_graph
+from modular_query.utils import generate_random_logic_gate_module_graph
 
 
 def test_generate_random_and_gate_module_graph():
     """Tests for generate_random_and_gate_module_graph()."""
 
     num_modules = 8
-    module_graph = generate_random_and_gate_module_graph(
+    module_graph = generate_random_logic_gate_module_graph(
         num_modules=num_modules,
         edge_probability=0.5,
         confidence_sampler=lambda rng: rng.uniform(0.5, 1.0),
