@@ -14,5 +14,6 @@ class NeverQueryStrategy(QueryStrategy):
         self,
         module_graph: ModuleGraph,
         computed_values: dict[Module, Any],
+        computed_confidences: dict[Module, float],
     ) -> set[str]:
         return set()

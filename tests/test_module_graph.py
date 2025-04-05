@@ -98,7 +98,9 @@ def test_module_graph():
     # from pathlib import Path
     # draw_module_graph(graph, Path("tests/test_graph.png"))
 
-    values, query_cost = graph.compute_values(expert_query_module_names=set())
+    values, confidences, query_cost = graph.compute_values(
+        expert_query_module_names=set()
+    )
     assert (
         abs(query_cost - 0.0) < 1e-6
     ), f"Expected total query cost to be 0.0, got {query_cost}"
@@ -108,9 +110,23 @@ def test_module_graph():
     assert values[m2] == 2, f"Expected M2 to return 2, got {values[m2]}"
     assert values[m3] == 3, f"Expected M3 to return 3, got {values[m3]}"
     assert values[m4] == 5, f"Expected M4 to return 5 (2 + 3), got {values[m4]}"
+    assert (
+        confidences[m1] == 1.0
+    ), f"Expected M1 confidence to be 1.0, got {confidences[m1]}"
+    assert (
+        confidences[m2] == 0.5
+    ), f"Expected M2 confidence to be 0.5, got {confidences[m2]}"
+    assert (
+        confidences[m3] == 0.5
+    ), f"Expected M3 confidence to be 0.5, got {confidences[m3]}"
+    assert (
+        confidences[m4] == 1.0
+    ), f"Expected M4 confidence to be 1.0, got {confidences[m4]}"
 
     # Now test with M3 as an expert query:
-    values, query_cost = graph.compute_values(expert_query_module_names={"M3"})
+    values, confidences, query_cost = graph.compute_values(
+        expert_query_module_names={"M3"}
+    )
     # Now M3 should be computed using the expert, which returns 10.
     assert (
         abs(query_cost - 1.0) < 1e-6
@@ -123,3 +139,16 @@ def test_module_graph():
     assert values[m3] == 10, f"Expected M3 to return 10 (expert), got {values[m3]}"
     # M4 should now return 12 (2 + 10) because M3 was computed as an expert.
     assert values[m4] == 12, f"Expected M4 to return 12 (2 + 10), got {values[m4]}"
+    assert (
+        confidences[m1] == 1.0
+    ), f"Expected M1 confidence to be 1.0, got {confidences[m1]}"
+    assert (
+        confidences[m2] == 0.5
+    ), f"Expected M2 confidence to be 0.5, got {confidences[m2]}"
+    # M3 should now have confidence 1.0 because it was computed using the expert.
+    assert (
+        confidences[m3] == 1.0
+    ), f"Expected M3 confidence to be 1.0, got {confidences[m3]}"
+    assert (
+        confidences[m4] == 1.0
+    ), f"Expected M4 confidence to be 1.0, got {confidences[m4]}"

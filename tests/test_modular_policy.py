@@ -6,6 +6,7 @@ from modular_query.modular_policy import ModularPolicy
 from modular_query.module_graph import ModuleGraph
 from modular_query.modules import ActionModule, Module, StateModule
 from modular_query.query_strategies.always_query import AlwaysQueryStrategy
+from modular_query.query_strategies.brute_force import BruteForceQueryStrategy
 from modular_query.query_strategies.never_query import NeverQueryStrategy
 
 
@@ -23,7 +24,7 @@ def test_modular_policy():
             return inputs["state"] + 1, 0.5
 
         def get_expert_query_cost(self) -> float:
-            return 0.0
+            return 100.0
 
         def call_expert(self, inputs: dict[str, Any]) -> Any:
             return self.call(inputs)[0]
@@ -49,9 +50,11 @@ def test_modular_policy():
         middle_module: [state_module],
         action_module: [middle_module],
     }
+    correct_answer_cost = 0.0
+    incorrect_answer_cost = 10.0
 
     graph = ModuleGraph(module_to_parents)
-    query_strategy = NeverQueryStrategy()
+    query_strategy = NeverQueryStrategy(correct_answer_cost, incorrect_answer_cost)
     policy = ModularPolicy(
         module_graph=graph,
         query_strategy=query_strategy,
@@ -61,7 +64,17 @@ def test_modular_policy():
     assert action == 3, f"Expected action to be 3, got {action}"
     assert abs(cost - 0.0) < 1e-6, f"Expected total query cost to be 0.0, got {cost}"
 
-    query_strategy = AlwaysQueryStrategy()
+    query_strategy = AlwaysQueryStrategy(correct_answer_cost, incorrect_answer_cost)
+    policy = ModularPolicy(
+        module_graph=graph,
+        query_strategy=query_strategy,
+    )
+
+    action, cost = policy.get_action(state=1)
+    assert action == 4, f"Expected action to be 4, got {action}"
+    assert abs(cost - 101.0) < 1e-6, f"Expected total query cost to be 1.0, got {cost}"
+
+    query_strategy = BruteForceQueryStrategy(correct_answer_cost, incorrect_answer_cost)
     policy = ModularPolicy(
         module_graph=graph,
         query_strategy=query_strategy,

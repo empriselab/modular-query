@@ -26,16 +26,20 @@ class ModularPolicy:
         self.module_graph.root.set_state(state)
 
         # Compute initial values for all modules first.
-        computed_values, _ = self.module_graph.compute_values(
+        computed_values, computed_confidences, _ = self.module_graph.compute_values(
             expert_query_module_names=set()
         )
 
         # Compute the expert query modules using the querying strategy.
         expert_query_module_names = self.query_strategy.get_expert_query_modules(
-            module_graph=self.module_graph, computed_values=computed_values
+            module_graph=self.module_graph,
+            computed_values=computed_values,
+            computed_confidences=computed_confidences,
         )
+        print("Selected modules for querying:", sorted(expert_query_module_names))
+
         # Recompute values with the chosen expert queries.
-        computed_values, total_query_cost = self.module_graph.compute_values(
+        computed_values, _, total_query_cost = self.module_graph.compute_values(
             expert_query_module_names=expert_query_module_names
         )
 

@@ -52,9 +52,8 @@ class ModuleGraph:
 
     def compute_values(
         self, expert_query_module_names: set[str]
-    ) -> tuple[dict[Module, Any], float]:
-        """Recompute values for all modules and query the expert for the given
-        modules.
+    ) -> tuple[dict[Module, Any], dict[Module, float], float]:
+        """Recompute values and confidences for all modules.
 
         Return the values and also the overall expert query cost.
         """
@@ -64,6 +63,7 @@ class ModuleGraph:
 
         # Traverse in topological order, computing each module’s output exactly once.
         computed_values: dict[Module, Any] = {}
+        computed_confidences: dict[Module, float] = {}
         for module in self.topo_order:
             parent_outputs = {}
             # Gather all parent outputs from previously computed modules.
@@ -76,10 +76,12 @@ class ModuleGraph:
                 value = module.call_expert(parent_outputs)
                 # Use the expert's value, and set confidence to 1.0.
                 computed_values[module] = value
+                computed_confidences[module] = 1.0
                 # Add the expert query cost for this module.
                 total_query_cost += module.get_expert_query_cost()
             else:
-                value, _ = module.call(parent_outputs)
+                value, confidence = module.call(parent_outputs)
                 computed_values[module] = value
+                computed_confidences[module] = confidence
 
-        return computed_values, total_query_cost
+        return computed_values, computed_confidences, total_query_cost
