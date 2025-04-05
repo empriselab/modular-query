@@ -7,6 +7,7 @@ from modular_query.module_graph import ModuleGraph
 from modular_query.modules import ActionModule, Module, StateModule
 from modular_query.query_strategies.always_query import AlwaysQueryStrategy
 from modular_query.query_strategies.brute_force import BruteForceQueryStrategy
+from modular_query.query_strategies.milp import MILPQueryStrategy
 from modular_query.query_strategies.never_query import NeverQueryStrategy
 
 
@@ -80,6 +81,15 @@ def test_modular_policy():
         query_strategy=query_strategy,
     )
 
+    action, cost = policy.get_action(state=1)
+    assert action == 4, f"Expected action to be 4, got {action}"
+    assert abs(cost - 1.0) < 1e-6, f"Expected total query cost to be 1.0, got {cost}"
+
+    query_strategy = MILPQueryStrategy(correct_answer_cost, incorrect_answer_cost)
+    policy = ModularPolicy(
+        module_graph=graph,
+        query_strategy=query_strategy,
+    )
     action, cost = policy.get_action(state=1)
     assert action == 4, f"Expected action to be 4, got {action}"
     assert abs(cost - 1.0) < 1e-6, f"Expected total query cost to be 1.0, got {cost}"

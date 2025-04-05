@@ -50,10 +50,11 @@ def create_module(
 def generate_random_logic_gate_module_graph(
     num_modules: int,
     edge_probability: float,
-    confidence_sampler: Callable[[np.random.Generator], float],
     query_cost_sampler: Callable[[np.random.Generator], float],
     rng: np.random.Generator,
     is_policy: bool = False,
+    num_incorrect_modules: int = 1,
+    incorrect_module_confidence: float = 0.1,
 ) -> ModuleGraph:
     """Generate a random module graph where all modules are logical."""
 
@@ -82,6 +83,11 @@ def generate_random_logic_gate_module_graph(
         """A function for an incorrect module."""
         return not expert(and_or_or, not_out, inputs), confidence
 
+    # Determine which modules will be unconfident and incorrect.
+    incorrect_module_nums = rng.choice(
+        num_modules, size=num_incorrect_modules, replace=False
+    )
+
     # Create the modules.
     modules: list[Module] = []
     for num in range(num_modules):
@@ -99,15 +105,13 @@ def generate_random_logic_gate_module_graph(
             ParentModuleClass = Module  # type: ignore
             module_name = f"module_{num}"
 
-        prob_correct = confidence_sampler(rng)
-        assert 0 <= prob_correct <= 1
         and_or_or = rng.choice(["and", "or"])
         not_out = rng.choice([True, False])
         expert_fn = partial(expert, and_or_or, not_out)
-        if rng.uniform() < prob_correct:
-            fn = partial(correct_fn, and_or_or, not_out, prob_correct)
+        if num in incorrect_module_nums:
+            fn = partial(incorrect_fn, and_or_or, not_out, incorrect_module_confidence)
         else:
-            fn = partial(incorrect_fn, and_or_or, not_out, prob_correct)
+            fn = partial(correct_fn, and_or_or, not_out, 1.0)
         query_cost = query_cost_sampler(rng)
         module = create_module(
             name=module_name,
@@ -142,3 +146,37 @@ def generate_random_logic_gate_module_graph(
     # Create the module graph.
     module_graph = ModuleGraph(module_to_parents)
     return module_graph
+
+
+def get_query_set_expected_cost(
+    query_set: set[str],
+    module_graph: ModuleGraph,
+    computed_confidences: dict[Module, float],
+    correct_answer_cost: float,
+    incorrect_answer_cost: float,
+) -> float:
+    """Calculate the total cost of querying the modules in the given query
+    set."""
+
+    # Compute query cost.
+    module_name_to_module = {m.get_name(): m for m in module_graph.get_modules()}
+    total_query_cost = 0.0
+    for module_name in query_set:
+        module = module_name_to_module[module_name]
+        total_query_cost += module.get_expert_query_cost()
+
+    # Compute probability of being correct, assuming that a module confidence
+    # is exactly the probability that it is correct.
+    probability_of_correct_answer = 1.0
+    nonquery_set = set(module_name_to_module) - query_set
+    for module_name in nonquery_set:
+        module = module_name_to_module[module_name]
+        probability_of_correct_answer *= computed_confidences[module]
+
+    # Compute total cost.
+    combined_cost = total_query_cost + (
+        correct_answer_cost * probability_of_correct_answer
+        + incorrect_answer_cost * (1 - probability_of_correct_answer)
+    )
+
+    return combined_cost

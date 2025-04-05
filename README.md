@@ -11,3 +11,4 @@
 
 1. Recommended: create and source a virtualenv.
 2. `pip install -e ".[develop]"`
+3. `python -m amplpy.modules install coin -q`

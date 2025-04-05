@@ -12,6 +12,8 @@ dependencies = [
    "matplotlib",
    "numpy",
    "tomsutils@git+https://github.com/tomsilver/toms-utils.git",
+   "amplpy",
+   "pyomo",
 ]
 
 [project.optional-dependencies]
@@ -51,5 +53,7 @@ exclude = ["venv/*"]
 [[tool.mypy.overrides]]
 module = [
     "matplotlib.*",
+    "amplpy.*",
+    "pyomo.*",
 ]
 ignore_missing_imports = true

@@ -12,6 +12,7 @@ from modular_query.modular_policy import ModularPolicy
 from modular_query.modules import StateModule
 from modular_query.query_strategies.always_query import AlwaysQueryStrategy
 from modular_query.query_strategies.brute_force import BruteForceQueryStrategy
+from modular_query.query_strategies.milp import MILPQueryStrategy
 from modular_query.query_strategies.never_query import NeverQueryStrategy
 from modular_query.utils import generate_random_logic_gate_module_graph
 
@@ -24,22 +25,11 @@ def run_experiment(
     incorrect_answer_cost: float = 1000.0,
     min_querying_cost: float = 10.0,
     max_querying_cost: float = 100.0,
-    confidence_prob: float = 0.5,
-    confident_min_confidence: float = 0.95,
-    unconfident_max_confidence: float = 0.5,
     seed: int = 0,
 ) -> dict[str, dict[str, dict[int, list[float]]]]:
     """Run experiments with different graph sizes and querying strategies."""
     # Set up RNG.
     rng = np.random.default_rng(seed)
-
-    # Define confidence and query cost samplers.
-    def confidence_sampler(rng: np.random.Generator) -> float:
-        # Make confidences bimodal to simulate real-world scenarios where modules
-        # can be highly confident or not at all.
-        if rng.uniform() < confidence_prob:  # high confidence
-            return rng.uniform(confident_min_confidence, 1.0)
-        return rng.uniform(0.0, unconfident_max_confidence)  # low confidence
 
     def query_cost_sampler(rng: np.random.Generator) -> float:
         return rng.uniform(min_querying_cost, max_querying_cost)
@@ -51,6 +41,7 @@ def run_experiment(
         "Brute Force": BruteForceQueryStrategy(
             correct_answer_cost, incorrect_answer_cost
         ),
+        "MILP": MILPQueryStrategy(correct_answer_cost, incorrect_answer_cost),
     }
 
     # Initialize results structure:
@@ -74,7 +65,6 @@ def run_experiment(
             module_graph = generate_random_logic_gate_module_graph(
                 num_modules=size,
                 edge_probability=edge_probability,
-                confidence_sampler=confidence_sampler,
                 query_cost_sampler=query_cost_sampler,
                 rng=rng.spawn(1)[0],  # create a new RNG to avoid affecting main one
                 is_policy=True,
@@ -89,7 +79,7 @@ def run_experiment(
             }
             all_queryable_module_names.remove("state")
             assert isinstance(module_graph.root, StateModule)
-            module_graph.root.set_state(state)  # Set the state for the root module
+            module_graph.root.set_state(state)
             computed_values, _, _ = module_graph.compute_values(
                 expert_query_module_names=all_queryable_module_names
             )
@@ -102,19 +92,23 @@ def run_experiment(
                     query_strategy=strategy,
                 )
 
-                # Measure execution time
+                # NOTE: skip brute force for large graphs.
+                if strategy_name == "Brute Force" and size > 18:
+                    continue
+
+                # Measure execution time.
                 start_time = time.perf_counter()
 
                 # Run the policy.
                 action, query_cost = policy.get_action(state=state)
 
-                # Record execution time
+                # Record execution time.
                 execution_time = time.perf_counter() - start_time
 
                 correct = action == ground_truth_output
                 task_cost = correct_answer_cost if correct else incorrect_answer_cost
 
-                # Store action and query cost
+                # Store metrics.
                 results[strategy_name]["query_cost"][size].append(query_cost)
                 results[strategy_name]["task_cost"][size].append(task_cost)
                 results[strategy_name]["total_cost"][size].append(
@@ -160,6 +154,12 @@ def plot_results(
             "marker": "^",
             "linewidth": 2,
         },
+        "MILP": {
+            "color": "orange",
+            "linestyle": "-.",
+            "marker": "D",
+            "linewidth": 2,
+        },
     }
 
     # Plot each metric
@@ -172,16 +172,16 @@ def plot_results(
             # Calculate mean for each graph size
             means: list[np.floating | float] = []
             for size in graph_sizes:
-                if not results[strategy_name][metric][size]:
-                    # If no data for this size (e.g., due to errors), use NaN
-                    means.append(np.nan)
-                else:
-                    means.append(np.mean(results[strategy_name][metric][size]))
+                try:
+                    mean = np.mean(results[strategy_name][metric][size])
+                except KeyError:
+                    continue
+                means.append(mean)
 
             # Plot the data with strategy-specific styling
             style = styles[strategy_name]
             line = ax.plot(
-                graph_sizes,
+                graph_sizes[: len(means)],
                 means,
                 color=style["color"],
                 linestyle=style["linestyle"],
@@ -214,7 +214,7 @@ def plot_results(
     plt.tight_layout()
 
     # Add padding at the bottom for the legend
-    plt.subplots_adjust(bottom=0.2)
+    plt.subplots_adjust(bottom=0.15)
 
     # Create directory if it doesn't exist
     os.makedirs("experiments/results", exist_ok=True)
@@ -228,7 +228,7 @@ def plot_results(
 
 def main() -> None:
     """Run the experiment and generate plots."""
-    graph_sizes = list(range(3, 19, 3))
+    graph_sizes = [3, 5, 10, 15, 18, 25, 50, 75, 100]
 
     # Run the experiment
     results = run_experiment(graph_sizes=graph_sizes, num_trials=100)

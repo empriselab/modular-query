@@ -36,7 +36,6 @@ class ModularPolicy:
             computed_values=computed_values,
             computed_confidences=computed_confidences,
         )
-        print("Selected modules for querying:", sorted(expert_query_module_names))
 
         # Recompute values with the chosen expert queries.
         computed_values, _, total_query_cost = self.module_graph.compute_values(
