@@ -1,4 +1,5 @@
-"""A query strategy that formulates subset selection as a MILP."""
+"""A query strategy that formulates subset selection as a mixed integer
+program."""
 
 from typing import Any
 
@@ -19,13 +20,8 @@ from modular_query.modules import Module
 from modular_query.query_strategies.base import QueryStrategy
 
 
-class MILPQueryStrategy(QueryStrategy):
-    """A query strategy that formulates subset selection as a MILP.
-
-    This strategy should be equivalent to BruteForceQueryStrategy in
-    terms of the results it produces, but it uses a MILP solver, so it
-    should be faster.
-    """
+class MIPQueryStrategy(QueryStrategy):
+    """A query strategy that formulates subset selection as an MIP."""
 
     def get_expert_query_modules(
         self,
