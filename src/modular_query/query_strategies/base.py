@@ -8,12 +8,12 @@ from modular_query.modules import Module, StateModule
 
 
 class QueryStrategy(abc.ABC):
-    """A strategy for deciding which modules to expert-query.
+    """A strategy for deciding which module (if any) to expert-query.
 
     At the moment, this assumes a single-round choice:
         1. The original modules are queried first.
         2. Given the computed values, this strategy chooses a set to query.
-        3. The chosen modules are queried for their expert values.
+        3. The chosen module (if any) is queried for its expert value.
     """
 
     def __init__(
@@ -23,14 +23,18 @@ class QueryStrategy(abc.ABC):
         self.incorrect_answer_cost = incorrect_answer_cost
 
     @abc.abstractmethod
-    def get_expert_query_modules(
+    def get_expert_query_module(
         self,
         module_graph: ModuleGraph,
         computed_values: dict[Module, Any],
         computed_confidences: dict[Module, float],
-    ) -> set[str]:
-        """Given a module graph and the already computed values, return a set
-        of module names to query."""
+    ) -> str | None:
+        """Given a module graph and the already computed values, return a
+        module name to query.
+
+        Can also be None if we don't want to query for any of the
+        modules.
+        """
 
     def get_all_queryable_modules(
         self,

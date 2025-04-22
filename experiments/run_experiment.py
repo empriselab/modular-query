@@ -10,7 +10,6 @@ import numpy as np
 
 from modular_query.modular_policy import ModularPolicy
 from modular_query.modules import StateModule
-from modular_query.query_strategies.always_query import AlwaysQueryStrategy
 from modular_query.query_strategies.brute_force import BruteForceQueryStrategy
 from modular_query.query_strategies.mip import MIPQueryStrategy
 from modular_query.query_strategies.never_query import NeverQueryStrategy
@@ -36,7 +35,6 @@ def run_experiment(
 
     # Initialize strategies.
     strategies = {
-        "Always Query": AlwaysQueryStrategy(correct_answer_cost, incorrect_answer_cost),
         "Never Query": NeverQueryStrategy(correct_answer_cost, incorrect_answer_cost),
         "Brute Force": BruteForceQueryStrategy(
             correct_answer_cost, incorrect_answer_cost

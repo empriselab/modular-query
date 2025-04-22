@@ -23,12 +23,12 @@ from modular_query.query_strategies.base import QueryStrategy
 class MIPQueryStrategy(QueryStrategy):
     """A query strategy that formulates subset selection as an MIP."""
 
-    def get_expert_query_modules(
+    def get_expert_query_module(
         self,
         module_graph: ModuleGraph,
         computed_values: dict[Module, Any],
         computed_confidences: dict[Module, float],
-    ) -> set[str]:
+    ) -> str | None:
 
         # Extract module info.
         all_module_names = sorted(self.get_all_queryable_modules(module_graph))
@@ -59,6 +59,12 @@ class MIPQueryStrategy(QueryStrategy):
             return expert_cost_sum + task_cost
 
         model.obj = Objective(rule=obj_expression)
+
+        # Constraint: only select at most one module.
+        def one_module_rule(m):
+            return sum(m.x[i] for i in m.I) <= 1
+
+        model.one_module_constraint = Constraint(rule=one_module_rule)
 
         # Constraint: define y.
         def product_constraint_rule(m):
@@ -93,5 +99,7 @@ class MIPQueryStrategy(QueryStrategy):
         solver.solve(model)
         query_mask = [value(model.x[i]) >= 0.5 for i in model.I]
 
-        # Return selected modules.
-        return {m for m, mask in zip(all_module_names, query_mask) if mask}
+        # Return selected module name, or None if none selected.
+        if sum(query_mask) == 0:
+            return None
+        return all_module_names[query_mask.index(True)]

@@ -31,7 +31,7 @@ class ModularPolicy:
         )
 
         # Compute the expert query modules using the querying strategy.
-        expert_query_module_names = self.query_strategy.get_expert_query_modules(
+        expert_query_module_name = self.query_strategy.get_expert_query_module(
             module_graph=self.module_graph,
             computed_values=computed_values,
             computed_confidences=computed_confidences,
@@ -39,7 +39,9 @@ class ModularPolicy:
 
         # Recompute values with the chosen expert queries.
         computed_values, _, total_query_cost = self.module_graph.compute_values(
-            expert_query_module_names=expert_query_module_names
+            expert_query_module_names=(
+                set([expert_query_module_name]) if expert_query_module_name else set()
+            )
         )
 
         # Get the action from the leaf module.

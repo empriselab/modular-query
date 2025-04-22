@@ -72,7 +72,7 @@ class ModuleGraph:
 
             # Invoke the module call.
             if module.get_name() in expert_query_module_names:
-                # If this module is in the expert query set, call the expert.
+                # If this module is the module to query, call the expert.
                 value = module.call_expert(parent_outputs)
                 # Use the expert's value, and set confidence to 1.0.
                 computed_values[module] = value

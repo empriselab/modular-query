@@ -10,10 +10,10 @@ from modular_query.query_strategies.base import QueryStrategy
 class NeverQueryStrategy(QueryStrategy):
     """A query strategy that doesn't query anything."""
 
-    def get_expert_query_modules(
+    def get_expert_query_module(
         self,
         module_graph: ModuleGraph,
         computed_values: dict[Module, Any],
         computed_confidences: dict[Module, float],
-    ) -> set[str]:
-        return set()
+    ) -> str | None:
+        return None
