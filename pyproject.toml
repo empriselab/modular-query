@@ -14,6 +14,7 @@ dependencies = [
    "tomsutils@git+https://github.com/tomsilver/toms-utils.git",
    "amplpy",
    "pyomo",
+   "networkx"
 ]
 
 [project.optional-dependencies]
@@ -55,5 +56,6 @@ module = [
     "matplotlib.*",
     "amplpy.*",
     "pyomo.*",
+    "networkx.*"
 ]
 ignore_missing_imports = true

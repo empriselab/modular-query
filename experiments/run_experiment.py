@@ -11,6 +11,7 @@ import numpy as np
 from modular_query.modular_policy import ModularPolicy
 from modular_query.modules import StateModule
 from modular_query.query_strategies.brute_force import BruteForceQueryStrategy
+from modular_query.query_strategies.graph_query import GraphQueryStrategy
 from modular_query.query_strategies.mip import MIPQueryStrategy
 from modular_query.query_strategies.never_query import NeverQueryStrategy
 from modular_query.utils import generate_random_logic_gate_module_graph
@@ -25,6 +26,7 @@ def run_experiment(
     min_querying_cost: float = 10.0,
     max_querying_cost: float = 100.0,
     seed: int = 0,
+    workload_eps: float = 0.1,
 ) -> dict[str, dict[str, dict[int, list[float]]]]:
     """Run experiments with different graph sizes and querying strategies."""
     # Set up RNG.
@@ -40,6 +42,11 @@ def run_experiment(
             correct_answer_cost, incorrect_answer_cost
         ),
         "MIP": MIPQueryStrategy(correct_answer_cost, incorrect_answer_cost),
+        "Graph Query": GraphQueryStrategy(
+            correct_answer_cost,
+            incorrect_answer_cost,
+            workload_eps=workload_eps,
+        ),
     }
 
     # Initialize results structure:
@@ -118,7 +125,9 @@ def run_experiment(
 
 
 def plot_results(
-    results: dict[str, dict[str, dict[int, list[float]]]], graph_sizes: list[int]
+    results: dict[str, dict[str, dict[int, list[float]]]],
+    graph_sizes: list[int],
+    plot_name: str = "strategy_comparison.png",
 ) -> None:
     """Create plots showing the performance of different querying strategies.
 
@@ -138,6 +147,12 @@ def plot_results(
             "color": "blue",
             "linestyle": "-",
             "marker": "o",
+            "linewidth": 2,
+        },
+        "Graph Query": {
+            "color": "purple",
+            "linestyle": "-",
+            "marker": "x",
             "linewidth": 2,
         },
         "Never Query": {
@@ -218,9 +233,7 @@ def plot_results(
     os.makedirs("experiments/results", exist_ok=True)
 
     # Save the figure
-    plt.savefig(
-        "experiments/results/strategy_comparison.png", dpi=300, bbox_inches="tight"
-    )
+    plt.savefig(f"experiments/results/{plot_name}", dpi=300, bbox_inches="tight")
     plt.close()
 
 
@@ -229,10 +242,37 @@ def main() -> None:
     graph_sizes = [3, 5, 10, 15, 18, 25, 50, 75, 100]
 
     # Run the experiment
-    results = run_experiment(graph_sizes=graph_sizes, num_trials=100)
+    # Original setting.
+    # results = run_experiment(graph_sizes=graph_sizes, num_trials=100)
 
-    # Plot the results
-    plot_results(results, graph_sizes)
+    # Running with querying cost between 0 and 1, and with varying workload epsilon.
+    # Querying costs in [1e-3, 1.0] and task reward is binary (0 or 1).
+    # We should see behavior interpolate between always query (workload-eps = 0)
+    # and never query (workload-eps = 1).
+    workload_epsilons_small = np.linspace(0, 1.0, 11)
+    workload_epsilons_large = np.linspace(2.0, 10.0, 9)
+    workload_epsilons = np.concatenate(
+        (workload_epsilons_small, workload_epsilons_large)
+    )
+
+    for workload_eps in workload_epsilons:
+        print(f"Running experiments with workload_eps = {workload_eps:.2f}")
+        results = run_experiment(
+            graph_sizes=graph_sizes,
+            num_trials=100,
+            min_querying_cost=1e-3,
+            max_querying_cost=1.0,
+            correct_answer_cost=0.0,
+            incorrect_answer_cost=1.0,
+            workload_eps=workload_eps,
+        )
+
+        # Plot the results
+        plot_results(
+            results,
+            graph_sizes,
+            plot_name=f"strategy_comparison_eps_{workload_eps:.2f}.png",
+        )
 
     print("Experiment complete!")
 
