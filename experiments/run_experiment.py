@@ -27,6 +27,7 @@ def run_experiment(
     max_querying_cost: float = 100.0,
     seed: int = 0,
     workload_eps: float = 0.1,
+    time_horizon: int = 5,
 ) -> dict[str, dict[str, dict[int, list[float]]]]:
     """Run experiments with different graph sizes and querying strategies."""
     # Set up RNG.
@@ -51,6 +52,7 @@ def run_experiment(
 
     # Initialize results structure:
     # strategy -> metric -> graph_size -> list of values
+    # These store means over time.
     results: dict[str, dict[str, dict[int, list[float]]]] = {}
     for strategy_name in strategies:
         results[strategy_name] = {
@@ -101,25 +103,50 @@ def run_experiment(
                 if strategy_name == "Brute Force" and size > 18:
                     continue
 
-                # Measure execution time.
-                start_time = time.perf_counter()
+                # Temporal loop.
+                # Initialize accumulators.
+                acc_query_cost = 0.0
+                acc_task_cost = 0.0
+                acc_execution_time = 0.0
+                timesteps_elapsed = 0
+                correct = False
+                while timesteps_elapsed < time_horizon and not correct:
+                    # Measure execution time.
+                    start_time = time.perf_counter()
 
-                # Run the policy.
-                action, query_cost = policy.get_action(state=state)
+                    # Run the policy.
+                    action, query_cost = policy.get_action(state=state)
 
-                # Record execution time.
-                execution_time = time.perf_counter() - start_time
+                    # Record execution time.
+                    execution_time = time.perf_counter() - start_time
 
-                correct = action == ground_truth_output
-                task_cost = correct_answer_cost if correct else incorrect_answer_cost
+                    correct = action == ground_truth_output
+                    task_cost = (
+                        correct_answer_cost if correct else incorrect_answer_cost
+                    )
+
+                    # Add to accumulators.
+                    acc_query_cost += query_cost
+                    acc_task_cost += task_cost
+                    acc_execution_time += execution_time
+
+                    # Increment timesteps elapsed.
+                    timesteps_elapsed += 1
+
+                # Compute temporal means.
+                mean_query_cost = acc_query_cost / timesteps_elapsed
+                mean_task_cost = acc_task_cost / timesteps_elapsed
+                mean_execution_time = acc_execution_time / timesteps_elapsed
 
                 # Store metrics.
-                results[strategy_name]["query_cost"][size].append(query_cost)
-                results[strategy_name]["task_cost"][size].append(task_cost)
+                results[strategy_name]["query_cost"][size].append(mean_query_cost)
+                results[strategy_name]["task_cost"][size].append(mean_task_cost)
                 results[strategy_name]["total_cost"][size].append(
-                    task_cost + query_cost
+                    mean_task_cost + mean_query_cost
                 )
-                results[strategy_name]["execution_time"][size].append(execution_time)
+                results[strategy_name]["execution_time"][size].append(
+                    mean_execution_time
+                )
 
     return results
 
@@ -265,6 +292,7 @@ def main() -> None:
             correct_answer_cost=0.0,
             incorrect_answer_cost=1.0,
             workload_eps=workload_eps,
+            time_horizon=5,
         )
 
         # Plot the results
