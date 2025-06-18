@@ -84,4 +84,16 @@ class ModuleGraph:
                 computed_values[module] = value
                 computed_confidences[module] = confidence
 
+            # For logging purposes, print the module's inputs,
+            # the output, and the ground-truth output.
+            # try:
+            #     expert_value = module.call_expert(parent_outputs)
+            # except NotImplementedError:
+            #     expert_value = None
+            # print_and_log(
+            #     f"Module: {module.get_name()}, Inputs: {parent_outputs}, "
+            #     f"Output: {value}, "
+            #     f"Ground-truth value (for given input): {expert_value}"
+            # )
+
         return computed_values, computed_confidences, total_query_cost

@@ -4,9 +4,9 @@ best."""
 from typing import Any
 
 from modular_query.module_graph import ModuleGraph
+from modular_query.module_utils import get_query_set_expected_cost
 from modular_query.modules import Module
 from modular_query.query_strategies.base import QueryStrategy
-from modular_query.utils import get_query_set_expected_cost
 
 
 class BruteForceQueryStrategy(QueryStrategy):

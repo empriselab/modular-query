@@ -9,12 +9,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from modular_query.modular_policy import ModularPolicy
+from modular_query.module_utils import generate_random_logic_gate_module_graph
 from modular_query.modules import StateModule
 from modular_query.query_strategies.brute_force import BruteForceQueryStrategy
 from modular_query.query_strategies.graph_query import GraphQueryStrategy
 from modular_query.query_strategies.mip import MIPQueryStrategy
 from modular_query.query_strategies.never_query import NeverQueryStrategy
-from modular_query.utils import generate_random_logic_gate_module_graph
 
 
 def run_experiment(
@@ -60,6 +60,7 @@ def run_experiment(
             "task_cost": {size: [] for size in graph_sizes},
             "total_cost": {size: [] for size in graph_sizes},
             "execution_time": {size: [] for size in graph_sizes},
+            "queries": {size: [] for size in graph_sizes},
         }
 
     # Run experiments for each graph size.
@@ -75,6 +76,7 @@ def run_experiment(
                 query_cost_sampler=query_cost_sampler,
                 rng=rng.spawn(1)[0],  # create a new RNG to avoid affecting main one
                 is_policy=True,
+                num_incorrect_modules=1,
             )
 
             # Use random state inputs.
@@ -94,20 +96,20 @@ def run_experiment(
 
             # Run each strategy on the same graph.
             for strategy_name, strategy in strategies.items():
+                # Reset strategy's internal state.
+                strategy.reset()
+
                 policy = ModularPolicy(
                     module_graph=module_graph,
                     query_strategy=strategy,
                 )
-
-                # NOTE: skip brute force for large graphs.
-                if strategy_name == "Brute Force" and size > 18:
-                    continue
 
                 # Temporal loop.
                 # Initialize accumulators.
                 acc_query_cost = 0.0
                 acc_task_cost = 0.0
                 acc_execution_time = 0.0
+                acc_queried = 0
                 timesteps_elapsed = 0
                 correct = False
                 while timesteps_elapsed < time_horizon and not correct:
@@ -115,7 +117,7 @@ def run_experiment(
                     start_time = time.perf_counter()
 
                     # Run the policy.
-                    action, query_cost = policy.get_action(state=state)
+                    action, query_cost, queried = policy.get_action(state=state)
 
                     # Record execution time.
                     execution_time = time.perf_counter() - start_time
@@ -129,6 +131,7 @@ def run_experiment(
                     acc_query_cost += query_cost
                     acc_task_cost += task_cost
                     acc_execution_time += execution_time
+                    acc_queried += queried
 
                     # Increment timesteps elapsed.
                     timesteps_elapsed += 1
@@ -137,6 +140,7 @@ def run_experiment(
                 mean_query_cost = acc_query_cost / timesteps_elapsed
                 mean_task_cost = acc_task_cost / timesteps_elapsed
                 mean_execution_time = acc_execution_time / timesteps_elapsed
+                mean_queries = acc_queried / timesteps_elapsed
 
                 # Store metrics.
                 results[strategy_name]["query_cost"][size].append(mean_query_cost)
@@ -147,6 +151,13 @@ def run_experiment(
                 results[strategy_name]["execution_time"][size].append(
                     mean_execution_time
                 )
+                results[strategy_name]["queries"][size].append(mean_queries)
+
+        # # Print mean queries for each strategy (for this graph size)
+        # print_and_log(f"Mean queries for graph size {size}:")
+        # for strategy_name in strategies:
+        #     mean_queries = np.mean(results[strategy_name]["queries"][size])
+        #     print_and_log(f"{strategy_name}: {mean_queries:.2f}")
 
     return results
 
@@ -267,6 +278,7 @@ def plot_results(
 def main() -> None:
     """Run the experiment and generate plots."""
     graph_sizes = [3, 5, 10, 15, 18, 25, 50, 75, 100]
+    # graph_sizes = [3, 5]
 
     # Run the experiment
     # Original setting.
@@ -281,6 +293,11 @@ def main() -> None:
     workload_epsilons = np.concatenate(
         (workload_epsilons_small, workload_epsilons_large)
     )
+    # workload_epsilons = [1.0]
+
+    # Time horizon. 5 by default.
+    time_horizon = 5
+    # time_horizon = 1
 
     for workload_eps in workload_epsilons:
         print(f"Running experiments with workload_eps = {workload_eps:.2f}")
@@ -292,7 +309,7 @@ def main() -> None:
             correct_answer_cost=0.0,
             incorrect_answer_cost=1.0,
             workload_eps=workload_eps,
-            time_horizon=5,
+            time_horizon=time_horizon,
         )
 
         # Plot the results

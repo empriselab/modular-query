@@ -47,3 +47,6 @@ class QueryStrategy(abc.ABC):
                 continue
             to_query.add(module.get_name())
         return to_query
+
+    def reset(self) -> None:
+        """Reset the state of the query strategy."""

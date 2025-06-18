@@ -18,14 +18,16 @@ class ModularPolicy:
         assert isinstance(self.module_graph.root, StateModule)
         assert isinstance(self.module_graph.leaf, ActionModule)
 
-    def get_action(self, state: Any) -> tuple[Any, float]:
-        """Invoke the policy and return action and total querying cost."""
+    def get_action(self, state: Any) -> tuple[Any, float, bool]:
+        """Invoke the policy and return action and total querying cost and
+        whether we queried for a module."""
         # Set the state in the state module.
         if not isinstance(self.module_graph.root, StateModule):
             raise RuntimeError("Root module must be a StateModule.")
         self.module_graph.root.set_state(state)
 
         # Compute initial values for all modules first.
+        # print_and_log("Computing initial values for all modules...")
         computed_values, computed_confidences, _ = self.module_graph.compute_values(
             expert_query_module_names=set()
         )
@@ -37,7 +39,11 @@ class ModularPolicy:
             computed_confidences=computed_confidences,
         )
 
+        # Determine whether we queried for a module.
+        queried = expert_query_module_name is not None
+
         # Recompute values with the chosen expert queries.
+        # print_and_log("Recomputing values with expert queries...")
         computed_values, _, total_query_cost = self.module_graph.compute_values(
             expert_query_module_names=(
                 set([expert_query_module_name]) if expert_query_module_name else set()
@@ -50,4 +56,4 @@ class ModularPolicy:
 
         action_value = computed_values[self.module_graph.leaf]
 
-        return action_value, total_query_cost
+        return action_value, total_query_cost, queried

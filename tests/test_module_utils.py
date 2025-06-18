@@ -1,8 +1,8 @@
-"""Tests for utils.py."""
+"""Tests for module_utils.py."""
 
 import numpy as np
 
-from modular_query.utils import generate_random_logic_gate_module_graph
+from modular_query.module_utils import generate_random_logic_gate_module_graph
 
 
 def test_generate_random_and_gate_module_graph():
