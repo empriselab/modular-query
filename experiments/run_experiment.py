@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from modular_query.modular_policy import ModularPolicy
-from modular_query.module_utils import generate_random_logic_gate_module_graph
+from modular_query.module_utils import generate_random_and_gate_module_graph
 from modular_query.modules import StateModule
 from modular_query.query_strategies.brute_force import BruteForceQueryStrategy
 from modular_query.query_strategies.graph_query import GraphQueryStrategy
@@ -23,18 +23,19 @@ def run_experiment(
     edge_probability: float = 0.3,
     correct_answer_cost: float = 0.0,
     incorrect_answer_cost: float = 1000.0,
-    min_querying_cost: float = 10.0,
-    max_querying_cost: float = 100.0,
+    query_cost: float = 0.1,  # for uniform query-cost settings.
     seed: int = 0,
     workload_eps: float = 0.1,
     time_horizon: int = 5,
 ) -> dict[str, dict[str, dict[int, list[float]]]]:
-    """Run experiments with different graph sizes and querying strategies."""
+    """Run experiments with different graph sizes and querying strategies.
+
+    Querying costs: not used for the polynomial module graph,
+    but used for the logic gate module graph.
+    """
+    assert query_cost > 0, "Query cost for run_experiment should be positive."
     # Set up RNG.
     rng = np.random.default_rng(seed)
-
-    def query_cost_sampler(rng: np.random.Generator) -> float:
-        return rng.uniform(min_querying_cost, max_querying_cost)
 
     # Initialize strategies.
     strategies = {
@@ -69,18 +70,39 @@ def run_experiment(
 
         for _ in range(num_trials):
 
-            # Generate a random graph.
-            module_graph = generate_random_logic_gate_module_graph(
+            # Generate a random logic-gate graph.
+            # module_graph = generate_random_logic_gate_module_graph(
+            #     num_modules=size,
+            #     edge_probability=edge_probability,
+            #     query_cost_sampler=query_cost_sampler,
+            #     rng=rng.spawn(1)[0],  # create a new RNG to avoid affecting main one
+            #     is_policy=True,
+            #     num_incorrect_modules=1
+            # )
+
+            # Generate a random polynomial module graph.
+            # module_graph = generate_random_polynomial_module_graph(
+            #     num_modules=size,
+            #     edge_probability=edge_probability,
+            #     query_cost=0.1,
+            #     rng=rng.spawn(1)[0],  # create a new RNG to avoid affecting main one
+            #     num_incorrect_modules=1,
+            #     incorrect_module_confidence=0.1,
+            # )
+
+            # Generate a random AND-gate graph.
+            module_graph = generate_random_and_gate_module_graph(
                 num_modules=size,
                 edge_probability=edge_probability,
-                query_cost_sampler=query_cost_sampler,
+                query_cost=query_cost,
                 rng=rng.spawn(1)[0],  # create a new RNG to avoid affecting main one
-                is_policy=True,
                 num_incorrect_modules=1,
             )
 
-            # Use random state inputs.
-            state = bool(rng.integers(0, 2))
+            # # Use random state inputs.
+            # state = bool(rng.integers(0, 2))
+            # Always set state to True for AND-gate graph.
+            state = True
 
             # Get the correct expected output.
             all_queryable_module_names = {
@@ -117,7 +139,11 @@ def run_experiment(
                     start_time = time.perf_counter()
 
                     # Run the policy.
-                    action, query_cost, queried = policy.get_action(state=state)
+                    action, current_query_cost, queried = policy.get_action(state=state)
+                    if queried:
+                        assert (
+                            current_query_cost > 0
+                        ), "Query cost should be positive if we query!"
 
                     # Record execution time.
                     execution_time = time.perf_counter() - start_time
@@ -128,7 +154,7 @@ def run_experiment(
                     )
 
                     # Add to accumulators.
-                    acc_query_cost += query_cost
+                    acc_query_cost += current_query_cost
                     acc_task_cost += task_cost
                     acc_execution_time += execution_time
                     acc_queried += queried
@@ -152,12 +178,6 @@ def run_experiment(
                     mean_execution_time
                 )
                 results[strategy_name]["queries"][size].append(mean_queries)
-
-        # # Print mean queries for each strategy (for this graph size)
-        # print_and_log(f"Mean queries for graph size {size}:")
-        # for strategy_name in strategies:
-        #     mean_queries = np.mean(results[strategy_name]["queries"][size])
-        #     print_and_log(f"{strategy_name}: {mean_queries:.2f}")
 
     return results
 
@@ -220,14 +240,17 @@ def plot_results(
         ax = axes[i]
 
         for strategy_name in results:
-            # Calculate mean for each graph size
+            # Calculate means and standard deviations for each graph size
             means: list[np.floating | float] = []
+            stds: list[np.floating | float] = []
             for size in graph_sizes:
                 try:
                     mean = np.mean(results[strategy_name][metric][size])
+                    std = np.std(results[strategy_name][metric][size])
                 except KeyError:
                     continue
                 means.append(mean)
+                stds.append(std)
 
             # Plot the data with strategy-specific styling
             style = styles[strategy_name]
@@ -240,6 +263,16 @@ def plot_results(
                 linewidth=style["linewidth"],
                 markersize=8,
                 label=strategy_name,
+            )
+
+            # Plot the standard deviation band
+            ax.fill_between(
+                graph_sizes[: len(means)],
+                np.array(means) - np.array(stds),
+                np.array(means) + np.array(stds),
+                alpha=0.3,
+                label="±1 std dev",
+                color=style["color"],
             )
 
             # Only store lines and labels from the first subplot
@@ -275,25 +308,58 @@ def plot_results(
     plt.close()
 
 
+def exp_vary_cquery() -> None:
+    """Run the experiment with varying query cost."""
+    graph_sizes = [3, 5, 10, 15, 18, 25, 50, 75, 100]
+    # graph_sizes = [3, 5, 10]
+    time_horizon = 5
+
+    # 6/12: vary c_query now, but keep workload_eps=1.0
+    workload_eps = 1.0
+    c_query_list = np.linspace(0.1, 1.0, 10)
+    # c_query_list = [1.0]
+
+    for c_query in c_query_list:
+        print(f"Running experiments with c_query = {c_query:.2f}")
+        results = run_experiment(
+            graph_sizes=graph_sizes,
+            num_trials=100,
+            query_cost=c_query,
+            correct_answer_cost=0.0,
+            incorrect_answer_cost=1.0,
+            workload_eps=workload_eps,
+            time_horizon=time_horizon,
+        )
+
+        # Plot the results
+        plot_results(
+            results,
+            graph_sizes,
+            plot_name=f"strategy_comparison_c_query_{c_query:.2f}.png",
+        )
+
+    print("Experiment with varying query cost complete!")
+
+
 def main() -> None:
     """Run the experiment and generate plots."""
     graph_sizes = [3, 5, 10, 15, 18, 25, 50, 75, 100]
-    # graph_sizes = [3, 5]
 
     # Run the experiment
     # Original setting.
-    # results = run_experiment(graph_sizes=graph_sizes, num_trials=100)
+    results = run_experiment(graph_sizes=graph_sizes, num_trials=100)
 
     # Running with querying cost between 0 and 1, and with varying workload epsilon.
     # Querying costs in [1e-3, 1.0] and task reward is binary (0 or 1).
     # We should see behavior interpolate between always query (workload-eps = 0)
     # and never query (workload-eps = 1).
-    workload_epsilons_small = np.linspace(0, 1.0, 11)
-    workload_epsilons_large = np.linspace(2.0, 10.0, 9)
-    workload_epsilons = np.concatenate(
-        (workload_epsilons_small, workload_epsilons_large)
-    )
-    # workload_epsilons = [1.0]
+    # workload_epsilons_small = np.linspace(0, 1.0, 11)
+    # workload_epsilons_large = np.linspace(2.0, 10.0, 9)
+    # workload_epsilons = np.concatenate(
+    #     (workload_epsilons_small, workload_epsilons_large)
+    # )
+    workload_epsilons = [1.0]
+    # workload_epsilons = workload_epsilons_large
 
     # Time horizon. 5 by default.
     time_horizon = 5
@@ -304,8 +370,6 @@ def main() -> None:
         results = run_experiment(
             graph_sizes=graph_sizes,
             num_trials=100,
-            min_querying_cost=1e-3,
-            max_querying_cost=1.0,
             correct_answer_cost=0.0,
             incorrect_answer_cost=1.0,
             workload_eps=workload_eps,
@@ -318,6 +382,9 @@ def main() -> None:
             graph_sizes,
             plot_name=f"strategy_comparison_eps_{workload_eps:.2f}.png",
         )
+
+    # Run the experiment with varying query cost.
+    exp_vary_cquery()
 
     print("Experiment complete!")
 

@@ -23,6 +23,20 @@ from modular_query.query_strategies.base import QueryStrategy
 class MIPQueryStrategy(QueryStrategy):
     """A query strategy that formulates subset selection as an MIP."""
 
+    def __init__(
+        self,
+        correct_answer_cost: float,
+        incorrect_answer_cost: float,
+    ) -> None:
+        super().__init__(correct_answer_cost, incorrect_answer_cost)
+        # State variable: Set of modules that we have queried for.
+        # We add to this set when we query a module.
+        self.queried_modules: set[str] = set()
+
+    def reset(self) -> None:
+        """Reset the state variable."""
+        self.queried_modules = set()
+
     def get_expert_query_module(
         self,
         module_graph: ModuleGraph,
@@ -32,6 +46,10 @@ class MIPQueryStrategy(QueryStrategy):
 
         # Extract module info.
         all_module_names = sorted(self.get_all_queryable_modules(module_graph))
+        # Filter out modules that have already been queried.
+        all_module_names = [
+            name for name in all_module_names if name not in self.queried_modules
+        ]
         module_name_to_module = {
             module.get_name(): module for module in module_graph.get_modules()
         }
@@ -102,4 +120,9 @@ class MIPQueryStrategy(QueryStrategy):
         # Return selected module name, or None if none selected.
         if sum(query_mask) == 0:
             return None
+
+        # If we have a query, add it to the set of queried modules.
+        query_module_name = all_module_names[query_mask.index(True)]
+        self.queried_modules.add(query_module_name)
+
         return all_module_names[query_mask.index(True)]

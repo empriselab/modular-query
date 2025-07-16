@@ -163,3 +163,4 @@ cython_debug/
 #.idea/
 
 experiments/log.txt
+experiments/mean_task_cost_vs_graph_size.png

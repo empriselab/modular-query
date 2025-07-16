@@ -7,7 +7,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from modular_query.modular_policy import ModularPolicy
-from modular_query.module_utils import generate_random_logic_gate_module_graph
+from modular_query.module_utils import (
+    generate_random_and_gate_module_graph,
+)
 from modular_query.modules import StateModule
 from modular_query.query_strategies.never_query import NeverQueryStrategy
 from modular_query.utils import print_and_log
@@ -19,16 +21,12 @@ def run_experiment(
     edge_probability: float = 0.3,
     correct_answer_cost: float = 0.0,
     incorrect_answer_cost: float = 1000.0,
-    min_querying_cost: float = 10.0,
-    max_querying_cost: float = 100.0,
     seed: int = 0,
+    verbose: bool = False,
 ) -> dict[str, dict[str, dict[int, list[float]]]]:
     """Run experiments with different graph sizes and querying strategies."""
     # Set up RNG.
     rng = np.random.default_rng(seed)
-
-    def query_cost_sampler(rng: np.random.Generator) -> float:
-        return rng.uniform(min_querying_cost, max_querying_cost)
 
     # Initialize strategies.
     strategies = {
@@ -51,20 +49,41 @@ def run_experiment(
         for _ in range(num_trials):
 
             # Generate a random graph.
-            module_graph = generate_random_logic_gate_module_graph(
+            # module_graph = generate_random_logic_gate_module_graph(
+            #     num_modules=size,
+            #     edge_probability=edge_probability,
+            #     query_cost_sampler=query_cost_sampler,
+            #     rng=rng.spawn(1)[0],  # create a new RNG to avoid affecting main one
+            #     is_policy=True,
+            #     num_incorrect_modules=1
+            # )
+
+            # Switch to polynomial graphs.
+            # module_graph = generate_random_polynomial_module_graph(
+            #     num_modules=size,
+            #     edge_probability=edge_probability,
+            #     rng=rng.spawn(1)[0],  # create a new RNG to avoid affecting main one
+            #     num_incorrect_modules=1,
+            #     query_cost=0.1,
+            #     incorrect_module_confidence=0.1,
+            # )
+
+            # Switch to AND gate graphs.
+            module_graph = generate_random_and_gate_module_graph(
                 num_modules=size,
                 edge_probability=edge_probability,
-                query_cost_sampler=query_cost_sampler,
                 rng=rng.spawn(1)[0],  # create a new RNG to avoid affecting main one
-                is_policy=True,
                 num_incorrect_modules=1,
+                query_cost=0.1,
+                incorrect_module_confidence=0.1,
             )
 
-            # Use random state inputs.
-            state = bool(rng.integers(0, 2))
+            # We always want the state input to be 1 (True)
+            state = True
 
             # Get the correct expected output.
-            print_and_log("Generating ground truth output.")
+            if verbose:
+                print_and_log("Generating ground truth output.")
             all_queryable_module_names = {
                 m.get_name() for m in module_graph.get_modules()
             }
@@ -124,15 +143,13 @@ def main() -> None:
     # graph_sizes = [3, 5]
     # graph_sizes = [3, 5, 10, 15]
 
-    # num_trials = 100
-    num_trials = 1
+    num_trials = 100
+    # num_trials = 1
 
     print("Running experiments.")
     results = run_experiment(
         graph_sizes=graph_sizes,
         num_trials=num_trials,
-        min_querying_cost=1e-3,
-        max_querying_cost=1.0,
         correct_answer_cost=0.0,
         incorrect_answer_cost=1.0,
     )

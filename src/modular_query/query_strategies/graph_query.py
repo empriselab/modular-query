@@ -191,6 +191,7 @@ class GraphQueryStrategy(QueryStrategy):
                 path[module_name] = True
             else:
                 path[module_name] = False
+
         # Step 3: Return the path.
         return path
 

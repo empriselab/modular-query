@@ -47,6 +47,206 @@ def create_module(
     return _CustomModule()
 
 
+def construct_graph(
+    modules: list[Module],
+    num_modules: int,
+    edge_probability: float,
+    rng: np.random.Generator,
+) -> ModuleGraph:
+    """Construct a random directed acyclic graph (DAG) for the module
+    dependencies."""
+    # Create a random directed acyclic graph (DAG) for the module dependencies.
+    module_to_parents: dict[Module, list[Module]] = {}
+    leaves: set[Module] = set()
+    for i in range(num_modules):
+        module = modules[i]
+        parents = []
+        # Force the last module to be the only leaf.
+        if i == num_modules - 1:
+            parents = sorted(leaves, key=lambda m: m.get_name())
+        else:
+            for j in range(i):
+                if rng.uniform() < edge_probability:
+                    parents.append(modules[j])
+        if i > 0 and not parents:
+            # Ensure at least one parent for the first module to avoid isolated nodes.
+            parent_idx = rng.choice(range(i))
+            parents.append(modules[parent_idx])
+        module_to_parents[module] = parents
+        leaves -= set(parents)
+        leaves.add(module)
+
+    # Create the module graph.
+    module_graph = ModuleGraph(module_to_parents)
+
+    return module_graph
+
+
+## Logic gate graph where we have:
+## (1) AND gates only (not even negations)
+## (2) Success nodes will just take logical AND over all inputs;
+##     Failure nodes will just produce a False output.
+def generate_random_and_gate_module_graph(
+    num_modules: int,
+    edge_probability: float,
+    query_cost: float,
+    rng: np.random.Generator,
+    num_incorrect_modules: int = 1,
+    incorrect_module_confidence: float = 0.1,
+) -> ModuleGraph:
+    """Generate a random module graph where all modules are AND gates.
+
+    Assumes uniform query cost for all modules.
+    """
+    assert (
+        query_cost > 0
+    ), "Input query cost to generate_random_and_gate_graph must be positive."
+
+    # The expert function is the same for all modules.
+    def expert(inputs: dict[str, Any]) -> Any:
+        """Expert function for the AND gate."""
+        out = all(inputs.values())
+        return out
+
+    def correct_fn(confidence: float, inputs: dict[str, Any]) -> tuple[Any, float]:
+        """A function for a correct module."""
+        return expert(inputs), confidence
+
+    def incorrect_fn(confidence: float, _inputs: dict[str, Any]) -> tuple[Any, float]:
+        """A function for an incorrect module."""
+        return False, confidence
+
+    # Determine which modules will be unconfident and incorrect.
+    # NOTE: We have to select from the range [1, num_modules], because
+    # currently we cannot model the StateModule as incorrect.
+    incorrect_module_nums = rng.choice(
+        np.arange(1, num_modules), size=num_incorrect_modules, replace=False
+    )
+
+    # Create the modules.
+    modules: list[Module] = []
+    for num in range(num_modules):
+        if num == 0:
+            # Ensure the first module is a StateModule if this is a policy graph.
+            module_name = "state"
+            module: Module = StateModule()
+            modules.append(module)
+            continue
+
+        if num == num_modules - 1:
+            ParentModuleClass: Type[Module] = ActionModule  # type: ignore
+            module_name = "action"
+        else:
+            ParentModuleClass = Module  # type: ignore
+            module_name = f"module_{num}"
+
+        if num in incorrect_module_nums:
+            fn = partial(incorrect_fn, incorrect_module_confidence)
+        else:
+            fn = partial(correct_fn, 1.0)
+        module = create_module(
+            name=module_name,
+            fn=fn,
+            query_cost=query_cost,
+            expert_fn=expert,
+            ParentModuleClass=ParentModuleClass,
+        )
+        modules.append(module)
+
+    # For all modules except the state module, verify that the query cost is positive.
+    for module in modules[1:]:
+        assert module.get_expert_query_cost() > 0, (
+            f"Module {module.get_name()}: "
+            "Expert query cost must be positive"
+            f"and equal to fn-provided cost of {query_cost}"
+        )
+
+    module_graph = construct_graph(
+        modules=modules,
+        num_modules=num_modules,
+        edge_probability=edge_probability,
+        rng=rng,
+    )
+
+    return module_graph
+
+
+def generate_random_polynomial_module_graph(
+    num_modules: int,
+    edge_probability: float,
+    query_cost: float,
+    rng: np.random.Generator,
+    num_incorrect_modules: int = 1,
+    incorrect_module_confidence: float = 0.1,
+) -> ModuleGraph:
+    """Generate a random module graph where all modules are polynomial (just
+    summing all inputs for now).
+
+    Assumes uniform query cost for all modules.
+    """
+
+    def expert_fn(inputs: dict[str, Any]) -> Any:
+        """Expert function for the polynomial module."""
+        return sum(list(inputs.values()))
+
+    def correct_fn(inputs: dict[str, Any]) -> tuple[Any, float]:
+        """A function for a correct module."""
+        return expert_fn(inputs), 1.0
+
+    def incorrect_fn(
+        rng: np.random.Generator, inputs: dict[str, Any]
+    ) -> tuple[Any, float]:
+        """A function for an incorrect module.
+
+        Adds uniform integer noise
+        """
+        return expert_fn(inputs) + rng.integers(-10, 10), incorrect_module_confidence
+
+    # Determine which modules will be unconfident and incorrect.
+    incorrect_module_nums = rng.choice(
+        num_modules, size=num_incorrect_modules, replace=False
+    )
+
+    # Create the modules.
+    modules: list[Module] = []
+    for num in range(num_modules):
+        if num == 0:
+            # Ensure the first module is a StateModule.
+            module_name = "state"
+            module: Module = StateModule()
+            modules.append(module)
+            continue
+
+        if num == num_modules - 1:
+            ParentModuleClass: Type[Module] = ActionModule  # type: ignore
+            module_name = "action"
+        else:
+            ParentModuleClass = Module  # type: ignore
+            module_name = f"module_{num}"
+
+        if num in incorrect_module_nums:
+            fn = partial(incorrect_fn, rng)
+        else:
+            fn = partial(correct_fn)
+
+        module = create_module(
+            name=module_name,
+            fn=fn,
+            query_cost=query_cost,
+            expert_fn=expert_fn,
+            ParentModuleClass=ParentModuleClass,
+        )
+        modules.append(module)
+
+    module_graph = construct_graph(
+        modules=modules,
+        num_modules=num_modules,
+        edge_probability=edge_probability,
+        rng=rng,
+    )
+    return module_graph
+
+
 def generate_random_logic_gate_module_graph(
     num_modules: int,
     edge_probability: float,
@@ -122,29 +322,12 @@ def generate_random_logic_gate_module_graph(
         )
         modules.append(module)
 
-    # Create a random directed acyclic graph (DAG) for the module dependencies.
-    module_to_parents: dict[Module, list[Module]] = {}
-    leaves: set[Module] = set()
-    for i in range(num_modules):
-        module = modules[i]
-        parents = []
-        # Force the last module to be the only leaf.
-        if i == num_modules - 1:
-            parents = sorted(leaves, key=lambda m: m.get_name())
-        else:
-            for j in range(i):
-                if rng.uniform() < edge_probability:
-                    parents.append(modules[j])
-        if i > 0 and not parents:
-            # Ensure at least one parent for the first module to avoid isolated nodes.
-            parent_idx = rng.choice(range(i))
-            parents.append(modules[parent_idx])
-        module_to_parents[module] = parents
-        leaves -= set(parents)
-        leaves.add(module)
-
-    # Create the module graph.
-    module_graph = ModuleGraph(module_to_parents)
+    module_graph = construct_graph(
+        modules=modules,
+        num_modules=num_modules,
+        edge_probability=edge_probability,
+        rng=rng,
+    )
     return module_graph
 
 

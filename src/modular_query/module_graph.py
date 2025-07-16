@@ -4,12 +4,15 @@ from collections import deque
 from typing import Any
 
 from modular_query.modules import Module
+from modular_query.utils import print_and_log
 
 
 class ModuleGraph:
     """A graph of modules."""
 
-    def __init__(self, module_to_parents: dict[Module, list[Module]]) -> None:
+    def __init__(
+        self, module_to_parents: dict[Module, list[Module]], verbose: bool = False
+    ) -> None:
         self.module_to_parents = module_to_parents
         self.module_to_children: dict[Module, list[Module]] = {
             m: [] for m in module_to_parents
@@ -46,6 +49,9 @@ class ModuleGraph:
                 if all(parent in visited for parent in self.module_to_parents[child]):
                     queue.append(child)
 
+        # Set verbose flag. Outputs model forward passes.
+        self.verbose = verbose
+
     def get_modules(self) -> set[Module]:
         """Get all modules in the graph."""
         return set(self.module_to_parents)
@@ -78,7 +84,11 @@ class ModuleGraph:
                 computed_values[module] = value
                 computed_confidences[module] = 1.0
                 # Add the expert query cost for this module.
-                total_query_cost += module.get_expert_query_cost()
+                query_cost = module.get_expert_query_cost()
+                assert (
+                    query_cost > 0
+                ), f"Module {module.get_name()}: Query cost must be positive."
+                total_query_cost += query_cost
             else:
                 value, confidence = module.call(parent_outputs)
                 computed_values[module] = value
@@ -86,14 +96,15 @@ class ModuleGraph:
 
             # For logging purposes, print the module's inputs,
             # the output, and the ground-truth output.
-            # try:
-            #     expert_value = module.call_expert(parent_outputs)
-            # except NotImplementedError:
-            #     expert_value = None
-            # print_and_log(
-            #     f"Module: {module.get_name()}, Inputs: {parent_outputs}, "
-            #     f"Output: {value}, "
-            #     f"Ground-truth value (for given input): {expert_value}"
-            # )
+            if self.verbose:
+                try:
+                    expert_value = module.call_expert(parent_outputs)
+                except NotImplementedError:
+                    expert_value = None
+                print_and_log(
+                    f"Module: {module.get_name()}, Inputs: {parent_outputs}, "
+                    f"Output: {value}, Ground-truth value (for given input): "
+                    f"{expert_value}"
+                )
 
         return computed_values, computed_confidences, total_query_cost
