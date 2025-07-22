@@ -103,7 +103,7 @@ def run_experiment(
                 )
 
                 # Run the policy.
-                action, _, _ = policy.get_action(state=state)
+                action, _, _, _ = policy.get_action(state=state)
 
                 correct = action == ground_truth_output
                 task_cost = correct_answer_cost if correct else incorrect_answer_cost

@@ -61,7 +61,7 @@ def test_modular_policy():
         query_strategy=query_strategy,
     )
 
-    action, cost, _ = policy.get_action(state=1)
+    action, cost, _, _ = policy.get_action(state=1)
     assert action == 3, f"Expected action to be 3, got {action}"
     assert abs(cost - 0.0) < 1e-6, f"Expected total query cost to be 0.0, got {cost}"
 
@@ -71,7 +71,7 @@ def test_modular_policy():
         query_strategy=query_strategy,
     )
 
-    action, cost, _ = policy.get_action(state=1)
+    action, cost, _, _ = policy.get_action(state=1)
     assert action == 4, f"Expected action to be 4, got {action}"
     assert abs(cost - 1.0) < 1e-6, f"Expected total query cost to be 1.0, got {cost}"
 
@@ -80,7 +80,7 @@ def test_modular_policy():
         module_graph=graph,
         query_strategy=query_strategy,
     )
-    action, cost, _ = policy.get_action(state=1)
+    action, cost, _, _ = policy.get_action(state=1)
     assert action == 4, f"Expected action to be 4, got {action}"
     assert abs(cost - 1.0) < 1e-6, f"Expected total query cost to be 1.0, got {cost}"
 
@@ -90,7 +90,7 @@ def test_modular_policy():
         module_graph=graph,
         query_strategy=query_strategy,
     )
-    action, cost, _ = policy.get_action(state=1)
+    action, cost, _, _ = policy.get_action(state=1)
 
     # NOTE: holds for epsilon=0.1 (assumption for this test).
     assert action == 4, f"Expected action to be 4, got {action}"
@@ -100,7 +100,7 @@ def test_modular_policy():
     # success), we should query for the middle module, since the method forces
     # a query for subsequent timesteps.
 
-    action, cost, _ = policy.get_action(state=1)
+    action, cost, _, _ = policy.get_action(state=1)
     assert action == 3, f"Expected action to be 3, got {action}"
     assert (
         abs(cost - 100.0) < 1e-6

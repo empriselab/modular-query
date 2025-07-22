@@ -3,7 +3,7 @@
 from typing import Any
 
 from modular_query.module_graph import ModuleGraph
-from modular_query.modules import ActionModule, StateModule
+from modular_query.modules import ActionModule, Module, StateModule
 from modular_query.query_strategies.base import QueryStrategy
 from modular_query.utils import print_and_log
 
@@ -23,9 +23,10 @@ class ModularPolicy:
         assert isinstance(self.module_graph.leaf, ActionModule)
         self.verbose = verbose
 
-    def get_action(self, state: Any) -> tuple[Any, float, bool]:
+    def get_action(self, state: Any) -> tuple[Any, float, bool, dict[Module, float]]:
         """Invoke the policy and return action and total querying cost and
-        whether we queried for a module."""
+        whether we queried for a module, as well as the post-query
+        confidences."""
         # Set the state in the state module.
         if not isinstance(self.module_graph.root, StateModule):
             raise RuntimeError("Root module must be a StateModule.")
@@ -51,9 +52,13 @@ class ModularPolicy:
         # Recompute values with the chosen expert queries.
         if self.verbose:
             print_and_log("Recomputing values with expert queries...")
-        computed_values, _, total_query_cost = self.module_graph.compute_values(
-            expert_query_module_names=(
-                set([expert_query_module_name]) if expert_query_module_name else set()
+        computed_values, post_query_confidences, total_query_cost = (
+            self.module_graph.compute_values(
+                expert_query_module_names=(
+                    set([expert_query_module_name])
+                    if expert_query_module_name
+                    else set()
+                )
             )
         )
 
@@ -66,4 +71,4 @@ class ModularPolicy:
         if queried:
             assert total_query_cost > 0, "Query cost should be positive if we query!"
 
-        return action_value, total_query_cost, queried
+        return action_value, total_query_cost, queried, post_query_confidences

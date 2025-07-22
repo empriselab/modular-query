@@ -10,11 +10,28 @@ import numpy as np
 
 from modular_query.modular_policy import ModularPolicy
 from modular_query.module_utils import generate_random_and_gate_module_graph
-from modular_query.modules import StateModule
+from modular_query.modules import Module, StateModule
 from modular_query.query_strategies.brute_force import BruteForceQueryStrategy
 from modular_query.query_strategies.graph_query import GraphQueryStrategy
 from modular_query.query_strategies.mip import MIPQueryStrategy
 from modular_query.query_strategies.never_query import NeverQueryStrategy
+
+
+def product_of_confidences(confidences: dict[Module, float]) -> float:
+    """Compute the product of confidences."""
+    product = 1.0
+    for conf in confidences.values():
+        product *= conf
+    return product
+
+
+def sum_of_uncertainties(confidences: dict[Module, float]) -> float:
+    """Compute the sum of uncertainties."""
+    # Uncertainty is 1 - confidence.
+    uncertainty_sum = 0.0
+    for conf in confidences.values():
+        uncertainty_sum += 1.0 - conf
+    return uncertainty_sum
 
 
 def run_experiment(
@@ -60,6 +77,8 @@ def run_experiment(
             "query_cost": {size: [] for size in graph_sizes},
             "task_cost": {size: [] for size in graph_sizes},
             "total_cost": {size: [] for size in graph_sizes},
+            "proxy_obj_1": {size: [] for size in graph_sizes},
+            "proxy_obj_2": {size: [] for size in graph_sizes},
             "execution_time": {size: [] for size in graph_sizes},
             "queries": {size: [] for size in graph_sizes},
         }
@@ -69,27 +88,6 @@ def run_experiment(
         print(f"Running experiments for graph size {size}")
 
         for _ in range(num_trials):
-
-            # Generate a random logic-gate graph.
-            # module_graph = generate_random_logic_gate_module_graph(
-            #     num_modules=size,
-            #     edge_probability=edge_probability,
-            #     query_cost_sampler=query_cost_sampler,
-            #     rng=rng.spawn(1)[0],  # create a new RNG to avoid affecting main one
-            #     is_policy=True,
-            #     num_incorrect_modules=1
-            # )
-
-            # Generate a random polynomial module graph.
-            # module_graph = generate_random_polynomial_module_graph(
-            #     num_modules=size,
-            #     edge_probability=edge_probability,
-            #     query_cost=0.1,
-            #     rng=rng.spawn(1)[0],  # create a new RNG to avoid affecting main one
-            #     num_incorrect_modules=1,
-            #     incorrect_module_confidence=0.1,
-            # )
-
             # Generate a random AND-gate graph.
             module_graph = generate_random_and_gate_module_graph(
                 num_modules=size,
@@ -99,8 +97,6 @@ def run_experiment(
                 num_incorrect_modules=1,
             )
 
-            # # Use random state inputs.
-            # state = bool(rng.integers(0, 2))
             # Always set state to True for AND-gate graph.
             state = True
 
@@ -130,6 +126,8 @@ def run_experiment(
                 # Initialize accumulators.
                 acc_query_cost = 0.0
                 acc_task_cost = 0.0
+                acc_proxy_obj_1 = 0.0  # just the task part of the proxy objective.
+                acc_proxy_obj_2 = 0.0  # just the task part of the proxy objective.
                 acc_execution_time = 0.0
                 acc_queried = 0
                 timesteps_elapsed = 0
@@ -139,7 +137,9 @@ def run_experiment(
                     start_time = time.perf_counter()
 
                     # Run the policy.
-                    action, current_query_cost, queried = policy.get_action(state=state)
+                    action, current_query_cost, queried, post_query_confidences = (
+                        policy.get_action(state=state)
+                    )
                     if queried:
                         assert (
                             current_query_cost > 0
@@ -156,6 +156,10 @@ def run_experiment(
                     # Add to accumulators.
                     acc_query_cost += current_query_cost
                     acc_task_cost += task_cost
+                    acc_proxy_obj_1 += 1 - product_of_confidences(
+                        post_query_confidences
+                    )
+                    acc_proxy_obj_2 += sum_of_uncertainties(post_query_confidences)
                     acc_execution_time += execution_time
                     acc_queried += queried
 
@@ -165,6 +169,8 @@ def run_experiment(
                 # Compute temporal means.
                 mean_query_cost = acc_query_cost / timesteps_elapsed
                 mean_task_cost = acc_task_cost / timesteps_elapsed
+                mean_proxy_obj_1 = acc_proxy_obj_1 / timesteps_elapsed
+                mean_proxy_obj_2 = acc_proxy_obj_2 / timesteps_elapsed
                 mean_execution_time = acc_execution_time / timesteps_elapsed
                 mean_queries = acc_queried / timesteps_elapsed
 
@@ -173,6 +179,12 @@ def run_experiment(
                 results[strategy_name]["task_cost"][size].append(mean_task_cost)
                 results[strategy_name]["total_cost"][size].append(
                     mean_task_cost + mean_query_cost
+                )
+                results[strategy_name]["proxy_obj_1"][size].append(
+                    mean_proxy_obj_1 + mean_query_cost
+                )
+                results[strategy_name]["proxy_obj_2"][size].append(
+                    mean_proxy_obj_2 + mean_query_cost
                 )
                 results[strategy_name]["execution_time"][size].append(
                     mean_execution_time
@@ -189,15 +201,35 @@ def plot_results(
 ) -> None:
     """Create plots showing the performance of different querying strategies.
 
+    Includes two proxy objectives:
+    - Proxy objective 1 (uses 1 - product of confidences)
+    - Proxy objective 2 (uses sum of uncertainties)
+
     Args:
         results: dictionary with results from run_experiment
         graph_sizes: list of graph sizes that were tested
     """
-    # Set up figure with four subplots
-    fig, axes = plt.subplots(1, 4, figsize=(24, 6), sharex=True)
+    # Set up figure with six subplots
+    num_rows = 2
+    num_cols = 3
+    fig, axes = plt.subplots(num_rows, num_cols, figsize=(24, 12), sharex=True)
 
-    metrics = ["query_cost", "task_cost", "total_cost", "execution_time"]
-    titles = ["Query Cost", "Task Cost", "Total Cost", "Execution Time (s)"]
+    metrics = [
+        "query_cost",
+        "task_cost",
+        "total_cost",
+        "proxy_obj_1",
+        "proxy_obj_2",
+        "execution_time",
+    ]
+    titles = [
+        "Query Cost",
+        "Task Cost",
+        "Total Cost",
+        "Product-of-Confidences Total Cost",
+        "Sum-of-Uncertainties Total Cost",
+        "Execution Time (s)",
+    ]
 
     # Define distinct line styles, markers, and colors for each strategy
     styles = {
@@ -237,7 +269,7 @@ def plot_results(
     lines = []
     labels = []
     for i, (metric, title) in enumerate(zip(metrics, titles)):
-        ax = axes[i]
+        ax = axes[i // num_cols][i % num_cols]
 
         for strategy_name in results:
             # Calculate means and standard deviations for each graph size
@@ -311,13 +343,11 @@ def plot_results(
 def exp_vary_cquery() -> None:
     """Run the experiment with varying query cost."""
     graph_sizes = [3, 5, 10, 15, 18, 25, 50, 75, 100]
-    # graph_sizes = [3, 5, 10]
     time_horizon = 5
 
     # 6/12: vary c_query now, but keep workload_eps=1.0
     workload_eps = 1.0
     c_query_list = np.linspace(0.1, 1.0, 10)
-    # c_query_list = [1.0]
 
     for c_query in c_query_list:
         print(f"Running experiments with c_query = {c_query:.2f}")
@@ -353,17 +383,10 @@ def main() -> None:
     # Querying costs in [1e-3, 1.0] and task reward is binary (0 or 1).
     # We should see behavior interpolate between always query (workload-eps = 0)
     # and never query (workload-eps = 1).
-    # workload_epsilons_small = np.linspace(0, 1.0, 11)
-    # workload_epsilons_large = np.linspace(2.0, 10.0, 9)
-    # workload_epsilons = np.concatenate(
-    #     (workload_epsilons_small, workload_epsilons_large)
-    # )
     workload_epsilons = [1.0]
-    # workload_epsilons = workload_epsilons_large
 
     # Time horizon. 5 by default.
     time_horizon = 5
-    # time_horizon = 1
 
     for workload_eps in workload_epsilons:
         print(f"Running experiments with workload_eps = {workload_eps:.2f}")
