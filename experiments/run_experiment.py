@@ -11,6 +11,7 @@ import numpy as np
 from modular_query.modular_policy import ModularPolicy
 from modular_query.module_utils import generate_random_and_gate_module_graph
 from modular_query.modules import Module, StateModule
+from modular_query.query_strategies.binary_tree_query import BinaryTreeQueryStrategy
 from modular_query.query_strategies.brute_force import BruteForceQueryStrategy
 from modular_query.query_strategies.graph_query import GraphQueryStrategy
 from modular_query.query_strategies.mip import MIPQueryStrategy
@@ -65,6 +66,10 @@ def run_experiment(
             correct_answer_cost,
             incorrect_answer_cost,
             workload_eps=workload_eps,
+        ),
+        "Binary Tree Query": BinaryTreeQueryStrategy(
+            correct_answer_cost,
+            incorrect_answer_cost,
         ),
     }
 
@@ -261,6 +266,12 @@ def plot_results(
             "color": "orange",
             "linestyle": "-.",
             "marker": "D",
+            "linewidth": 2,
+        },
+        "Binary Tree Query": {
+            "color": "cyan",
+            "linestyle": "-",
+            "marker": "v",
             "linewidth": 2,
         },
     }

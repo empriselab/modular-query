@@ -5,6 +5,7 @@ from typing import Any
 from modular_query.modular_policy import ModularPolicy
 from modular_query.module_graph import ModuleGraph
 from modular_query.modules import ActionModule, Module, StateModule
+from modular_query.query_strategies.binary_tree_query import BinaryTreeQueryStrategy
 from modular_query.query_strategies.brute_force import BruteForceQueryStrategy
 from modular_query.query_strategies.graph_query import GraphQueryStrategy
 from modular_query.query_strategies.mip import MIPQueryStrategy
@@ -105,3 +106,14 @@ def test_modular_policy():
     assert (
         abs(cost - 100.0) < 1e-6
     ), f"Expected total query cost to be 100.0, got {cost}"
+
+    # Test for BinaryTreeQueryStrategy
+    query_strategy = BinaryTreeQueryStrategy(correct_answer_cost, incorrect_answer_cost)
+    policy = ModularPolicy(
+        module_graph=graph,
+        query_strategy=query_strategy,
+    )
+    action, cost, queried, _ = policy.get_action(state=1)
+    assert not queried, f"Expected queried to be False, got {queried}"
+    assert action == 3, f"Expected action to be 3, got {action}"
+    assert abs(cost - 0.0) < 1e-6, f"Expected total query cost to be 1.0, got {cost}"
