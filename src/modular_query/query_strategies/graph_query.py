@@ -2,8 +2,10 @@
 informative queries to ask."""
 
 import itertools
+from pathlib import Path
 from typing import Any
 
+import matplotlib.pyplot as plt
 import networkx as nx
 
 from modular_query.module_graph import ModuleGraph
@@ -68,7 +70,9 @@ class GraphQueryStrategy(QueryStrategy):
             graph.add_node(f"s_{module},failure")
 
         ## Add edges
-        modules_list = sorted(list(self.get_all_queryable_modules(module_graph)))
+        modules_list = [module.get_name() for module in module_graph.topo_order]
+        # Remove the first module, which we will always assume to be the 'state' module.
+        modules_list = modules_list[1:]
         computed_confidences_str = {
             module.get_name(): confidence
             for (module, confidence) in computed_confidences.items()
@@ -195,22 +199,24 @@ class GraphQueryStrategy(QueryStrategy):
         # Step 3: Return the path.
         return path
 
+    def visualize_query_graph(self, graph: nx.MultiDiGraph, outfile: Path) -> None:
+        """Visualize the query graph."""
+        nx.draw(graph, with_labels=True)
+        plt.savefig(outfile)
+        plt.close()
+
     def get_expert_query_module(
         self,
         module_graph: ModuleGraph,
         computed_values: dict[Module, Any],
         computed_confidences: dict[Module, float],
-    ) -> str | None:
+    ) -> tuple[str | None, dict[str, float] | None]:
         # Step 1: Create the query graph structure
         graph = self.create_query_graph(module_graph, computed_confidences)
         # Step 2: Run A* in the graph to return the best path
-        modules_list = sorted(list(self.get_all_queryable_modules(module_graph)))
+        modules_list = [module.get_name() for module in module_graph.topo_order]
         final_module = modules_list[-1]
-        # If we've already queried for one module, assume that we failed,
-        # so the source node for A* has to change.
-        source = (
-            "s_init" if len(self.queried_modules) == 0 else f"s_{final_module},failure"
-        )
+        source = "s_init"
         # print(f"Source node: {source}, Final module: {final_module}")
         path = self.run_a_star(graph, source, final_module)
         # print_and_log(f"Path: {path}")
@@ -220,6 +226,6 @@ class GraphQueryStrategy(QueryStrategy):
             if is_query:
                 # Update the state variable
                 self.queried_modules[module] = True
-                return module
+                return module, {}
         # If no module is found, return None
-        return None
+        return None, {}

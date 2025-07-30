@@ -15,5 +15,5 @@ class NeverQueryStrategy(QueryStrategy):
         module_graph: ModuleGraph,
         computed_values: dict[Module, Any],
         computed_confidences: dict[Module, float],
-    ) -> str | None:
-        return None
+    ) -> tuple[str | None, dict[str, float] | None]:
+        return None, {}

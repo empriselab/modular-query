@@ -28,9 +28,9 @@ class QueryStrategy(abc.ABC):
         module_graph: ModuleGraph,
         computed_values: dict[Module, Any],
         computed_confidences: dict[Module, float],
-    ) -> str | None:
+    ) -> tuple[str | None, dict[str, float] | None]:
         """Given a module graph and the already computed values, return a
-        module name to query.
+        module name to query and an optional dictionary of timing information.
 
         Can also be None if we don't want to query for any of the
         modules.

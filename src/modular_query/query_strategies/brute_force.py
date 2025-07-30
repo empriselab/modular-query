@@ -32,7 +32,7 @@ class BruteForceQueryStrategy(QueryStrategy):
         module_graph: ModuleGraph,
         computed_values: dict[Module, Any],
         computed_confidences: dict[Module, float],
-    ) -> str | None:
+    ) -> tuple[str | None, dict[str, float] | None]:
         all_modules = self.get_all_queryable_modules(module_graph)
         # Filter out modules that have already been queried.
         all_modules = all_modules - self.queried_modules
@@ -54,4 +54,4 @@ class BruteForceQueryStrategy(QueryStrategy):
         # If best_query_module is not none, add it to the set of queried modules.
         if best_query_module is not None:
             self.queried_modules.add(best_query_module)
-        return best_query_module
+        return best_query_module, {}

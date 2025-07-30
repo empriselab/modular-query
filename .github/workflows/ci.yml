@@ -68,6 +68,14 @@ jobs:
         set -ex
         python -m pip install -e ".[develop]"
         python -m amplpy.modules install coin
+    - name: Install SCIP
+      run: |
+        wget https://www.scipopt.org/download/release/scipoptsuite-9.2.3.tgz
+        tar -xzf scipoptsuite-9.2.3.tgz
+        cd scipoptsuite-9.2.3
+        cmake -Bbuild -H. -DSOPLEX_DIR=soplex/ -DPAPILO=off -DREADLINE=off -DGMP=off -DIPOPT=off
+        cmake --build build --config Release
+        echo "$PWD/build/bin" >> $GITHUB_PATH
     - name: Pytest
       run: |
         pytest tests/

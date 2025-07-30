@@ -16,6 +16,7 @@ from modular_query.query_strategies.brute_force import BruteForceQueryStrategy
 from modular_query.query_strategies.graph_query import GraphQueryStrategy
 from modular_query.query_strategies.mip import MIPQueryStrategy
 from modular_query.query_strategies.never_query import NeverQueryStrategy
+from modular_query.utils import print_and_log
 
 
 def product_of_confidences(confidences: dict[Module, float]) -> float:
@@ -45,6 +46,7 @@ def run_experiment(
     seed: int = 0,
     workload_eps: float = 0.1,
     time_horizon: int = 5,
+    num_incorrect_modules: int = 0,
 ) -> dict[str, dict[str, dict[int, list[float]]]]:
     """Run experiments with different graph sizes and querying strategies.
 
@@ -73,6 +75,17 @@ def run_experiment(
         ),
     }
 
+    # Store timing info for binary tree query.
+    binary_tree_query_timing_info: dict[str, dict[int, list[float]]] = {
+        "t_create_graph": {size: [] for size in graph_sizes},
+        "t_run_a_star": {size: [] for size in graph_sizes},
+    }
+    # Store timing info for MIP query.
+    mip_query_timing_info: dict[str, dict[int, list[float]]] = {
+        "t_construct_problem": {size: [] for size in graph_sizes},
+        "t_solve_problem": {size: [] for size in graph_sizes},
+    }
+
     # Initialize results structure:
     # strategy -> metric -> graph_size -> list of values
     # These store means over time.
@@ -85,7 +98,9 @@ def run_experiment(
             "proxy_obj_1": {size: [] for size in graph_sizes},
             "proxy_obj_2": {size: [] for size in graph_sizes},
             "execution_time": {size: [] for size in graph_sizes},
-            "queries": {size: [] for size in graph_sizes},
+            "mean_queries": {size: [] for size in graph_sizes},
+            "total_queries": {size: [] for size in graph_sizes},
+            "total_correct": {size: [] for size in graph_sizes},
         }
 
     # Run experiments for each graph size.
@@ -99,7 +114,7 @@ def run_experiment(
                 edge_probability=edge_probability,
                 query_cost=query_cost,
                 rng=rng.spawn(1)[0],  # create a new RNG to avoid affecting main one
-                num_incorrect_modules=1,
+                num_incorrect_modules=num_incorrect_modules,
             )
 
             # Always set state to True for AND-gate graph.
@@ -123,8 +138,7 @@ def run_experiment(
                 strategy.reset()
 
                 policy = ModularPolicy(
-                    module_graph=module_graph,
-                    query_strategy=strategy,
+                    module_graph=module_graph, query_strategy=strategy, verbose=False
                 )
 
                 # Temporal loop.
@@ -137,14 +151,27 @@ def run_experiment(
                 acc_queried = 0
                 timesteps_elapsed = 0
                 correct = False
+
+                # Strategy-specific temporal accumulators.
+                if strategy_name == "Binary Tree Query":
+                    acc_t_create_graph = 0.0
+                    acc_t_run_a_star = 0.0
+                elif strategy_name == "MIP":
+                    acc_t_construct_problem = 0.0
+                    acc_t_solve_problem = 0.0
+
                 while timesteps_elapsed < time_horizon and not correct:
                     # Measure execution time.
                     start_time = time.perf_counter()
 
                     # Run the policy.
-                    action, current_query_cost, queried, post_query_confidences = (
-                        policy.get_action(state=state)
-                    )
+                    (
+                        action,
+                        current_query_cost,
+                        queried,
+                        post_query_confidences,
+                        timing_info,
+                    ) = policy.get_action(state=state)
                     if queried:
                         assert (
                             current_query_cost > 0
@@ -168,6 +195,16 @@ def run_experiment(
                     acc_execution_time += execution_time
                     acc_queried += queried
 
+                    # Strategy-specific temporal accumulation.
+                    if strategy_name == "Binary Tree Query":
+                        assert timing_info is not None
+                        acc_t_create_graph += timing_info["t_create_graph"]
+                        acc_t_run_a_star += timing_info["t_run_a_star"]
+                    elif strategy_name == "MIP":
+                        assert timing_info is not None
+                        acc_t_construct_problem += timing_info["t_construct_problem"]
+                        acc_t_solve_problem += timing_info["t_solve_problem"]
+
                     # Increment timesteps elapsed.
                     timesteps_elapsed += 1
 
@@ -179,6 +216,19 @@ def run_experiment(
                 mean_execution_time = acc_execution_time / timesteps_elapsed
                 mean_queries = acc_queried / timesteps_elapsed
 
+                # Strategy-specific temporal means.
+                mean_t_create_graph = 0.0
+                mean_t_run_a_star = 0.0
+                mean_t_construct_problem = 0.0
+                mean_t_solve_problem = 0.0
+                if strategy_name == "Binary Tree Query":
+                    mean_t_create_graph = acc_t_create_graph / timesteps_elapsed
+                    mean_t_run_a_star = acc_t_run_a_star / timesteps_elapsed
+                elif strategy_name == "MIP":
+                    mean_t_construct_problem = (
+                        acc_t_construct_problem / timesteps_elapsed
+                    )
+                    mean_t_solve_problem = acc_t_solve_problem / timesteps_elapsed
                 # Store metrics.
                 results[strategy_name]["query_cost"][size].append(mean_query_cost)
                 results[strategy_name]["task_cost"][size].append(mean_task_cost)
@@ -194,7 +244,97 @@ def run_experiment(
                 results[strategy_name]["execution_time"][size].append(
                     mean_execution_time
                 )
-                results[strategy_name]["queries"][size].append(mean_queries)
+                results[strategy_name]["mean_queries"][size].append(mean_queries)
+                results[strategy_name]["total_queries"][size].append(acc_queried)
+                results[strategy_name]["total_correct"][size].append(correct)
+
+                # Store timing info for binary tree query.
+                if strategy_name == "Binary Tree Query":
+                    binary_tree_query_timing_info["t_create_graph"][size].append(
+                        mean_t_create_graph
+                    )
+                    binary_tree_query_timing_info["t_run_a_star"][size].append(
+                        mean_t_run_a_star
+                    )
+
+                # Store timing info for MIP query.
+                if strategy_name == "MIP":
+                    mip_query_timing_info["t_construct_problem"][size].append(
+                        mean_t_construct_problem
+                    )
+                    mip_query_timing_info["t_solve_problem"][size].append(
+                        mean_t_solve_problem
+                    )
+
+    # Print and log the timing info for binary tree query.
+    print_and_log("Timing info for binary tree query:")
+    for size in graph_sizes:
+        print_and_log(f"Size {size}:")
+        print_and_log(
+            f"  t_create_graph:"
+            f"{np.mean(binary_tree_query_timing_info['t_create_graph'][size]):.6f}"
+            f"±{np.std(binary_tree_query_timing_info['t_create_graph'][size]):.6f}"
+        )
+        print_and_log(
+            f"  t_run_a_star:"
+            f"{np.mean(binary_tree_query_timing_info['t_run_a_star'][size]):.6f}"
+            f"±{np.std(binary_tree_query_timing_info['t_run_a_star'][size]):.6f}"
+        )
+    # Make a quick plot of the timing info (as a function of graph size).
+    plt.plot(
+        graph_sizes,
+        [
+            np.mean(binary_tree_query_timing_info["t_create_graph"][size])
+            for size in graph_sizes
+        ],
+        label="t_create_graph",
+    )
+    plt.plot(
+        graph_sizes,
+        [
+            np.mean(binary_tree_query_timing_info["t_run_a_star"][size])
+            for size in graph_sizes
+        ],
+        label="t_run_a_star",
+    )
+    plt.legend()
+    plt.savefig("experiments/results/binary_tree_query_timing.png")
+    plt.close()
+
+    # Print, log, plot the timing info for MIP query.
+    print_and_log("Timing info for MIP query:")
+    for size in graph_sizes:
+        print_and_log(f"Size {size}:")
+        print_and_log(
+            f"  t_construct_problem:"
+            f"{np.mean(mip_query_timing_info['t_construct_problem'][size]):.6f}"
+            f"± {np.std(mip_query_timing_info['t_construct_problem'][size]):.6f}"
+        )
+        print_and_log(
+            f"  t_solve_problem: "
+            f"{np.mean(mip_query_timing_info['t_solve_problem'][size]):.6f}"
+            f"± {np.std(mip_query_timing_info['t_solve_problem'][size]):.6f}"
+        )
+    # Make a quick plot of the timing info (as a function of graph size).
+    plt.plot(
+        graph_sizes,
+        [
+            np.mean(mip_query_timing_info["t_construct_problem"][size])
+            for size in graph_sizes
+        ],
+        label="t_construct_problem",
+    )
+    plt.plot(
+        graph_sizes,
+        [
+            np.mean(mip_query_timing_info["t_solve_problem"][size])
+            for size in graph_sizes
+        ],
+        label="t_solve_problem",
+    )
+    plt.legend()
+    plt.savefig("experiments/results/mip_query_timing.png")
+    plt.close()
 
     return results
 
@@ -215,7 +355,7 @@ def plot_results(
         graph_sizes: list of graph sizes that were tested
     """
     # Set up figure with six subplots
-    num_rows = 2
+    num_rows = 3
     num_cols = 3
     fig, axes = plt.subplots(num_rows, num_cols, figsize=(24, 12), sharex=True)
 
@@ -226,6 +366,9 @@ def plot_results(
         "proxy_obj_1",
         "proxy_obj_2",
         "execution_time",
+        "mean_queries",
+        "total_queries",
+        "total_correct",
     ]
     titles = [
         "Query Cost",
@@ -234,6 +377,20 @@ def plot_results(
         "Product-of-Confidences Total Cost",
         "Sum-of-Uncertainties Total Cost",
         "Execution Time (s)",
+        "Mean Queries per Time Step",
+        "Total Queries",
+        "Total Correct",
+    ]
+    ylabels = [
+        "Cost",
+        "Cost",
+        "Cost",
+        "Cost",
+        "Cost",
+        "Time (s)",
+        "Mean Queries",
+        "Total Queries",
+        "Total Correct",
     ]
 
     # Define distinct line styles, markers, and colors for each strategy
@@ -325,7 +482,7 @@ def plot_results(
 
         ax.set_title(title)
         ax.set_xlabel("Number of Graph Nodes")
-        ax.set_ylabel("Time (s)" if metric == "execution_time" else "Cost")
+        ax.set_ylabel(ylabels[i])
         ax.grid(True, linestyle="--", alpha=0.7)
 
     # Add shared legend to the figure
@@ -358,10 +515,10 @@ def exp_vary_cquery() -> None:
 
     # 6/12: vary c_query now, but keep workload_eps=1.0
     workload_eps = 1.0
-    c_query_list = np.linspace(0.1, 1.0, 10)
+    c_query_list = [0.1]
 
     for c_query in c_query_list:
-        print(f"Running experiments with c_query = {c_query:.2f}")
+        print_and_log(f"Running experiments with c_query = {c_query:.2f}")
         results = run_experiment(
             graph_sizes=graph_sizes,
             num_trials=100,
@@ -370,6 +527,7 @@ def exp_vary_cquery() -> None:
             incorrect_answer_cost=1.0,
             workload_eps=workload_eps,
             time_horizon=time_horizon,
+            num_incorrect_modules=1,
         )
 
         # Plot the results
@@ -382,43 +540,39 @@ def exp_vary_cquery() -> None:
     print("Experiment with varying query cost complete!")
 
 
-def main() -> None:
-    """Run the experiment and generate plots."""
-    graph_sizes = [3, 5, 10, 15, 18, 25, 50, 75, 100]
+def exp_vary_num_failures() -> None:
+    """Run the experiment with varying number of failures."""
+    graph_sizes = [10, 15, 18, 25, 50, 75, 100]
+    num_failures_list = [3, 5, 7, 9]
 
-    # Run the experiment
-    # Original setting.
-    results = run_experiment(graph_sizes=graph_sizes, num_trials=100)
-
-    # Running with querying cost between 0 and 1, and with varying workload epsilon.
-    # Querying costs in [1e-3, 1.0] and task reward is binary (0 or 1).
-    # We should see behavior interpolate between always query (workload-eps = 0)
-    # and never query (workload-eps = 1).
-    workload_epsilons = [1.0]
-
-    # Time horizon. 5 by default.
-    time_horizon = 5
-
-    for workload_eps in workload_epsilons:
-        print(f"Running experiments with workload_eps = {workload_eps:.2f}")
+    for num_failures in num_failures_list:
+        print_and_log(f"Running experiments with num_failures = {num_failures}")
         results = run_experiment(
             graph_sizes=graph_sizes,
-            num_trials=100,
+            num_trials=5,
             correct_answer_cost=0.0,
             incorrect_answer_cost=1.0,
-            workload_eps=workload_eps,
-            time_horizon=time_horizon,
+            query_cost=0.08,
+            num_incorrect_modules=num_failures,
+            workload_eps=1.0,
+            time_horizon=5,
         )
 
         # Plot the results
         plot_results(
             results,
             graph_sizes,
-            plot_name=f"strategy_comparison_eps_{workload_eps:.2f}.png",
+            plot_name=f"strategy_comparison_num_failures_{num_failures}.png",
         )
 
+
+def main() -> None:
+    """Run the experiment and generate plots."""
     # Run the experiment with varying query cost.
-    exp_vary_cquery()
+    # exp_vary_cquery()
+
+    # Run the experiment with varying number of failures.
+    exp_vary_num_failures()
 
     print("Experiment complete!")
 
