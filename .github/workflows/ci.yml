@@ -63,19 +63,19 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
+    - name: Install dependencies (including scipopt)
       run: |
         set -ex
+        conda create -n test_env python=3.11 -y
+        source $(conda info --base)/etc/profile.d/conda.sh
+        conda activate test_env
+        conda install -c conda-forge pyscipopt -y
         python -m pip install -e ".[develop]"
         python -m amplpy.modules install coin
-    - name: Install SCIP
-      run: |
-        wget https://www.scipopt.org/download/release/scipoptsuite-9.2.3.tgz
-        tar -xzf scipoptsuite-9.2.3.tgz
-        cd scipoptsuite-9.2.3
-        cmake -Bbuild -H. -DSOPLEX_DIR=soplex/ -DPAPILO=off -DREADLINE=off -DGMP=off -DIPOPT=off
-        cmake --build build --config Release
-        echo "$PWD/build/bin" >> $GITHUB_PATH
+        python -m pip install pytest
     - name: Pytest
       run: |
+        set -ex
+        source $(conda info --base)/etc/profile.d/conda.sh
+        conda activate test_env
         pytest tests/

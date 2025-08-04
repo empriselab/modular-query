@@ -2,9 +2,11 @@
 """Experiment to measure and compare performance of different querying
 strategies."""
 
+import argparse
 import os
 import time
 
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -17,6 +19,9 @@ from modular_query.query_strategies.graph_query import GraphQueryStrategy
 from modular_query.query_strategies.mip import MIPQueryStrategy
 from modular_query.query_strategies.never_query import NeverQueryStrategy
 from modular_query.utils import print_and_log
+
+# Set matplotlib backend to avoid tkinter conflicts with Pyomo
+matplotlib.use("Agg")  # Use non-interactive backend
 
 
 def product_of_confidences(confidences: dict[Module, float]) -> float:
@@ -46,14 +51,28 @@ def run_experiment(
     seed: int = 0,
     workload_eps: float = 0.1,
     time_horizon: int = 5,
-    num_incorrect_modules: int = 0,
+    incorrect_module_count: np.ndarray | None = None,
+    variant: str = "balanced",
 ) -> dict[str, dict[str, dict[int, list[float]]]]:
     """Run experiments with different graph sizes and querying strategies.
 
     Querying costs: not used for the polynomial module graph,
     but used for the logic gate module graph.
+
+    incorrect_module_count: array of number of failures,
+    where each value is the number of trials with that many failures.
+    sum(incorrect_module_count) must = num_trials.
     """
     assert query_cost > 0, "Query cost for run_experiment should be positive."
+
+    # If incorrect_module_count is None, set to a default value.
+    # (all trials will have 1 failure.)
+    if incorrect_module_count is None:
+        incorrect_module_count = np.array([0, num_trials])
+
+    # Print variant.
+    print_and_log(f"Running experiment with variant {variant}")
+
     # Set up RNG.
     rng = np.random.default_rng(seed)
 
@@ -101,13 +120,26 @@ def run_experiment(
             "mean_queries": {size: [] for size in graph_sizes},
             "total_queries": {size: [] for size in graph_sizes},
             "total_correct": {size: [] for size in graph_sizes},
+            "total_timesteps": {size: [] for size in graph_sizes},
+            "total_executions": {size: [] for size in graph_sizes},
         }
+
+    # Create cumulative distribution of incorrect module counts.
+    incorrect_module_counts_cumsum = np.cumsum(incorrect_module_count)
 
     # Run experiments for each graph size.
     for size in graph_sizes:
         print(f"Running experiments for graph size {size}")
 
-        for _ in range(num_trials):
+        # Reset num incorrect modules for each graph size.
+        num_incorrect_modules = 0
+
+        for trial_idx in range(num_trials):
+            # If we exceeded the current cumulative incorrect module count,
+            # increment num_incorrect_modules.
+            while trial_idx >= incorrect_module_counts_cumsum[num_incorrect_modules]:
+                num_incorrect_modules += 1
+
             # Generate a random AND-gate graph.
             module_graph = generate_random_and_gate_module_graph(
                 num_modules=size,
@@ -143,6 +175,8 @@ def run_experiment(
 
                 # Temporal loop.
                 # Initialize accumulators.
+                # Timesteps: increment every time we query or execute.
+                # Executions: increment every time we execute only.
                 acc_query_cost = 0.0
                 acc_task_cost = 0.0
                 acc_proxy_obj_1 = 0.0  # just the task part of the proxy objective.
@@ -150,6 +184,7 @@ def run_experiment(
                 acc_execution_time = 0.0
                 acc_queried = 0
                 timesteps_elapsed = 0
+                num_executions = 0
                 correct = False
 
                 # Strategy-specific temporal accumulators.
@@ -159,6 +194,23 @@ def run_experiment(
                 elif strategy_name == "MIP":
                     acc_t_construct_problem = 0.0
                     acc_t_solve_problem = 0.0
+
+                # If greedy, do an initial forward pass + execution.
+                if variant == "greedy":
+                    # Forward pass only.
+                    action, _, computed_confidences = policy.forward_pass_only(state)
+                    # Execute action.
+                    correct = action == ground_truth_output
+                    timesteps_elapsed += 1
+                    num_executions += 1
+
+                    task_cost = (
+                        correct_answer_cost if correct else incorrect_answer_cost
+                    )
+                    # Update accumulators.
+                    acc_task_cost += task_cost
+                    acc_proxy_obj_1 += 1 - product_of_confidences(computed_confidences)
+                    acc_proxy_obj_2 += sum_of_uncertainties(computed_confidences)
 
                 while timesteps_elapsed < time_horizon and not correct:
                     # Measure execution time.
@@ -176,24 +228,57 @@ def run_experiment(
                         assert (
                             current_query_cost > 0
                         ), "Query cost should be positive if we query!"
+                    # Increment accumulators.
+                    acc_query_cost += current_query_cost
+                    acc_proxy_obj_1 += 1 - product_of_confidences(
+                        post_query_confidences
+                    )
+                    acc_proxy_obj_2 += sum_of_uncertainties(post_query_confidences)
+                    acc_queried += queried
+                    timesteps_elapsed += 1 if queried else 0
+
+                    # Conservative runs this loop multiple times
+                    # (until we decide not to query.)
+                    if variant == "conservative":
+                        while queried:
+                            # Then, do forward pass/query algorithm call.
+                            (
+                                action,
+                                current_query_cost,
+                                queried,
+                                post_query_confidences,
+                                timing_info,
+                            ) = policy.get_action(state=state)
+                            if queried:
+                                assert (
+                                    current_query_cost > 0
+                                ), "Query cost should be positive if we query!"
+                            # Increment accumulators and timesteps elapsed.
+                            acc_query_cost += current_query_cost
+                            acc_proxy_obj_1 += 1 - product_of_confidences(
+                                post_query_confidences
+                            )
+                            acc_proxy_obj_2 += sum_of_uncertainties(
+                                post_query_confidences
+                            )
+                            acc_queried += queried
+                            timesteps_elapsed += 1 if queried else 0
 
                     # Record execution time.
                     execution_time = time.perf_counter() - start_time
 
+                    # Execute action and increment time only.
                     correct = action == ground_truth_output
+                    timesteps_elapsed += 1
+                    num_executions += 1
+
                     task_cost = (
                         correct_answer_cost if correct else incorrect_answer_cost
                     )
 
                     # Add to accumulators.
-                    acc_query_cost += current_query_cost
                     acc_task_cost += task_cost
-                    acc_proxy_obj_1 += 1 - product_of_confidences(
-                        post_query_confidences
-                    )
-                    acc_proxy_obj_2 += sum_of_uncertainties(post_query_confidences)
                     acc_execution_time += execution_time
-                    acc_queried += queried
 
                     # Strategy-specific temporal accumulation.
                     if strategy_name == "Binary Tree Query":
@@ -204,9 +289,6 @@ def run_experiment(
                         assert timing_info is not None
                         acc_t_construct_problem += timing_info["t_construct_problem"]
                         acc_t_solve_problem += timing_info["t_solve_problem"]
-
-                    # Increment timesteps elapsed.
-                    timesteps_elapsed += 1
 
                 # Compute temporal means.
                 mean_query_cost = acc_query_cost / timesteps_elapsed
@@ -247,6 +329,10 @@ def run_experiment(
                 results[strategy_name]["mean_queries"][size].append(mean_queries)
                 results[strategy_name]["total_queries"][size].append(acc_queried)
                 results[strategy_name]["total_correct"][size].append(correct)
+                results[strategy_name]["total_timesteps"][size].append(
+                    timesteps_elapsed
+                )
+                results[strategy_name]["total_executions"][size].append(num_executions)
 
                 # Store timing info for binary tree query.
                 if strategy_name == "Binary Tree Query":
@@ -355,7 +441,7 @@ def plot_results(
         graph_sizes: list of graph sizes that were tested
     """
     # Set up figure with six subplots
-    num_rows = 3
+    num_rows = 4
     num_cols = 3
     fig, axes = plt.subplots(num_rows, num_cols, figsize=(24, 12), sharex=True)
 
@@ -369,6 +455,8 @@ def plot_results(
         "mean_queries",
         "total_queries",
         "total_correct",
+        "total_timesteps",
+        "total_executions",
     ]
     titles = [
         "Query Cost",
@@ -380,6 +468,8 @@ def plot_results(
         "Mean Queries per Time Step",
         "Total Queries",
         "Total Correct",
+        "Total Timesteps",
+        "Total Executions",
     ]
     ylabels = [
         "Cost",
@@ -391,6 +481,8 @@ def plot_results(
         "Mean Queries",
         "Total Queries",
         "Total Correct",
+        "Total Timesteps",
+        "Total Executions",
     ]
 
     # Define distinct line styles, markers, and colors for each strategy
@@ -508,7 +600,7 @@ def plot_results(
     plt.close()
 
 
-def exp_vary_cquery() -> None:
+def exp_vary_cquery(variant: str) -> None:
     """Run the experiment with varying query cost."""
     graph_sizes = [3, 5, 10, 15, 18, 25, 50, 75, 100]
     time_horizon = 5
@@ -516,18 +608,20 @@ def exp_vary_cquery() -> None:
     # 6/12: vary c_query now, but keep workload_eps=1.0
     workload_eps = 1.0
     c_query_list = [0.1]
+    num_trials = 100
 
     for c_query in c_query_list:
         print_and_log(f"Running experiments with c_query = {c_query:.2f}")
         results = run_experiment(
             graph_sizes=graph_sizes,
-            num_trials=100,
+            num_trials=num_trials,
             query_cost=c_query,
             correct_answer_cost=0.0,
             incorrect_answer_cost=1.0,
             workload_eps=workload_eps,
             time_horizon=time_horizon,
-            num_incorrect_modules=1,
+            incorrect_module_count=np.array([0, num_trials]),
+            variant=variant,
         )
 
         # Plot the results
@@ -540,22 +634,26 @@ def exp_vary_cquery() -> None:
     print("Experiment with varying query cost complete!")
 
 
-def exp_vary_num_failures() -> None:
+def exp_vary_num_failures(variant: str) -> None:
     """Run the experiment with varying number of failures."""
     graph_sizes = [10, 15, 18, 25, 50, 75, 100]
     num_failures_list = [3, 5, 7, 9]
+    num_trials = 5
 
     for num_failures in num_failures_list:
         print_and_log(f"Running experiments with num_failures = {num_failures}")
+        incorrect_module_count = np.zeros(num_failures, dtype=int)
+        incorrect_module_count[0] = num_trials
         results = run_experiment(
             graph_sizes=graph_sizes,
-            num_trials=5,
+            num_trials=num_trials,
             correct_answer_cost=0.0,
             incorrect_answer_cost=1.0,
             query_cost=0.08,
-            num_incorrect_modules=num_failures,
+            incorrect_module_count=incorrect_module_count,
             workload_eps=1.0,
             time_horizon=5,
+            variant=variant,
         )
 
         # Plot the results
@@ -566,16 +664,58 @@ def exp_vary_num_failures() -> None:
         )
 
 
-def main() -> None:
+def exp_mixed_failure_population(variant: str) -> None:
+    """Run the experiment with a mixed failure population."""
+    graph_sizes = [3, 5, 10, 15, 18, 25, 50, 75, 100]
+
+    num_trials = 100
+
+    # 0-failure, 1-failure, and mixed failure population.
+    failure_populations = [np.array([100, 0]), np.array([0, 100]), np.array([50, 50])]
+    for failure_population in failure_populations:
+        print_and_log(
+            f"Running experiments with failure population {failure_population}"
+        )
+        results = run_experiment(
+            graph_sizes=graph_sizes,
+            num_trials=num_trials,
+            correct_answer_cost=0.0,
+            incorrect_answer_cost=1.0,
+            query_cost=0.08,
+            incorrect_module_count=failure_population,
+            variant=variant,
+        )
+
+        # Plot the results
+        plot_results(
+            results,
+            graph_sizes,
+            plot_name=f"strategy_comparison_mixed_failure_population"
+            f"_{variant}_{failure_population}.png",
+        )
+
+
+def main(variant: str) -> None:
     """Run the experiment and generate plots."""
     # Run the experiment with varying query cost.
-    # exp_vary_cquery()
+    # exp_vary_cquery(variant)
 
     # Run the experiment with varying number of failures.
-    exp_vary_num_failures()
+    # exp_vary_num_failures(variant)
+
+    # Run the experiment with a mixed failure population.
+    exp_mixed_failure_population(variant)
 
     print("Experiment complete!")
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--variant",
+        type=str,
+        choices=["balanced", "greedy", "conservative"],
+        required=True,
+    )
+    args = parser.parse_args()
+    main(args.variant)

@@ -36,12 +36,14 @@ class ModularPolicy:
         # Track the set of modules that have been queried.
         self.queried_modules: set[str] = set()
 
-    def get_action(
+    def forward_pass_only(
         self, state: Any
-    ) -> tuple[Any, float, bool, dict[Module, float], dict[str, float] | None]:
-        """Invoke the policy and return action and total querying cost and
-        whether we queried for a module, as well as the post-query
-        confidences."""
+    ) -> tuple[Any, dict[Module, float], dict[Module, float]]:
+        """Compute the values for all modules in the graph (without any
+        queries) for a given state.
+
+        Returns action value, computed values, and computed confidences.
+        """
         # Set the state in the state module.
         if not isinstance(self.module_graph.root, StateModule):
             raise RuntimeError("Root module must be a StateModule.")
@@ -53,6 +55,19 @@ class ModularPolicy:
         computed_values, computed_confidences, _ = self.module_graph.compute_values(
             expert_query_module_names=set()
         )
+        return (
+            computed_values[self.module_graph.leaf],
+            computed_values,
+            computed_confidences,
+        )
+
+    def get_action(
+        self, state: Any
+    ) -> tuple[Any, float, bool, dict[Module, float], dict[str, float] | None]:
+        """Invoke the policy and return action and total querying cost and
+        whether we queried for a module, as well as the post-query
+        confidences."""
+        _, computed_values, computed_confidences = self.forward_pass_only(state)
 
         # Compute the expert query modules using the querying strategy.
         expert_query_module_name, timing_info = (
