@@ -196,6 +196,15 @@ class BinaryTreeQueryStrategy(QueryStrategy):
                 cost=0,
             )
 
+        ## Forcing exactly one query.
+        ## Remove the edge corresponding to the all fully-autonomous path.
+        final_node = "1" * len(modules_list)
+        final_node_int = int(final_node, 2)
+        graph.remove_edge(
+            f"s_{modules_list[-1]},{final_node_int}",
+            "s_final",
+        )
+
         return graph
 
     def visualize_planning_graph(self, graph: nx.MultiDiGraph, outfile: Path) -> None:

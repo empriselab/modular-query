@@ -38,7 +38,8 @@ class BruteForceQueryStrategy(QueryStrategy):
         all_modules = all_modules - self.queried_modules
         best_query_module = None
         best_query_cost = float("inf")
-        for query_module in [None] + list(all_modules):
+        # Force to ask at least one module.
+        for query_module in list(all_modules):
             query_set = set([query_module]) if query_module else set()
             query_cost = get_query_set_expected_cost(
                 query_set,

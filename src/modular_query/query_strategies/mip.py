@@ -80,12 +80,12 @@ class MIPQueryStrategy(QueryStrategy):
 
             model.obj = Objective(rule=obj_expression)
 
-            # Constraint: only select at most one module.
+            # Constraint: select exactly one module (i.e. force a query.)
             def one_module_rule(m):
                 # Handle special case where there are no modules to query.
                 if len(m.I) == 0:
                     return Constraint.Feasible
-                return sum(m.x[i] for i in m.I) <= 1
+                return sum(m.x[i] for i in m.I) == 1
 
             try:
                 model.one_module_constraint = Constraint(rule=one_module_rule)

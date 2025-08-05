@@ -4,6 +4,7 @@ strategies."""
 
 import argparse
 import os
+import pickle as pkl
 import time
 
 import matplotlib
@@ -76,6 +77,9 @@ def run_experiment(
     # Set up RNG.
     rng = np.random.default_rng(seed)
 
+    # Set max number of conservative queries per execution loop.
+    max_conservative_queries_per_loop = 2
+
     # Initialize strategies.
     strategies = {
         "Never Query": NeverQueryStrategy(correct_answer_cost, incorrect_answer_cost),
@@ -122,6 +126,7 @@ def run_experiment(
             "total_correct": {size: [] for size in graph_sizes},
             "total_timesteps": {size: [] for size in graph_sizes},
             "total_executions": {size: [] for size in graph_sizes},
+            "total_task_cost": {size: [] for size in graph_sizes},
         }
 
     # Create cumulative distribution of incorrect module counts.
@@ -216,6 +221,9 @@ def run_experiment(
                     # Measure execution time.
                     start_time = time.perf_counter()
 
+                    # Initialize number of queries in this execution loop.
+                    num_queries_in_loop = 0
+
                     # Run the policy.
                     (
                         action,
@@ -236,11 +244,18 @@ def run_experiment(
                     acc_proxy_obj_2 += sum_of_uncertainties(post_query_confidences)
                     acc_queried += queried
                     timesteps_elapsed += 1 if queried else 0
+                    # If we exceed time_horizon, break.
+                    if timesteps_elapsed >= time_horizon:
+                        break
+                    num_queries_in_loop += 1 if queried else 0
 
                     # Conservative runs this loop multiple times
                     # (until we decide not to query.)
                     if variant == "conservative":
-                        while queried:
+                        while (
+                            queried
+                            and num_queries_in_loop < max_conservative_queries_per_loop
+                        ):
                             # Then, do forward pass/query algorithm call.
                             (
                                 action,
@@ -263,9 +278,17 @@ def run_experiment(
                             )
                             acc_queried += queried
                             timesteps_elapsed += 1 if queried else 0
+                            # If we exceed time_horizon, break.
+                            if timesteps_elapsed >= time_horizon:
+                                break
+                            num_queries_in_loop += 1 if queried else 0
 
                     # Record execution time.
                     execution_time = time.perf_counter() - start_time
+
+                    # If we exceed time_horizon, break.
+                    if timesteps_elapsed >= time_horizon:
+                        break
 
                     # Execute action and increment time only.
                     correct = action == ground_truth_output
@@ -333,6 +356,7 @@ def run_experiment(
                     timesteps_elapsed
                 )
                 results[strategy_name]["total_executions"][size].append(num_executions)
+                results[strategy_name]["total_task_cost"][size].append(acc_task_cost)
 
                 # Store timing info for binary tree query.
                 if strategy_name == "Binary Tree Query":
@@ -637,13 +661,17 @@ def exp_vary_cquery(variant: str) -> None:
 def exp_vary_num_failures(variant: str) -> None:
     """Run the experiment with varying number of failures."""
     graph_sizes = [10, 15, 18, 25, 50, 75, 100]
-    num_failures_list = [3, 5, 7, 9]
-    num_trials = 5
+    num_failures_list = [0, 1, 2, 3]
+    num_trials = 100
+    time_horizon = 10
 
     for num_failures in num_failures_list:
+        # Convert num_failures to a one-hot vector.
+        incorrect_module_count = np.zeros(num_failures + 1)
+        incorrect_module_count[-1] = num_trials
+        # Don't include graph sizes that are too small for the number of failures.
+        graph_sizes = [size for size in graph_sizes if size > num_failures]
         print_and_log(f"Running experiments with num_failures = {num_failures}")
-        incorrect_module_count = np.zeros(num_failures, dtype=int)
-        incorrect_module_count[0] = num_trials
         results = run_experiment(
             graph_sizes=graph_sizes,
             num_trials=num_trials,
@@ -652,15 +680,23 @@ def exp_vary_num_failures(variant: str) -> None:
             query_cost=0.08,
             incorrect_module_count=incorrect_module_count,
             workload_eps=1.0,
-            time_horizon=5,
+            time_horizon=time_horizon,
             variant=variant,
         )
+
+        # Save results to a pickle file.
+        with open(
+            "experiments/results/strategy_comparison_num_failures_"
+            f"{variant}_{num_failures}.pkl",
+            "wb",
+        ) as f:
+            pkl.dump(results, f)
 
         # Plot the results
         plot_results(
             results,
             graph_sizes,
-            plot_name=f"strategy_comparison_num_failures_{num_failures}.png",
+            plot_name=f"strategy_comparison_num_failures_{variant}_{num_failures}.png",
         )
 
 
@@ -701,10 +737,10 @@ def main(variant: str) -> None:
     # exp_vary_cquery(variant)
 
     # Run the experiment with varying number of failures.
-    # exp_vary_num_failures(variant)
+    exp_vary_num_failures(variant)
 
     # Run the experiment with a mixed failure population.
-    exp_mixed_failure_population(variant)
+    # exp_mixed_failure_population(variant)
 
     print("Experiment complete!")
 

@@ -126,10 +126,12 @@ def test_modular_policy():
         query_strategy.create_query_graph(graph, dummy_confidences),
         Path("tests/test_planning_graph.png"),
     )
+
+    # Because we force a single query, we should query for the action module.
     action, cost, queried, _, _ = policy.get_action(state=1)
-    assert not queried, f"Expected queried to be False, got {queried}"
-    assert action == 3, f"Expected action to be 3, got {action}"
-    assert abs(cost - 0.0) < 1e-6, f"Expected total query cost to be 1.0, got {cost}"
+    assert queried, f"Expected queried to be True, got {queried}"
+    assert action == 4, f"Expected action to be 4, got {action}"
+    assert abs(cost - 1.0) < 1e-6, f"Expected total query cost to be 1.0, got {cost}"
 
 
 def test_graph_query_strategy():
