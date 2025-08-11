@@ -2,6 +2,7 @@
 """Experiment to measure and compare performance of different querying
 strategies."""
 
+import abc
 import argparse
 import os
 import pickle as pkl
@@ -42,6 +43,78 @@ def sum_of_uncertainties(confidences: dict[Module, float]) -> float:
     return uncertainty_sum
 
 
+class TerminationCondition(abc.ABC):
+    """Base class for termination conditions in query loops."""
+
+    def __init__(self, name: str) -> None:
+        """Initialize the termination condition with a name."""
+        self.name = name
+
+    @abc.abstractmethod
+    def evaluate(
+        self,
+        new_confidences: dict[Module, float],
+        old_confidences: dict[Module, float],
+        queried_module: Module,
+        current_query_cost: float,
+    ) -> bool:
+        """Evaluate whether to terminate the query loop."""
+
+
+class ConservativeTerminationCondition(TerminationCondition):
+    """Termination condition that stops when product of confidences exceeds
+    threshold."""
+
+    def __init__(self, thresh: float) -> None:
+        """Initialize with confidence threshold."""
+        super().__init__("conservative")
+        self.thresh = thresh
+
+    def evaluate(
+        self,
+        new_confidences: dict[Module, float],
+        old_confidences: dict[Module, float],
+        queried_module: Module,
+        current_query_cost: float,
+    ) -> bool:
+        return product_of_confidences(new_confidences) > self.thresh
+
+
+class Balanced2TerminationCondition(TerminationCondition):
+    """Termination condition for balanced-2 variant (terminates when confidence
+    gain from querying is less than query cost)"""
+
+    def __init__(self) -> None:
+        """Initialize the balanced-2 termination condition."""
+        super().__init__("balanced-2")
+
+    def evaluate(
+        self,
+        new_confidences: dict[Module, float],
+        old_confidences: dict[Module, float],
+        queried_module: Module,
+        current_query_cost: float,
+    ) -> bool:
+        return 1 - old_confidences[queried_module] < current_query_cost
+
+
+class DummyTerminationCondition(TerminationCondition):
+    """Dummy termination condition that never terminates."""
+
+    def __init__(self) -> None:
+        """Initialize the dummy termination condition."""
+        super().__init__("dummy")
+
+    def evaluate(
+        self,
+        new_confidences: dict[Module, float],
+        old_confidences: dict[Module, float],
+        queried_module: Module,
+        current_query_cost: float,
+    ) -> bool:
+        return False
+
+
 def run_experiment(
     graph_sizes: list[int],
     num_trials: int = 5,
@@ -77,8 +150,21 @@ def run_experiment(
     # Set up RNG.
     rng = np.random.default_rng(seed)
 
-    # Set max number of conservative queries per execution loop.
-    max_conservative_queries_per_loop = 2
+    # Variant-specific parameters.
+    # Set termination conditions for 'conservative' and 'balanced-2' variants.
+    loop_termination_condition: TerminationCondition
+    pre_make_query_termination_condition: TerminationCondition
+
+    if variant == "conservative":
+        loop_termination_condition = ConservativeTerminationCondition(thresh=0.5)
+        pre_make_query_termination_condition = DummyTerminationCondition()
+    elif variant == "balanced-2":
+        loop_termination_condition = DummyTerminationCondition()
+        pre_make_query_termination_condition = Balanced2TerminationCondition()
+    else:
+        # Default case - these won't be used for other variants
+        loop_termination_condition = DummyTerminationCondition()
+        pre_make_query_termination_condition = DummyTerminationCondition()
 
     # Initialize strategies.
     strategies = {
@@ -229,6 +315,8 @@ def run_experiment(
                         action,
                         current_query_cost,
                         queried,
+                        queried_module,
+                        pre_query_confidences,
                         post_query_confidences,
                         timing_info,
                     ) = policy.get_action(state=state)
@@ -251,16 +339,24 @@ def run_experiment(
 
                     # Conservative runs this loop multiple times
                     # (until we decide not to query.)
-                    if variant == "conservative":
+                    if variant in ("conservative", "balanced-2"):
                         while (
                             queried
-                            and num_queries_in_loop < max_conservative_queries_per_loop
+                            and queried_module is not None
+                            and not loop_termination_condition.evaluate(
+                                new_confidences=post_query_confidences,
+                                old_confidences=pre_query_confidences,
+                                queried_module=queried_module,
+                                current_query_cost=current_query_cost,
+                            )
                         ):
                             # Then, do forward pass/query algorithm call.
                             (
                                 action,
                                 current_query_cost,
                                 queried,
+                                queried_module,
+                                pre_query_confidences,
                                 post_query_confidences,
                                 timing_info,
                             ) = policy.get_action(state=state)
@@ -268,6 +364,22 @@ def run_experiment(
                                 assert (
                                     current_query_cost > 0
                                 ), "Query cost should be positive if we query!"
+                            # Balanced-2 actually has to intervene *here*
+                            # i.e. - after we decide what to query,
+                            # but before we actually make the query
+                            # (i.e. we need to distinguish between
+                            # get-query and make-query)
+                            if (
+                                queried
+                                and queried_module is not None
+                                and pre_make_query_termination_condition.evaluate(
+                                    new_confidences=post_query_confidences,
+                                    old_confidences=pre_query_confidences,
+                                    queried_module=queried_module,
+                                    current_query_cost=current_query_cost,
+                                )
+                            ):
+                                break
                             # Increment accumulators and timesteps elapsed.
                             acc_query_cost += current_query_cost
                             acc_proxy_obj_1 += 1 - product_of_confidences(
@@ -659,7 +771,8 @@ def exp_vary_cquery(variant: str) -> None:
 
 
 def exp_vary_num_failures(variant: str) -> None:
-    """Run the experiment with varying number of failures."""
+    """Run the experiment with varying number of failures; also saves results
+    to a pickle file and plots the results."""
     graph_sizes = [10, 15, 18, 25, 50, 75, 100]
     num_failures_list = [0, 1, 2, 3]
     num_trials = 100
@@ -737,7 +850,14 @@ def main(variant: str) -> None:
     # exp_vary_cquery(variant)
 
     # Run the experiment with varying number of failures.
-    exp_vary_num_failures(variant)
+    # exp_vary_num_failures(variant)
+
+    # Run for all variants.
+    if variant == "all-variants":
+        for variant_to_use in ["balanced", "greedy", "conservative", "balanced-2"]:
+            exp_vary_num_failures(variant_to_use)
+    else:
+        exp_vary_num_failures(variant)
 
     # Run the experiment with a mixed failure population.
     # exp_mixed_failure_population(variant)
@@ -750,7 +870,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--variant",
         type=str,
-        choices=["balanced", "greedy", "conservative"],
+        choices=["balanced", "greedy", "conservative", "balanced-2", "all-variants"],
         required=True,
     )
     args = parser.parse_args()

@@ -56,6 +56,13 @@ class ModuleGraph:
         """Get all modules in the graph."""
         return set(self.module_to_parents)
 
+    def get_module_by_name(self, name: str | None) -> Module | None:
+        """Get a module by name."""
+        for module in self.get_modules():
+            if module.get_name() == name:
+                return module
+        return None
+
     def compute_values(
         self, expert_query_module_names: set[str]
     ) -> tuple[dict[Module, Any], dict[Module, float], float]:

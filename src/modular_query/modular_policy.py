@@ -61,9 +61,15 @@ class ModularPolicy:
             computed_confidences,
         )
 
-    def get_action(
-        self, state: Any
-    ) -> tuple[Any, float, bool, dict[Module, float], dict[str, float] | None]:
+    def get_action(self, state: Any) -> tuple[
+        Any,
+        float,
+        bool,
+        Module | None,
+        dict[Module, float],
+        dict[Module, float],
+        dict[str, float] | None,
+    ]:
         """Invoke the policy and return action and total querying cost and
         whether we queried for a module, as well as the post-query
         confidences."""
@@ -127,6 +133,8 @@ class ModularPolicy:
             action_value,
             total_query_cost_adjusted,
             queried,
+            self.module_graph.get_module_by_name(expert_query_module_name),
+            computed_confidences,
             post_query_confidences,
             timing_info,
         )

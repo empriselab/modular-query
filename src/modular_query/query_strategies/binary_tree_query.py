@@ -279,7 +279,8 @@ class BinaryTreeQueryStrategy(QueryStrategy):
         # Only do this if we have not created the graph yet.
         if self.graph is None:
             with timer(
-                "BinaryTreeQueryStrategy: Create query graph"
+                "BinaryTreeQueryStrategy: Create query graph",
+                verbose=False,
             ) as result:  # type: dict[str, float]
                 self.graph = self.create_query_graph(module_graph, computed_confidences)
             t_create_graph = result["time"]
@@ -287,7 +288,7 @@ class BinaryTreeQueryStrategy(QueryStrategy):
             t_create_graph = 0.0
 
         # Step 2: Run A* in the graph to return the best path.
-        with timer("BinaryTreeQueryStrategy: Run A* search") as result:
+        with timer("BinaryTreeQueryStrategy: Run A* search", verbose=False) as result:
             path = self.run_a_star(self.graph, "s_init", "s_final")
         t_run_a_star = result["time"]
         timing_info = {

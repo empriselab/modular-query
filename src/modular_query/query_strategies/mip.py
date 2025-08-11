@@ -44,7 +44,8 @@ class MIPQueryStrategy(QueryStrategy):
         computed_confidences: dict[Module, float],
     ) -> tuple[str | None, dict[str, float] | None]:
         with timer(
-            "MIPQueryStrategy: Construct problem"
+            "MIPQueryStrategy: Construct problem",
+            verbose=False,
         ) as result:  # type: dict[str, float]
             # Extract module info.
             all_module_names = sorted(self.get_all_queryable_modules(module_graph))
@@ -119,7 +120,7 @@ class MIPQueryStrategy(QueryStrategy):
 
         t_construct_problem = result["time"]
 
-        with timer("MIPQueryStrategy: Solve problem") as result:
+        with timer("MIPQueryStrategy: Solve problem", verbose=False) as result:
             # Run optimization.
             # pip install amplpy pyomo -q
             # python -m amplpy.modules install coin highs scip gcg -q
