@@ -56,6 +56,10 @@ class ModuleGraph:
         """Get all modules in the graph."""
         return set(self.module_to_parents)
 
+    def get_module_str_to_module(self) -> dict[str, Module]:
+        """Get a dictionary mapping module strings to modules."""
+        return {m.get_name(): m for m in self.module_to_parents}
+
     def get_module_by_name(self, name: str | None) -> Module | None:
         """Get a module by name."""
         for module in self.get_modules():
@@ -63,8 +67,28 @@ class ModuleGraph:
                 return module
         return None
 
+    def get_downstream_modules(self, module_name: str) -> set[str]:
+        """Get all downstream modules of a given module."""
+        module = self.get_module_str_to_module()[module_name]
+        # successively get all children of the module, and all downstream modules.
+        downstream_modules = set()
+        queue = deque([module])
+        while queue:
+            module = queue.popleft()
+            downstream_modules.add(module.get_name())
+            child_modules = self.module_to_children[module]
+            # don't add child modules that are already in the queue,
+            # or already in the downstream modules set.
+            child_modules = [
+                c
+                for c in child_modules
+                if c not in queue and c.get_name() not in downstream_modules
+            ]
+            queue.extend(child_modules)
+        return downstream_modules
+
     def compute_values(
-        self, expert_query_module_names: set[str]
+        self, expert_query_module_names: set[str], expert_values_cache: dict[str, Any]
     ) -> tuple[dict[Module, Any], dict[Module, float], float]:
         """Recompute values and confidences for all modules.
 
@@ -84,7 +108,15 @@ class ModuleGraph:
                 parent_outputs[parent.get_name()] = computed_values[parent]
 
             # Invoke the module call.
-            if module.get_name() in expert_query_module_names:
+            if (
+                module.get_name() in expert_values_cache
+                and expert_values_cache[module.get_name()] is not None
+            ):
+                # Use the cached expert value, and set confidence to 1.0.
+                value = expert_values_cache[module.get_name()]
+                computed_values[module] = value
+                computed_confidences[module] = 1.0
+            elif module.get_name() in expert_query_module_names:
                 # If this module is the module to query, call the expert.
                 value = module.call_expert(parent_outputs)
                 # Use the expert's value, and set confidence to 1.0.

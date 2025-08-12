@@ -99,7 +99,7 @@ def test_module_graph():
     # draw_module_graph(graph, Path("tests/test_graph.png"))
 
     values, confidences, query_cost = graph.compute_values(
-        expert_query_module_names=set()
+        expert_query_module_names=set(), expert_values_cache={}
     )
     assert (
         abs(query_cost - 0.0) < 1e-6
@@ -125,7 +125,7 @@ def test_module_graph():
 
     # Now test with M3 as an expert query:
     values, confidences, query_cost = graph.compute_values(
-        expert_query_module_names={"M3"}
+        expert_query_module_names={"M3"}, expert_values_cache={}
     )
     # Now M3 should be computed using the expert, which returns 10.
     assert (

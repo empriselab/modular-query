@@ -35,16 +35,16 @@ class BinaryTreeQueryStrategy(QueryStrategy):
         incorrect_answer_cost: float,
     ) -> None:
         super().__init__(correct_answer_cost, incorrect_answer_cost)
-        # State variable: Set of modules that we have queried for.
-        # We add to this set when we query a module.
-        self.queried_modules: dict[str, bool] = {}
         # Store the graph.
         self.graph: nx.DiGraph | None = None
+        # Store the list of modules in the module graph.
+        self.modules_list: list[str] = []
 
     def reset(self) -> None:
-        """Reset the state variable."""
-        self.queried_modules = {}
+        """Reset the state variable (need to also reset the graph.)"""
+        super().reset()
         self.graph = None
+        self.modules_list = []
 
     def create_query_graph(
         self,
@@ -60,13 +60,13 @@ class BinaryTreeQueryStrategy(QueryStrategy):
         ## Add nodes. s_init,
         ## for each module in the module graph, create a nodes that track
         ## the full history of queries for previous modules.
-        modules_list = sorted(list(self.get_all_queryable_modules(module_graph)))
+        self.modules_list = sorted(list(self.get_all_queryable_modules(module_graph)))
 
         ## Create mapping from module name to list of valid node IDs (in binary)
         module_to_node_ids: dict[str, list[str]] = {}
 
         graph.add_node("s_init")
-        for _, module in enumerate(modules_list):
+        for _, module in enumerate(self.modules_list):
             # We index nodes as s_{module_name},j,
             # where j is an integer whose binary encoding stores the query history.
             # 0s correspond to querying, 1s to not querying.
@@ -75,7 +75,7 @@ class BinaryTreeQueryStrategy(QueryStrategy):
             # Construct valid j values for the module.
             module_to_node_ids[module] = []
             base_str = "1" * (
-                modules_list.index(module) + 1
+                self.modules_list.index(module) + 1
             )  # Base string for the module.
             node_binary_strs = [base_str]
             for index in range(len(base_str)):
@@ -106,16 +106,16 @@ class BinaryTreeQueryStrategy(QueryStrategy):
             if module.get_name() in self.get_all_queryable_modules(module_graph)
         }
         ### Query edges between consecutive levels.
-        query_cost = query_costs_str[modules_list[0]]
+        query_cost = query_costs_str[self.modules_list[0]]
         # First level.
-        if modules_list[0] not in self.queried_modules:
+        if self.modules_list[0] not in self.queried_modules:
             graph.add_edge(
                 "s_init",
-                f"s_{modules_list[0]},0",
+                f"s_{self.modules_list[0]},0",
                 key="a_query",
                 cost=query_cost,
             )
-        for module_start, module_end in pairwise(modules_list):
+        for module_start, module_end in pairwise(self.modules_list):
             if module_end not in self.queried_modules:
                 query_cost = query_costs_str[module_end]
                 # Only the special node j = "111...1" (all 1s),
@@ -123,7 +123,7 @@ class BinaryTreeQueryStrategy(QueryStrategy):
                 # can have query edges to the next module.
                 # And it will go to k = "111...10" (all 1s, last bit is 0),
                 # which corresponds to querying the module_end module.
-                j_binary_str = "1" * (modules_list.index(module_start) + 1)
+                j_binary_str = "1" * (self.modules_list.index(module_start) + 1)
                 k_binary_str = j_binary_str + "0"
                 j = int(j_binary_str, 2)
                 k = int(k_binary_str, 2)
@@ -137,9 +137,11 @@ class BinaryTreeQueryStrategy(QueryStrategy):
 
         ### Add autonomous edges.
         ## Autonomous edges between consecutive levels.
-        auto_cost = 1 - computed_confidences_str[modules_list[0]]
-        graph.add_edge("s_init", f"s_{modules_list[0]},1", key="a_auto", cost=auto_cost)
-        for module_start, module_end in pairwise(modules_list):
+        auto_cost = 1 - computed_confidences_str[self.modules_list[0]]
+        graph.add_edge(
+            "s_init", f"s_{self.modules_list[0]},1", key="a_auto", cost=auto_cost
+        )
+        for module_start, module_end in pairwise(self.modules_list):
             # Autonomous edges start from all s_{module_start},j nodes,
             # and end at s_{module_end},k nodes, where k = concat(j, "1")
             # (odd k corresponds to not querying the module_end module,)
@@ -169,12 +171,12 @@ class BinaryTreeQueryStrategy(QueryStrategy):
                     # 0 pad so that it has the same length
                     # as the number of modules before module_end.
                     modified_binary_encoding = raw_binary_encoding.zfill(
-                        len(modules_list[: modules_list.index(module_end)])
+                        len(self.modules_list[: self.modules_list.index(module_end)])
                     )
                     for idx, bit in enumerate(modified_binary_encoding):
                         if bit == "1":  # '0' represents querying the module,
                             # '1' represents not querying.
-                            A *= computed_confidences_str[modules_list[idx]]
+                            A *= computed_confidences_str[self.modules_list[idx]]
                     # Compute the cost.
                     cost = -computed_confidences_str[module_end] * A + A
                 # Add edge
@@ -187,10 +189,10 @@ class BinaryTreeQueryStrategy(QueryStrategy):
 
         ## Autonomous edges from the last level to the final node.
         # Cost is 0.
-        for j_binary_str in module_to_node_ids[modules_list[-1]]:
+        for j_binary_str in module_to_node_ids[self.modules_list[-1]]:
             j = int(j_binary_str, 2)
             graph.add_edge(
-                f"s_{modules_list[-1]},{j}",
+                f"s_{self.modules_list[-1]},{j}",
                 "s_final",
                 key="a_auto",
                 cost=0,
@@ -198,10 +200,10 @@ class BinaryTreeQueryStrategy(QueryStrategy):
 
         ## Forcing exactly one query.
         ## Remove the edge corresponding to the all fully-autonomous path.
-        final_node = "1" * len(modules_list)
+        final_node = "1" * len(self.modules_list)
         final_node_int = int(final_node, 2)
         graph.remove_edge(
-            f"s_{modules_list[-1]},{final_node_int}",
+            f"s_{self.modules_list[-1]},{final_node_int}",
             "s_final",
         )
 
@@ -287,9 +289,16 @@ class BinaryTreeQueryStrategy(QueryStrategy):
         else:
             t_create_graph = 0.0
 
+        assert self.graph is not None, "Graph should not be None."
+
         # Step 2: Run A* in the graph to return the best path.
         with timer("BinaryTreeQueryStrategy: Run A* search", verbose=False) as result:
-            path = self.run_a_star(self.graph, "s_init", "s_final")
+            try:
+                path = self.run_a_star(self.graph, "s_init", "s_final")
+            except nx.NetworkXNoPath:
+                # This can happen if we have queried all possible modules
+                # in the module graph.
+                path = {}
         t_run_a_star = result["time"]
         timing_info = {
             "t_create_graph": t_create_graph,
@@ -299,31 +308,56 @@ class BinaryTreeQueryStrategy(QueryStrategy):
         # (just choose the first one in the sequence)
         for module, is_query in path.items():
             if is_query:
-                # Update the state variable
-                self.queried_modules[module] = True
-
-                # Step 4: Update the graph to remove the query edge
-                # for the module that we just queried.
-                modules_list = sorted(
-                    list(self.get_all_queryable_modules(module_graph))
-                )
-                query_module_index = modules_list.index(module)
-                if query_module_index == 0:
-                    # Remove the query edge from s_init to s_{module},0.
-                    self.graph.remove_edge("s_init", f"s_{module},0")
-                else:
-                    # Remove the query edge from s_{module_start},j to s_{module},k,
-                    # where k = concat(j, "1").
-                    j_binary_str = "1" * (query_module_index)
-                    k_binary_str = j_binary_str + "0"
-                    j = int(j_binary_str, 2)
-                    k = int(k_binary_str, 2)
-                    self.graph.remove_edge(
-                        f"s_{modules_list[query_module_index - 1]},{j}",
-                        f"s_{module},{k}",
-                    )
-
                 return module, timing_info
 
         # If no module is found, return None
         return None, timing_info
+
+    def add_queried_module(self, module_name: str) -> None:
+        """Add a module to the set of queried modules, and update the internal
+        state of the strategy."""
+        assert self.graph is not None, "Graph should not be None."
+        super().add_queried_module(module_name)
+
+        # Update the graph to remove the query edge
+        # for the module that we just queried.
+        query_module_index = self.modules_list.index(module_name)
+        if query_module_index == 0:
+            # Remove the query edge from s_init to s_{module},0.
+            self.graph.remove_edge("s_init", f"s_{module_name},0")
+        else:
+            # Remove the query edge from s_{module_start},j to s_{module},k,
+            # where k = concat(j, "1").
+            j_binary_str = "1" * (query_module_index)
+            k_binary_str = j_binary_str + "0"
+            j = int(j_binary_str, 2)
+            k = int(k_binary_str, 2)
+            self.graph.remove_edge(
+                f"s_{self.modules_list[query_module_index - 1]},{j}",
+                f"s_{module_name},{k}",
+            )
+
+    def remove_queried_modules(self, module_names: set[str]) -> None:
+        """Remove a set of modules from the set of queried modules, and update
+        the internal state of the strategy."""
+        assert self.graph is not None, "Graph should not be None."
+        super().remove_queried_modules(module_names)
+
+        # Update the graph to add back in the query edges
+        # for all of the modules in the module_names set.
+        for module_name in module_names:
+            query_module_index = self.modules_list.index(module_name)
+            if query_module_index == 0:
+                # Add the query edge from s_init to s_{module},0.
+                self.graph.add_edge("s_init", f"s_{module_name},0")
+            else:
+                # Add the query edge from s_{module_start},j to s_{module},k,
+                # where k = concat(j, "1").
+                j_binary_str = "1" * (query_module_index)
+                k_binary_str = j_binary_str + "0"
+                j = int(j_binary_str, 2)
+                k = int(k_binary_str, 2)
+                self.graph.add_edge(
+                    f"s_{self.modules_list[query_module_index - 1]},{j}",
+                    f"s_{module_name},{k}",
+                )

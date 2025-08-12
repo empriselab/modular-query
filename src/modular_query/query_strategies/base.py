@@ -21,6 +21,8 @@ class QueryStrategy(abc.ABC):
     ) -> None:
         self.correct_answer_cost = correct_answer_cost
         self.incorrect_answer_cost = incorrect_answer_cost
+        # State variable: Set of modules that we have queried for in this episode.
+        self.queried_modules: set[str] = set()
 
     @abc.abstractmethod
     def get_expert_query_module(
@@ -50,3 +52,14 @@ class QueryStrategy(abc.ABC):
 
     def reset(self) -> None:
         """Reset the state of the query strategy."""
+        self.queried_modules = set()
+
+    def add_queried_module(self, module_name: str) -> None:
+        """Add a module to the set of queried modules, and update the internal
+        state of the strategy."""
+        self.queried_modules.add(module_name)
+
+    def remove_queried_modules(self, module_names: set[str]) -> None:
+        """Remove a set of modules from the set of queried modules, and update
+        the internal state of the strategy."""
+        self.queried_modules.difference_update(module_names)

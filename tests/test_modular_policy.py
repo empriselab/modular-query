@@ -102,9 +102,9 @@ def test_modular_policy():
     assert abs(cost - 1.0) < 1e-6, f"Expected total query cost to be 1.0, got {cost}"
 
     # If we decide to query again (even though in this case the first query leads to
-    # success), we will not query for any module, but because of the sticky query
-    # behavior, we'll use expert advice for both modules, leading to the action still
-    # being 4.
+    # success), we will not query for any module, but because of the caching behavior,
+    # we will still have the same (updated) expert values for the modules,
+    # leading to the action still being 4.
 
     action, cost, _, _, _, _, _ = policy.get_action(state=1)
     assert action == 4, f"Expected action to be 4, got {action}"
@@ -129,7 +129,9 @@ def test_modular_policy():
 
     # Because we force a single query, we should query for the action module.
     action, cost, queried, _, _, _, _ = policy.get_action(state=1)
-    assert queried, f"Expected queried to be True, got {queried}"
+    assert (
+        queried
+    ), f"Expected queried to be True (since we force a single query), got {queried}"
     assert action == 4, f"Expected action to be 4, got {action}"
     assert abs(cost - 1.0) < 1e-6, f"Expected total query cost to be 1.0, got {cost}"
 
@@ -156,7 +158,7 @@ def test_graph_query_strategy():
     assert isinstance(module_graph.root, StateModule)
     module_graph.root.set_state(state)
     computed_values, _, _ = module_graph.compute_values(
-        expert_query_module_names=all_queryable_module_names
+        expert_query_module_names=all_queryable_module_names, expert_values_cache={}
     )
     ground_truth_output = computed_values[module_graph.leaf]
 

@@ -7,17 +7,6 @@ from modular_query.modules import ActionModule, Module, StateModule
 from modular_query.query_strategies.base import QueryStrategy
 from modular_query.utils import print_and_log
 
-## Includes 'sticky query' behavior:
-## where if we query for module Mi at time t,
-## we continue to use the expert for Mi at future t
-## without incurring the query cost for module Mi.
-##
-## This assumes that if we invoke the expert once,
-## we always have access to their 'oracle function' for free
-## (i.e. even if the inputs to the module change,
-## we can costlessly get the expert output)
-## That is, once we query a module, we 'repair' it permanently.
-
 
 class ModularPolicy:
     """A policy defined by a graph of modules and a querying strategy."""
@@ -33,8 +22,8 @@ class ModularPolicy:
         assert isinstance(self.module_graph.root, StateModule)
         assert isinstance(self.module_graph.leaf, ActionModule)
         self.verbose = verbose
-        # Track the set of modules that have been queried.
-        self.queried_modules: set[str] = set()
+        # Keep a cache of the expert values for each queried module.
+        self.expert_values_cache: dict[str, Any] = {}
 
     def forward_pass_only(
         self, state: Any
@@ -53,7 +42,8 @@ class ModularPolicy:
         if self.verbose:
             print_and_log("Computing initial values for all modules...")
         computed_values, computed_confidences, _ = self.module_graph.compute_values(
-            expert_query_module_names=set()
+            expert_query_module_names=set(),
+            expert_values_cache=self.expert_values_cache,
         )
         return (
             computed_values[self.module_graph.leaf],
@@ -98,20 +88,10 @@ class ModularPolicy:
         expert_query_module_names = (
             set([expert_query_module_name]) if expert_query_module_name else set()
         )
-        # Add sticky queries when computing the graph values.
-        expert_query_module_names.update(self.queried_modules)
         computed_values, post_query_confidences, total_query_cost = (
             self.module_graph.compute_values(
-                expert_query_module_names=expert_query_module_names
-            )
-        )
-        # But, subtract the query cost for the sticky queries
-        # when computing the total query cost.
-        total_query_cost_adjusted = total_query_cost - sum(
-            (
-                module.get_expert_query_cost()
-                for module in self.module_graph.topo_order
-                if module.get_name() in self.queried_modules
+                expert_query_module_names=expert_query_module_names,
+                expert_values_cache=self.expert_values_cache,
             )
         )
 
@@ -125,13 +105,40 @@ class ModularPolicy:
             assert (
                 total_query_cost > 0
             ), "Raw total query cost should be positive if we query."
-            # Add the queried module to the set of queried modules.
-            assert expert_query_module_name is not None  # type narrowing for mypy
-            self.queried_modules.add(expert_query_module_name)
+            assert (
+                expert_query_module_name is not None
+            ), "Expert query module name should not be None if we query."
+            # Post querying logic (querying state and cache updates)
+            # - identify modules that are downstream of the queried module
+            downstream_modules = self.module_graph.get_downstream_modules(
+                expert_query_module_name
+            )
+            # - identify the intersection between the downstream set
+            # and the strategy's current queried_modules set.
+            downstream_modules_to_remove = downstream_modules.intersection(
+                self.query_strategy.queried_modules
+            )
+            # - add the queried module to the strategy's queried_modules set
+            #  [triggers internal strategy changes]
+            self.query_strategy.add_queried_module(expert_query_module_name)
+            # - remove any downstream modules from the strategy's queried_modules set
+            #  [triggers internal strategy changes]
+            self.query_strategy.remove_queried_modules(downstream_modules_to_remove)
+
+            # Cache the expert value for the queried module.
+            expert_query_module = self.module_graph.get_module_str_to_module()[
+                expert_query_module_name
+            ]
+            self.expert_values_cache[expert_query_module_name] = computed_values[
+                expert_query_module
+            ]
+            # Reset the cache for downstream modules in the expert_values_cache.
+            for module in downstream_modules_to_remove:
+                self.expert_values_cache[module] = None
 
         return (
             action_value,
-            total_query_cost_adjusted,
+            total_query_cost,
             queried,
             self.module_graph.get_module_by_name(expert_query_module_name),
             computed_confidences,

@@ -91,7 +91,8 @@ def run_experiment(
             assert isinstance(module_graph.root, StateModule)
             module_graph.root.set_state(state)
             computed_values, _, _ = module_graph.compute_values(
-                expert_query_module_names=all_queryable_module_names
+                expert_query_module_names=all_queryable_module_names,
+                expert_values_cache={},
             )
             ground_truth_output = computed_values[module_graph.leaf]
 

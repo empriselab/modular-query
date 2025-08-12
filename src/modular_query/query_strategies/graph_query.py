@@ -43,13 +43,6 @@ class GraphQueryStrategy(QueryStrategy):
     ) -> None:
         super().__init__(correct_answer_cost, incorrect_answer_cost)
         self.workload_eps = workload_eps
-        # State variable: Set of modules that we have queried for.
-        # We add to this set when we query a module.
-        self.queried_modules: dict[str, bool] = {}
-
-    def reset(self) -> None:
-        """Reset the state variable."""
-        self.queried_modules = {}
 
     def create_query_graph(
         self,
@@ -224,8 +217,6 @@ class GraphQueryStrategy(QueryStrategy):
         # (just choose the first one in the sequence)
         for module, is_query in path.items():
             if is_query:
-                # Update the state variable
-                self.queried_modules[module] = True
                 return module, {}
         # If no module is found, return None
         return None, {}

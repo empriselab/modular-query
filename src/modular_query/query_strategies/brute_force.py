@@ -13,20 +13,6 @@ class BruteForceQueryStrategy(QueryStrategy):
     """A query strategy that considers all possible queries and chooses the
     best."""
 
-    def __init__(
-        self,
-        correct_answer_cost: float,
-        incorrect_answer_cost: float,
-    ) -> None:
-        super().__init__(correct_answer_cost, incorrect_answer_cost)
-        # State variable: Set of modules that we have queried for.
-        # We add to this set when we query a module.
-        self.queried_modules: set[str] = set()
-
-    def reset(self) -> None:
-        """Reset the state variable."""
-        self.queried_modules = set()
-
     def get_expert_query_module(
         self,
         module_graph: ModuleGraph,
@@ -52,7 +38,4 @@ class BruteForceQueryStrategy(QueryStrategy):
             if query_cost < best_query_cost:
                 best_query_cost = query_cost
                 best_query_module = query_module
-        # If best_query_module is not none, add it to the set of queried modules.
-        if best_query_module is not None:
-            self.queried_modules.add(best_query_module)
         return best_query_module, {}

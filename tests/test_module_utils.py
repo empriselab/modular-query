@@ -65,7 +65,7 @@ def test_generate_random_polynomial_module_graph():
     all_queryable_module_names.remove("state")
     module_graph.root.set_state(state)
     _, _, _ = module_graph.compute_values(
-        expert_query_module_names=all_queryable_module_names
+        expert_query_module_names=all_queryable_module_names, expert_values_cache={}
     )
 
 
@@ -97,7 +97,9 @@ def test_generate_random_and_gate_module_graph():
     all_queryable_module_names = {m.get_name() for m in module_graph.get_modules()}
     all_queryable_module_names.remove("state")
     module_graph.root.set_state(state)
-    computed_values, _, _ = module_graph.compute_values(expert_query_module_names=set())
+    computed_values, _, _ = module_graph.compute_values(
+        expert_query_module_names=set(), expert_values_cache={}
+    )
 
     # Verify that the final value is correct for the AND gates (i.e.
     # FALSE, given the state is 0).
@@ -110,7 +112,9 @@ def test_generate_random_and_gate_module_graph():
     # leaf module value should still be 0.
     state = 1  # True
     module_graph.root.set_state(state)
-    computed_values, _, _ = module_graph.compute_values(expert_query_module_names=set())
+    computed_values, _, _ = module_graph.compute_values(
+        expert_query_module_names=set(), expert_values_cache={}
+    )
     assert computed_values[leaf_module] == 0, (
         "Expected leaf module value to be 0 (even with true initial state), "
         f"got {computed_values[leaf_module]}"
