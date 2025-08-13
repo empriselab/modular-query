@@ -7,6 +7,7 @@ import argparse
 import os
 import pickle as pkl
 import time
+from typing import Any
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -124,7 +125,6 @@ def run_experiment(
     query_cost: float = 0.1,  # for uniform query-cost settings.
     seed: int = 0,
     workload_eps: float = 0.1,
-    time_horizon: int = 5,
     incorrect_module_count: np.ndarray | None = None,
     variant: str = "balanced",
 ) -> dict[str, dict[str, dict[int, list[float]]]]:
@@ -133,9 +133,12 @@ def run_experiment(
     Querying costs: not used for the polynomial module graph,
     but used for the logic gate module graph.
 
-    incorrect_module_count: array of number of failures,
-    where each value is the number of trials with that many failures.
+    incorrect_module_count: array where each value
+    is the number of trials with that many incorrect modules.
     sum(incorrect_module_count) must = num_trials.
+
+    Time horizon is now set based on the graph size
+    (in particular, T = 2 * num_modules)
     """
     assert query_cost > 0, "Query cost for run_experiment should be positive."
 
@@ -224,6 +227,9 @@ def run_experiment(
 
         # Reset num incorrect modules for each graph size.
         num_incorrect_modules = 0
+
+        # Set time horizon based on graph size.
+        time_horizon = 2 * size
 
         for trial_idx in range(num_trials):
             # If we exceeded the current cumulative incorrect module count,
@@ -565,6 +571,7 @@ def run_experiment(
 def plot_results(
     results: dict[str, dict[str, dict[int, list[float]]]],
     graph_sizes: list[int],
+    metrics_to_plot: list[str] | None = None,
     plot_name: str = "strategy_comparison.png",
 ) -> None:
     """Create plots showing the performance of different querying strategies.
@@ -577,50 +584,55 @@ def plot_results(
         results: dictionary with results from run_experiment
         graph_sizes: list of graph sizes that were tested
     """
-    # Set up figure with six subplots
-    num_rows = 4
+    # Set up metrics to plot.
+    if metrics_to_plot is None:
+        metrics = [
+            "query_cost",
+            "task_cost",
+            "total_cost",
+            "proxy_obj_1",
+            "proxy_obj_2",
+            "execution_time",
+            "mean_queries",
+            "total_queries",
+            "total_correct",
+            "total_timesteps",
+            "total_executions",
+        ]
+    else:
+        metrics = metrics_to_plot
+
+    # Set up figure
     num_cols = 3
+    num_rows = (len(metrics) + num_cols - 1) // num_cols
     fig, axes = plt.subplots(num_rows, num_cols, figsize=(24, 12), sharex=True)
 
-    metrics = [
-        "query_cost",
-        "task_cost",
-        "total_cost",
-        "proxy_obj_1",
-        "proxy_obj_2",
-        "execution_time",
-        "mean_queries",
-        "total_queries",
-        "total_correct",
-        "total_timesteps",
-        "total_executions",
-    ]
-    titles = [
-        "Query Cost",
-        "Task Cost",
-        "Total Cost",
-        "Product-of-Confidences Total Cost",
-        "Sum-of-Uncertainties Total Cost",
-        "Execution Time (s)",
-        "Mean Queries per Time Step",
-        "Total Queries",
-        "Total Correct",
-        "Total Timesteps",
-        "Total Executions",
-    ]
-    ylabels = [
-        "Cost",
-        "Cost",
-        "Cost",
-        "Cost",
-        "Cost",
-        "Time (s)",
-        "Mean Queries",
-        "Total Queries",
-        "Total Correct",
-        "Total Timesteps",
-        "Total Executions",
-    ]
+    titles = {
+        "query_cost": "Query Cost",
+        "task_cost": "Final Task Cost",
+        "total_cost": "Total Cost (Task + Query)",
+        "proxy_obj_1": "Product-of-Confidences Total Cost (Task + Query)",
+        "proxy_obj_2": "Sum-of-Uncertainties Total Cost (Task + Query)",
+        "execution_time": "Query Algorithm Runtime (s)",
+        "mean_queries": "Mean Queries per Time Step",
+        "total_queries": "Total Queries",
+        "total_correct": "Total Successful Recoveries",
+        "total_timesteps": "Total Timesteps",
+        "total_executions": "Total Executions",
+    }
+    ylabels = {
+        "query_cost": "Cost",
+        "task_cost": "Cost",
+        "total_cost": "Cost",
+        "proxy_obj_1": "Cost",
+        "proxy_obj_2": "Cost",
+        "execution_time": "Runtime (s)",
+        "mean_queries": "Mean Queries",
+        "total_queries": "Total Queries",
+        "total_correct": "Total Successful Recoveries",
+        "total_timesteps": "Total Timesteps",
+        "total_executions": "Total Executions",
+    }
 
     # Define distinct line styles, markers, and colors for each strategy
     styles = {
@@ -665,7 +677,7 @@ def plot_results(
     # Plot each metric
     lines = []
     labels = []
-    for i, (metric, title) in enumerate(zip(metrics, titles)):
+    for i, metric in enumerate(metrics):
         ax = axes[i // num_cols][i % num_cols]
 
         for strategy_name in results:
@@ -709,9 +721,9 @@ def plot_results(
                 lines.append(line[0])
                 labels.append(strategy_name)
 
-        ax.set_title(title)
+        ax.set_title(titles[metric])
         ax.set_xlabel("Number of Graph Nodes")
-        ax.set_ylabel(ylabels[i])
+        ax.set_ylabel(ylabels[metric])
         ax.grid(True, linestyle="--", alpha=0.7)
 
     # Add shared legend to the figure
@@ -737,64 +749,69 @@ def plot_results(
     plt.close()
 
 
-def exp_vary_cquery(variant: str) -> None:
-    """Run the experiment with varying query cost."""
-    graph_sizes = [3, 5, 10, 15, 18, 25, 50, 75, 100]
-    time_horizon = 5
+def exp_vary_cquery(variant: str, config: dict[str, Any]) -> None:
+    """Run the experiment with varying query cost, where by default all trials
+    have 1 'incorrect' module.
 
-    # 6/12: vary c_query now, but keep workload_eps=1.0
-    workload_eps = 1.0
-    c_query_list = [0.1]
-    num_trials = 100
+    Required config keys: graph_sizes, num_trials, workload_eps, c_query_list
+    """
 
-    for c_query in c_query_list:
+    for c_query in config["c_query_list"]:
         print_and_log(f"Running experiments with c_query = {c_query:.2f}")
         results = run_experiment(
-            graph_sizes=graph_sizes,
-            num_trials=num_trials,
+            graph_sizes=config["graph_sizes"],
+            num_trials=config["num_trials"],
             query_cost=c_query,
             correct_answer_cost=0.0,
             incorrect_answer_cost=1.0,
-            workload_eps=workload_eps,
-            time_horizon=time_horizon,
-            incorrect_module_count=np.array([0, num_trials]),
+            workload_eps=config["workload_eps"],
+            incorrect_module_count=np.array([0, config["num_trials"]]),
             variant=variant,
         )
 
         # Plot the results
+        metrics_to_plot = [
+            "query_cost",
+            "task_cost",
+            "total_cost",
+            "proxy_obj_1",
+            "execution_time",
+            "total_correct",
+            "total_executions",
+        ]
         plot_results(
             results,
-            graph_sizes,
+            config["graph_sizes"],
+            metrics_to_plot=metrics_to_plot,
             plot_name=f"strategy_comparison_c_query_{c_query:.2f}.png",
         )
 
     print("Experiment with varying query cost complete!")
 
 
-def exp_vary_num_failures(variant: str) -> None:
-    """Run the experiment with varying number of failures; also saves results
-    to a pickle file and plots the results."""
-    graph_sizes = [10, 15, 18, 25, 50, 75, 100]
-    num_failures_list = [0, 1, 2, 3]
-    num_trials = 100
-    time_horizon = 10
+def exp_vary_num_failures(variant: str, config: dict[str, Any]) -> None:
+    """Run the experiment with varying number of incorrect modules; also saves
+    results to a pickle file and plots the results.
 
-    for num_failures in num_failures_list:
+    Required config keys: graph_sizes, num_trials, c_query, num_failures_list
+    """
+    for num_failures in config["num_failures_list"]:
         # Convert num_failures to a one-hot vector.
         incorrect_module_count = np.zeros(num_failures + 1)
-        incorrect_module_count[-1] = num_trials
+        incorrect_module_count[-1] = config["num_trials"]
         # Don't include graph sizes that are too small for the number of failures.
-        graph_sizes = [size for size in graph_sizes if size > num_failures]
+        graph_sizes_to_use = [
+            size for size in config["graph_sizes"] if size > num_failures
+        ]
         print_and_log(f"Running experiments with num_failures = {num_failures}")
         results = run_experiment(
-            graph_sizes=graph_sizes,
-            num_trials=num_trials,
+            graph_sizes=graph_sizes_to_use,
+            num_trials=config["num_trials"],
             correct_answer_cost=0.0,
             incorrect_answer_cost=1.0,
-            query_cost=0.08,
+            query_cost=config["c_query"],
             incorrect_module_count=incorrect_module_count,
             workload_eps=1.0,
-            time_horizon=time_horizon,
             variant=variant,
         )
 
@@ -807,39 +824,56 @@ def exp_vary_num_failures(variant: str) -> None:
             pkl.dump(results, f)
 
         # Plot the results
+        metrics_to_plot = [
+            "query_cost",
+            "task_cost",
+            "total_cost",
+            "proxy_obj_1",
+            "execution_time",
+            "total_correct",
+            "total_executions",
+        ]
         plot_results(
             results,
-            graph_sizes,
+            graph_sizes_to_use,
+            metrics_to_plot=metrics_to_plot,
             plot_name=f"strategy_comparison_num_failures_{variant}_{num_failures}.png",
         )
 
 
-def exp_mixed_failure_population(variant: str) -> None:
-    """Run the experiment with a mixed failure population."""
-    graph_sizes = [3, 5, 10, 15, 18, 25, 50, 75, 100]
+def exp_mixed_failure_population(variant: str, config: dict[str, Any]) -> None:
+    """Run the experiment with a mixed failure population.
 
-    num_trials = 100
-
-    # 0-failure, 1-failure, and mixed failure population.
-    failure_populations = [np.array([100, 0]), np.array([0, 100]), np.array([50, 50])]
-    for failure_population in failure_populations:
+    Required config keys: graph_sizes, num_trials, c_query, failure_populations
+    """
+    for failure_population in config["failure_populations"]:
         print_and_log(
             f"Running experiments with failure population {failure_population}"
         )
         results = run_experiment(
-            graph_sizes=graph_sizes,
-            num_trials=num_trials,
+            graph_sizes=config["graph_sizes"],
+            num_trials=config["num_trials"],
             correct_answer_cost=0.0,
             incorrect_answer_cost=1.0,
-            query_cost=0.08,
+            query_cost=config["c_query"],
             incorrect_module_count=failure_population,
             variant=variant,
         )
 
         # Plot the results
+        metrics_to_plot = [
+            "query_cost",
+            "task_cost",
+            "total_cost",
+            "proxy_obj_1",
+            "execution_time",
+            "total_correct",
+            "total_executions",
+        ]
         plot_results(
             results,
-            graph_sizes,
+            config["graph_sizes"],
+            metrics_to_plot=metrics_to_plot,
             plot_name=f"strategy_comparison_mixed_failure_population"
             f"_{variant}_{failure_population}.png",
         )
@@ -848,19 +882,38 @@ def exp_mixed_failure_population(variant: str) -> None:
 def main(variant: str) -> None:
     """Run the experiment and generate plots."""
     # Run the experiment with varying query cost.
+    # config = {
+    #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
+    #     "time_horizon": 5,
+    #     "workload_eps": 1.0,
+    #     "c_query_list": [0.1],
+    #     "num_trials": 100,
+    # }
     # exp_vary_cquery(variant)
 
     # Run the experiment with varying number of failures.
+    config = {
+        "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
+        "num_failures_list": [0, 1, 2, 3],
+        "num_trials": 100,
+        "c_query": 0.08,
+    }
     # exp_vary_num_failures(variant)
 
     # Run for all variants.
     if variant == "all-variants":
         for variant_to_use in ["balanced", "greedy", "conservative", "balanced-2"]:
-            exp_vary_num_failures(variant_to_use)
+            exp_vary_num_failures(variant_to_use, config)
     else:
-        exp_vary_num_failures(variant)
+        exp_vary_num_failures(variant, config)
 
     # Run the experiment with a mixed failure population.
+    # config = {
+    #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
+    #     "num_trials": 100,
+    #     "failure_populations":
+    #     [np.array([100, 0]), np.array([0, 100]), np.array([50, 50])],
+    # }
     # exp_mixed_failure_population(variant)
 
     print("Experiment complete!")

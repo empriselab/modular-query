@@ -92,11 +92,17 @@ def generate_random_and_gate_module_graph(
     query_cost: float,
     rng: np.random.Generator,
     num_incorrect_modules: int = 1,
+    correct_module_confidence: float = 1.0,
     incorrect_module_confidence: float = 0.1,
 ) -> ModuleGraph:
     """Generate a random module graph where all modules are AND gates.
 
     Assumes uniform query cost for all modules.
+
+    Another feature is that the incorrect modules can actually be
+    correct with probability incorrect_module_confidence, and the
+    correct modules will be correct with probability
+    correct_module_confidence.
     """
     assert (
         query_cost > 0
@@ -123,6 +129,9 @@ def generate_random_and_gate_module_graph(
         np.arange(1, num_modules), size=num_incorrect_modules, replace=False
     )
 
+    # Spawn an independent rng for seeding the modules with their actual states.
+    rng_for_states = rng.spawn(1)[0]
+
     # Create the modules.
     modules: list[Module] = []
     for num in range(num_modules):
@@ -141,9 +150,20 @@ def generate_random_and_gate_module_graph(
             module_name = f"module_{num}"
 
         if num in incorrect_module_nums:
-            fn = partial(incorrect_fn, incorrect_module_confidence)
+            # Module is correct with probability incorrect_module_confidence.
+            # Confidence is always 'incorrect_module_confidence' for these modules.
+            if rng_for_states.uniform() < incorrect_module_confidence:
+                fn = partial(correct_fn, incorrect_module_confidence)
+            else:
+                fn = partial(incorrect_fn, incorrect_module_confidence)
         else:
-            fn = partial(correct_fn, 1.0)
+            # Confidence is always 'correct_module_confidence' for these modules.
+            # Module is correct with probability correct_module_confidence.
+            if rng_for_states.uniform() < correct_module_confidence:
+                fn = partial(correct_fn, correct_module_confidence)
+            else:
+                fn = partial(incorrect_fn, correct_module_confidence)
+
         module = create_module(
             name=module_name,
             fn=fn,
