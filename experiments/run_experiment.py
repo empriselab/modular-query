@@ -4,7 +4,6 @@ strategies."""
 
 import abc
 import argparse
-import os
 import pickle as pkl
 import time
 from typing import Any
@@ -13,6 +12,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
+from experiments.plot_results import plot_results
 from modular_query.modular_policy import ModularPolicy
 from modular_query.module_utils import generate_random_and_gate_module_graph
 from modular_query.modules import Module, StateModule
@@ -202,20 +202,28 @@ def run_experiment(
     # strategy -> metric -> graph_size -> list of values
     # These store means over time.
     results: dict[str, dict[str, dict[int, list[float]]]] = {}
+    metric_names = [
+        "query_cost",
+        "query_cost_total",
+        "task_cost",
+        "total_cost",
+        "proxy_obj_1",
+        "proxy_obj_2",
+        "execution_time",
+        "execution_time_total",
+        "mean_queries",
+        "total_queries",
+        "total_correct",
+        "total_timesteps",
+        "total_executions",
+        "total_failed_attempts",
+        "total_task_cost",
+        "total_get_action_calls",
+    ]
     for strategy_name in strategies:
         results[strategy_name] = {
-            "query_cost": {size: [] for size in graph_sizes},
-            "task_cost": {size: [] for size in graph_sizes},
-            "total_cost": {size: [] for size in graph_sizes},
-            "proxy_obj_1": {size: [] for size in graph_sizes},
-            "proxy_obj_2": {size: [] for size in graph_sizes},
-            "execution_time": {size: [] for size in graph_sizes},
-            "mean_queries": {size: [] for size in graph_sizes},
-            "total_queries": {size: [] for size in graph_sizes},
-            "total_correct": {size: [] for size in graph_sizes},
-            "total_timesteps": {size: [] for size in graph_sizes},
-            "total_executions": {size: [] for size in graph_sizes},
-            "total_task_cost": {size: [] for size in graph_sizes},
+            metric_name: {size: [] for size in graph_sizes}
+            for metric_name in metric_names
         }
 
     # Create cumulative distribution of incorrect module counts.
@@ -280,6 +288,7 @@ def run_experiment(
                 acc_proxy_obj_1 = 0.0  # just the task part of the proxy objective.
                 acc_proxy_obj_2 = 0.0  # just the task part of the proxy objective.
                 acc_execution_time = 0.0
+                acc_get_action_calls = 0
                 acc_queried = 0
                 timesteps_elapsed = 0
                 num_executions = 0
@@ -294,9 +303,15 @@ def run_experiment(
                     acc_t_solve_problem = 0.0
 
                 # If greedy, do an initial forward pass + execution.
-                if variant == "greedy":
+                if variant == "greedy":  # Measure execution time solely for get_action.
+                    start_time = time.perf_counter()
+
                     # Forward pass only.
                     action, _, computed_confidences = policy.forward_pass_only(state)
+
+                    computation_time = time.perf_counter() - start_time
+                    acc_execution_time += computation_time
+
                     # Execute action.
                     correct = action == ground_truth_output
                     timesteps_elapsed += 1
@@ -311,7 +326,6 @@ def run_experiment(
                     acc_proxy_obj_2 += sum_of_uncertainties(computed_confidences)
 
                 while timesteps_elapsed < time_horizon and not correct:
-                    # Measure execution time.
                     start_time = time.perf_counter()
 
                     # Initialize number of queries in this execution loop.
@@ -327,6 +341,9 @@ def run_experiment(
                         post_query_confidences,
                         timing_info,
                     ) = policy.get_action(state=state)
+                    computation_time = time.perf_counter() - start_time
+                    acc_get_action_calls += 1
+                    acc_execution_time += computation_time
                     if queried:
                         assert (
                             current_query_cost > 0
@@ -346,6 +363,7 @@ def run_experiment(
 
                     # Conservative runs this loop multiple times
                     # (until we decide not to query.)
+                    start_time = time.perf_counter()
                     if variant in ("conservative", "balanced-2"):
                         while (
                             queried
@@ -367,6 +385,8 @@ def run_experiment(
                                 post_query_confidences,
                                 timing_info,
                             ) = policy.get_action(state=state)
+                            acc_get_action_calls += 1
+                            acc_execution_time += computation_time
                             if queried:
                                 assert (
                                     current_query_cost > 0
@@ -402,8 +422,9 @@ def run_experiment(
                                 break
                             num_queries_in_loop += 1 if queried else 0
 
-                    # Record execution time.
-                    execution_time = time.perf_counter() - start_time
+                    # Measure execution time for the entire loop.
+                    computation_time = time.perf_counter() - start_time
+                    acc_execution_time += computation_time
 
                     # If we exceed time_horizon, break.
                     if timesteps_elapsed >= time_horizon:
@@ -420,7 +441,6 @@ def run_experiment(
 
                     # Add to accumulators.
                     acc_task_cost += task_cost
-                    acc_execution_time += execution_time
 
                     # Strategy-specific temporal accumulation.
                     if strategy_name == "Binary Tree Query":
@@ -455,6 +475,7 @@ def run_experiment(
                     mean_t_solve_problem = acc_t_solve_problem / timesteps_elapsed
                 # Store metrics.
                 results[strategy_name]["query_cost"][size].append(mean_query_cost)
+                results[strategy_name]["query_cost_total"][size].append(acc_query_cost)
                 results[strategy_name]["task_cost"][size].append(mean_task_cost)
                 results[strategy_name]["total_cost"][size].append(
                     mean_task_cost + mean_query_cost
@@ -468,6 +489,9 @@ def run_experiment(
                 results[strategy_name]["execution_time"][size].append(
                     mean_execution_time
                 )
+                results[strategy_name]["execution_time_total"][size].append(
+                    acc_execution_time
+                )
                 results[strategy_name]["mean_queries"][size].append(mean_queries)
                 results[strategy_name]["total_queries"][size].append(acc_queried)
                 results[strategy_name]["total_correct"][size].append(correct)
@@ -476,7 +500,12 @@ def run_experiment(
                 )
                 results[strategy_name]["total_executions"][size].append(num_executions)
                 results[strategy_name]["total_task_cost"][size].append(acc_task_cost)
-
+                results[strategy_name]["total_failed_attempts"][size].append(
+                    num_executions - correct
+                )
+                results[strategy_name]["total_get_action_calls"][size].append(
+                    acc_get_action_calls
+                )
                 # Store timing info for binary tree query.
                 if strategy_name == "Binary Tree Query":
                     binary_tree_query_timing_info["t_create_graph"][size].append(
@@ -494,6 +523,12 @@ def run_experiment(
                     mip_query_timing_info["t_solve_problem"][size].append(
                         mean_t_solve_problem
                     )
+
+    # Print and log the total number of get_action calls.
+    print_and_log(
+        f"Total number of get_action calls: Brute Force, graph size 100:"
+        f"{results['Brute Force']['total_get_action_calls'][100]}"
+    )
 
     # Print and log the timing info for binary tree query.
     print_and_log("Timing info for binary tree query:")
@@ -566,187 +601,6 @@ def run_experiment(
     plt.close()
 
     return results
-
-
-def plot_results(
-    results: dict[str, dict[str, dict[int, list[float]]]],
-    graph_sizes: list[int],
-    metrics_to_plot: list[str] | None = None,
-    plot_name: str = "strategy_comparison.png",
-) -> None:
-    """Create plots showing the performance of different querying strategies.
-
-    Includes two proxy objectives:
-    - Proxy objective 1 (uses 1 - product of confidences)
-    - Proxy objective 2 (uses sum of uncertainties)
-
-    Args:
-        results: dictionary with results from run_experiment
-        graph_sizes: list of graph sizes that were tested
-    """
-    # Set up metrics to plot.
-    if metrics_to_plot is None:
-        metrics = [
-            "query_cost",
-            "task_cost",
-            "total_cost",
-            "proxy_obj_1",
-            "proxy_obj_2",
-            "execution_time",
-            "mean_queries",
-            "total_queries",
-            "total_correct",
-            "total_timesteps",
-            "total_executions",
-        ]
-    else:
-        metrics = metrics_to_plot
-
-    # Set up figure
-    num_cols = 3
-    num_rows = (len(metrics) + num_cols - 1) // num_cols
-    fig, axes = plt.subplots(num_rows, num_cols, figsize=(24, 12), sharex=True)
-
-    titles = {
-        "query_cost": "Query Cost",
-        "task_cost": "Final Task Cost",
-        "total_cost": "Total Cost (Task + Query)",
-        "proxy_obj_1": "Product-of-Confidences Total Cost (Task + Query)",
-        "proxy_obj_2": "Sum-of-Uncertainties Total Cost (Task + Query)",
-        "execution_time": "Query Algorithm Runtime (s)",
-        "mean_queries": "Mean Queries per Time Step",
-        "total_queries": "Total Queries",
-        "total_correct": "Total Successful Recoveries",
-        "total_timesteps": "Total Timesteps",
-        "total_executions": "Total Executions",
-    }
-    ylabels = {
-        "query_cost": "Cost",
-        "task_cost": "Cost",
-        "total_cost": "Cost",
-        "proxy_obj_1": "Cost",
-        "proxy_obj_2": "Cost",
-        "execution_time": "Runtime (s)",
-        "mean_queries": "Mean Queries",
-        "total_queries": "Total Queries",
-        "total_correct": "Total Successful Recoveries",
-        "total_timesteps": "Total Timesteps",
-        "total_executions": "Total Executions",
-    }
-
-    # Define distinct line styles, markers, and colors for each strategy
-    styles = {
-        "Always Query": {
-            "color": "blue",
-            "linestyle": "-",
-            "marker": "o",
-            "linewidth": 2,
-        },
-        "Graph Query": {
-            "color": "purple",
-            "linestyle": "-",
-            "marker": "x",
-            "linewidth": 2,
-        },
-        "Never Query": {
-            "color": "red",
-            "linestyle": "--",
-            "marker": "s",
-            "linewidth": 2,
-        },
-        "Brute Force": {
-            "color": "green",
-            "linestyle": ":",
-            "marker": "^",
-            "linewidth": 2,
-        },
-        "MIP": {
-            "color": "orange",
-            "linestyle": "-.",
-            "marker": "D",
-            "linewidth": 2,
-        },
-        "Binary Tree Query": {
-            "color": "cyan",
-            "linestyle": "-",
-            "marker": "v",
-            "linewidth": 2,
-        },
-    }
-
-    # Plot each metric
-    lines = []
-    labels = []
-    for i, metric in enumerate(metrics):
-        ax = axes[i // num_cols][i % num_cols]
-
-        for strategy_name in results:
-            # Calculate means and standard deviations for each graph size
-            means: list[np.floating | float] = []
-            stds: list[np.floating | float] = []
-            for size in graph_sizes:
-                try:
-                    mean = np.mean(results[strategy_name][metric][size])
-                    std = np.std(results[strategy_name][metric][size])
-                except KeyError:
-                    continue
-                means.append(mean)
-                stds.append(std)
-
-            # Plot the data with strategy-specific styling
-            style = styles[strategy_name]
-            line = ax.plot(
-                graph_sizes[: len(means)],
-                means,
-                color=style["color"],
-                linestyle=style["linestyle"],
-                marker=style["marker"],
-                linewidth=style["linewidth"],
-                markersize=8,
-                label=strategy_name,
-            )
-
-            # Plot the standard deviation band
-            ax.fill_between(
-                graph_sizes[: len(means)],
-                np.array(means) - np.array(stds),
-                np.array(means) + np.array(stds),
-                alpha=0.3,
-                label="±1 std dev",
-                color=style["color"],
-            )
-
-            # Only store lines and labels from the first subplot
-            if i == 0:
-                lines.append(line[0])
-                labels.append(strategy_name)
-
-        ax.set_title(titles[metric])
-        ax.set_xlabel("Number of Graph Nodes")
-        ax.set_ylabel(ylabels[metric])
-        ax.grid(True, linestyle="--", alpha=0.7)
-
-    # Add shared legend to the figure
-    fig.legend(
-        lines,
-        labels,
-        loc="upper center",
-        bbox_to_anchor=(0.5, 0.05),
-        ncol=len(results),
-        frameon=True,
-    )
-
-    plt.tight_layout()
-
-    # Add padding at the bottom for the legend
-    plt.subplots_adjust(bottom=0.15)
-
-    # Create directory if it doesn't exist
-    os.makedirs("experiments/results", exist_ok=True)
-
-    # Save the figure
-    plt.savefig(f"experiments/results/{plot_name}", dpi=300, bbox_inches="tight")
-    plt.close()
 
 
 def exp_vary_cquery(variant: str, config: dict[str, Any]) -> None:
@@ -891,16 +745,13 @@ def main(variant: str) -> None:
     # }
     # exp_vary_cquery(variant)
 
-    # Run the experiment with varying number of failures.
+    # Run the experiment with 1 failure.
     config = {
         "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
-        "num_failures_list": [0, 1, 2, 3],
         "num_trials": 100,
         "c_query": 0.08,
+        "num_failures_list": [1],
     }
-    # exp_vary_num_failures(variant)
-
-    # Run for all variants.
     if variant == "all-variants":
         for variant_to_use in ["balanced", "greedy", "conservative", "balanced-2"]:
             exp_vary_num_failures(variant_to_use, config)
