@@ -66,6 +66,8 @@ def plot_results(
     graph_sizes: list[int],
     metrics_to_plot: list[str] | None = None,
     plot_name: str = "strategy_comparison.png",
+    save_dir: str = "experiments/results",
+    title: str = "",
 ) -> None:
     """Create plots showing the performance of different querying strategies.
 
@@ -216,16 +218,20 @@ def plot_results(
         frameon=True,
     )
 
+    # Add overall title.
+    if title:
+        fig.suptitle(title)
+
     plt.tight_layout()
 
     # Add padding at the bottom for the legend
     plt.subplots_adjust(bottom=0.15)
 
     # Create directory if it doesn't exist
-    os.makedirs("experiments/results", exist_ok=True)
+    os.makedirs(save_dir, exist_ok=True)
 
     # Save the figure
-    plt.savefig(f"experiments/results/{plot_name}", dpi=300, bbox_inches="tight")
+    plt.savefig(Path(save_dir) / plot_name, dpi=300, bbox_inches="tight")
     plt.close()
 
 

@@ -3,8 +3,8 @@
 import numpy as np
 
 from modular_query.module_utils import (
-    generate_random_and_gate_module_graph,
     generate_random_logic_gate_module_graph,
+    generate_random_module_graph,
     generate_random_polynomial_module_graph,
 )
 
@@ -73,13 +73,14 @@ def test_generate_random_and_gate_module_graph():
     """Tests for generate_random_and_gate_module_graph()."""
 
     num_modules = 8
-    module_graph = generate_random_and_gate_module_graph(
+    module_graph = generate_random_module_graph(
         num_modules=num_modules,
         edge_probability=0.5,
         query_cost=1.0,  # Uniform query cost for all modules of 1.0
         rng=np.random.default_rng(seed=123),
         num_incorrect_modules=1,
         incorrect_module_confidence=0.1,
+        redundancy="AND",
     )
 
     # Ensure the module graph has the expected number of modules.

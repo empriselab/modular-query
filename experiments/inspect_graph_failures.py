@@ -7,9 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from modular_query.modular_policy import ModularPolicy
-from modular_query.module_utils import (
-    generate_random_and_gate_module_graph,
-)
+from modular_query.module_utils import generate_random_module_graph
 from modular_query.modules import StateModule
 from modular_query.query_strategies.never_query import NeverQueryStrategy
 from modular_query.utils import print_and_log
@@ -69,13 +67,14 @@ def run_experiment(
             # )
 
             # Switch to AND gate graphs.
-            module_graph = generate_random_and_gate_module_graph(
+            module_graph = generate_random_module_graph(
                 num_modules=size,
                 edge_probability=edge_probability,
                 rng=rng.spawn(1)[0],  # create a new RNG to avoid affecting main one
                 num_incorrect_modules=1,
                 query_cost=0.1,
                 incorrect_module_confidence=0.1,
+                redundancy="AND",
             )
 
             # We always want the state input to be 1 (True)

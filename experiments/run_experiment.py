@@ -4,18 +4,23 @@ strategies."""
 
 import abc
 import argparse
+import itertools
+import json
 import pickle as pkl
 import time
+from datetime import datetime
 from typing import Any
 
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
-from experiments.plot_results import plot_results
 from modular_query.modular_policy import ModularPolicy
-from modular_query.module_utils import generate_random_and_gate_module_graph
+from modular_query.module_utils import generate_random_module_graph
 from modular_query.modules import Module, StateModule
+
+# from plot_results import plot_results
+from modular_query.plot_utils import plot_results
 from modular_query.query_strategies.binary_tree_query import BinaryTreeQueryStrategy
 from modular_query.query_strategies.brute_force import BruteForceQueryStrategy
 from modular_query.query_strategies.graph_query import GraphQueryStrategy
@@ -122,11 +127,15 @@ def run_experiment(
     edge_probability: float = 0.3,
     correct_answer_cost: float = 0.0,
     incorrect_answer_cost: float = 1000.0,
+    correct_module_confidence: float = 1.0,
+    incorrect_module_confidence: float = 0.1,
     query_cost: float = 0.1,  # for uniform query-cost settings.
     seed: int = 0,
     workload_eps: float = 0.1,
     incorrect_module_count: np.ndarray | None = None,
     variant: str = "balanced",
+    redundancy: str = "AND",
+    disable_mip: bool = False,
 ) -> dict[str, dict[str, dict[int, list[float]]]]:
     """Run experiments with different graph sizes and querying strategies.
 
@@ -164,10 +173,12 @@ def run_experiment(
     elif variant == "balanced-2":
         loop_termination_condition = DummyTerminationCondition()
         pre_make_query_termination_condition = Balanced2TerminationCondition()
-    else:
+    elif variant in ("greedy", "balanced"):
         # Default case - these won't be used for other variants
         loop_termination_condition = DummyTerminationCondition()
         pre_make_query_termination_condition = DummyTerminationCondition()
+    else:
+        raise ValueError(f"Invalid variant: {variant}")
 
     # Initialize strategies.
     strategies = {
@@ -175,7 +186,6 @@ def run_experiment(
         "Brute Force": BruteForceQueryStrategy(
             correct_answer_cost, incorrect_answer_cost
         ),
-        "MIP": MIPQueryStrategy(correct_answer_cost, incorrect_answer_cost),
         "Graph Query": GraphQueryStrategy(
             correct_answer_cost,
             incorrect_answer_cost,
@@ -186,16 +196,21 @@ def run_experiment(
             incorrect_answer_cost,
         ),
     }
+    if not disable_mip:
+        strategies["MIP"] = MIPQueryStrategy(correct_answer_cost, incorrect_answer_cost)
+
+        # Store timing info for MIP query.
+        mip_query_timing_info: dict[str, dict[int, list[float]]] = {
+            "t_construct_problem": {size: [] for size in graph_sizes},
+            "t_solve_problem": {size: [] for size in graph_sizes},
+        }
+    else:
+        mip_query_timing_info = {}
 
     # Store timing info for binary tree query.
     binary_tree_query_timing_info: dict[str, dict[int, list[float]]] = {
         "t_create_graph": {size: [] for size in graph_sizes},
         "t_run_a_star": {size: [] for size in graph_sizes},
-    }
-    # Store timing info for MIP query.
-    mip_query_timing_info: dict[str, dict[int, list[float]]] = {
-        "t_construct_problem": {size: [] for size in graph_sizes},
-        "t_solve_problem": {size: [] for size in graph_sizes},
     }
 
     # Initialize results structure:
@@ -246,12 +261,15 @@ def run_experiment(
                 num_incorrect_modules += 1
 
             # Generate a random AND-gate graph.
-            module_graph = generate_random_and_gate_module_graph(
+            module_graph = generate_random_module_graph(
                 num_modules=size,
                 edge_probability=edge_probability,
                 query_cost=query_cost,
                 rng=rng.spawn(1)[0],  # create a new RNG to avoid affecting main one
                 num_incorrect_modules=num_incorrect_modules,
+                correct_module_confidence=correct_module_confidence,
+                incorrect_module_confidence=incorrect_module_confidence,
+                redundancy=redundancy,
             )
 
             # Always set state to True for AND-gate graph.
@@ -565,40 +583,41 @@ def run_experiment(
     plt.savefig("experiments/results/binary_tree_query_timing.png")
     plt.close()
 
-    # Print, log, plot the timing info for MIP query.
-    print_and_log("Timing info for MIP query:")
-    for size in graph_sizes:
-        print_and_log(f"Size {size}:")
-        print_and_log(
-            f"  t_construct_problem:"
-            f"{np.mean(mip_query_timing_info['t_construct_problem'][size]):.6f}"
-            f"± {np.std(mip_query_timing_info['t_construct_problem'][size]):.6f}"
+    if not disable_mip:
+        # Print, log, plot the timing info for MIP query.
+        print_and_log("Timing info for MIP query:")
+        for size in graph_sizes:
+            print_and_log(f"Size {size}:")
+            print_and_log(
+                f"  t_construct_problem:"
+                f"{np.mean(mip_query_timing_info['t_construct_problem'][size]):.6f}"
+                f"± {np.std(mip_query_timing_info['t_construct_problem'][size]):.6f}"
+            )
+            print_and_log(
+                f"  t_solve_problem: "
+                f"{np.mean(mip_query_timing_info['t_solve_problem'][size]):.6f}"
+                f"± {np.std(mip_query_timing_info['t_solve_problem'][size]):.6f}"
+            )
+        # Make a quick plot of the timing info (as a function of graph size).
+        plt.plot(
+            graph_sizes,
+            [
+                np.mean(mip_query_timing_info["t_construct_problem"][size])
+                for size in graph_sizes
+            ],
+            label="t_construct_problem",
         )
-        print_and_log(
-            f"  t_solve_problem: "
-            f"{np.mean(mip_query_timing_info['t_solve_problem'][size]):.6f}"
-            f"± {np.std(mip_query_timing_info['t_solve_problem'][size]):.6f}"
+        plt.plot(
+            graph_sizes,
+            [
+                np.mean(mip_query_timing_info["t_solve_problem"][size])
+                for size in graph_sizes
+            ],
+            label="t_solve_problem",
         )
-    # Make a quick plot of the timing info (as a function of graph size).
-    plt.plot(
-        graph_sizes,
-        [
-            np.mean(mip_query_timing_info["t_construct_problem"][size])
-            for size in graph_sizes
-        ],
-        label="t_construct_problem",
-    )
-    plt.plot(
-        graph_sizes,
-        [
-            np.mean(mip_query_timing_info["t_solve_problem"][size])
-            for size in graph_sizes
-        ],
-        label="t_solve_problem",
-    )
-    plt.legend()
-    plt.savefig("experiments/results/mip_query_timing.png")
-    plt.close()
+        plt.legend()
+        plt.savefig("experiments/results/mip_query_timing.png")
+        plt.close()
 
     return results
 
@@ -733,6 +752,79 @@ def exp_mixed_failure_population(variant: str, config: dict[str, Any]) -> None:
         )
 
 
+def exp_grid_search(variant: str, config: dict[str, Any]) -> None:
+    """Run the experiment over an experimental grid of parameters.
+
+    Have to disable MIP for now because it has a confidence sensitivity issue.
+
+    Expected keys in config:
+    - graph_sizes: list of graph sizes to use
+    - num_failures_list: list of number of unconfident modules to use
+    - confidences_list: list of confidences to use
+    - redundancy_list: list of redundancies to use
+    - c_query_list: list of query costs to use
+    - num_trials: number of trials to run
+    """
+    combo_generator = itertools.product(
+        config["num_failures_list"],
+        config["confidences_list"],
+        config["redundancy_list"],
+        config["c_query_list"],
+    )
+    for combo in combo_generator:
+        (num_failures, confidence, redundancy, c_query) = combo
+        (correct_confidence, incorrect_confidence) = confidence
+        print_and_log(
+            f"Running experiment with num_failures={num_failures},"
+            f"correct_confidence={correct_confidence},"
+            f"incorrect_confidence={incorrect_confidence},"
+            f"redundancy={redundancy}, c_query={c_query}"
+        )
+        # Convert num_failures to a one-hot vector.
+        incorrect_module_count = np.zeros(num_failures + 1)
+        incorrect_module_count[-1] = config["num_trials"]
+        # Use only the graph sizes that are larger than the number of failures.
+        graph_sizes_to_use = [
+            size for size in config["graph_sizes"] if size > num_failures
+        ]
+        results = run_experiment(
+            graph_sizes=graph_sizes_to_use,
+            num_trials=config["num_trials"],
+            correct_answer_cost=0.0,
+            incorrect_answer_cost=1.0,
+            query_cost=c_query,
+            workload_eps=1.0,
+            incorrect_module_count=incorrect_module_count,
+            variant=variant,
+            redundancy=redundancy,
+            correct_module_confidence=correct_confidence,
+            incorrect_module_confidence=incorrect_confidence,
+            disable_mip=True,
+        )
+        # Save results to a pickle file.
+        # Generate a unique run ID based on current date and time.
+        run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+        with open(
+            f"experiments/results/results_{run_id}.pkl",
+            "wb",
+        ) as f:
+            pkl.dump(results, f)
+        # Save the variant and combo to a json file.
+        config_to_save = {
+            "run_id": run_id,
+            "variant": variant,
+            "num_failures": num_failures,
+            "correct_confidence": correct_confidence,
+            "incorrect_confidence": incorrect_confidence,
+            "redundancy": redundancy,
+            "c_query": c_query,
+        }
+        with open(
+            f"experiments/results/config_{run_id}.json", "w", encoding="utf-8"
+        ) as f:
+            json.dump(config_to_save, f, indent=4)
+
+
 def main(variant: str) -> None:
     """Run the experiment and generate plots."""
     # Run the experiment with varying query cost.
@@ -746,17 +838,17 @@ def main(variant: str) -> None:
     # exp_vary_cquery(variant)
 
     # Run the experiment with 1 failure.
-    config = {
-        "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
-        "num_trials": 100,
-        "c_query": 0.08,
-        "num_failures_list": [1],
-    }
-    if variant == "all-variants":
-        for variant_to_use in ["balanced", "greedy", "conservative", "balanced-2"]:
-            exp_vary_num_failures(variant_to_use, config)
-    else:
-        exp_vary_num_failures(variant, config)
+    # config = {
+    #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
+    #     "num_trials": 100,
+    #     "c_query": 0.08,
+    #     "num_failures_list": [1],
+    # }
+    # if variant == "all-variants":
+    #     for variant_to_use in ["balanced", "greedy", "conservative", "balanced-2"]:
+    #         exp_vary_num_failures(variant_to_use, config)
+    # else:
+    #     exp_vary_num_failures(variant, config)
 
     # Run the experiment with a mixed failure population.
     # config = {
@@ -767,6 +859,20 @@ def main(variant: str) -> None:
     # }
     # exp_mixed_failure_population(variant)
 
+    # Run the grid-search experiment.
+    config = {
+        "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
+        "num_trials": 100,
+        "num_failures_list": [0, 1, 2, 3],
+        "confidences_list": [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)],
+        "redundancy_list": ["AND", "OR"],
+        "c_query_list": [0.04, 0.08, 0.16, 0.32, 0.64],
+    }
+    if variant == "all-variants":
+        for variant_to_use in ["balanced", "greedy", "conservative", "balanced-2"]:
+            exp_grid_search(variant_to_use, config)
+    else:
+        exp_grid_search(variant, config)
     print("Experiment complete!")
 
 

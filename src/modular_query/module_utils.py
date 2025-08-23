@@ -86,7 +86,7 @@ def construct_graph(
 ## (1) AND gates only (not even negations)
 ## (2) Success nodes will just take logical AND over all inputs;
 ##     Failure nodes will just produce a False output.
-def generate_random_and_gate_module_graph(
+def generate_random_module_graph(
     num_modules: int,
     edge_probability: float,
     query_cost: float,
@@ -94,6 +94,7 @@ def generate_random_and_gate_module_graph(
     num_incorrect_modules: int = 1,
     correct_module_confidence: float = 1.0,
     incorrect_module_confidence: float = 0.1,
+    redundancy: str = "AND",
 ) -> ModuleGraph:
     """Generate a random module graph where all modules are AND gates.
 
@@ -106,12 +107,17 @@ def generate_random_and_gate_module_graph(
     """
     assert (
         query_cost > 0
-    ), "Input query cost to generate_random_and_gate_graph must be positive."
+    ), "Input query cost to generate_random_module_graph must be positive."
 
     # The expert function is the same for all modules.
     def expert(inputs: dict[str, Any]) -> Any:
         """Expert function for the AND gate."""
-        out = all(inputs.values())
+        if redundancy == "AND":
+            out = all(inputs.values())
+        elif redundancy == "OR":
+            out = any(inputs.values())
+        else:
+            raise ValueError(f"Invalid redundancy: {redundancy}")
         return out
 
     def correct_fn(confidence: float, inputs: dict[str, Any]) -> tuple[Any, float]:

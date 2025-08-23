@@ -7,7 +7,7 @@ import numpy as np
 
 from modular_query.modular_policy import ModularPolicy
 from modular_query.module_graph import ModuleGraph
-from modular_query.module_utils import generate_random_and_gate_module_graph
+from modular_query.module_utils import generate_random_module_graph
 from modular_query.modules import ActionModule, Module, StateModule
 from modular_query.query_strategies.binary_tree_query import BinaryTreeQueryStrategy
 from modular_query.query_strategies.brute_force import BruteForceQueryStrategy
@@ -142,12 +142,13 @@ def test_graph_query_strategy():
     # So we can understand why if there are 2 incorrect modules,
     # the graph query strategy
     # may not necessarily query for them in sequence as it should.
-    module_graph = generate_random_and_gate_module_graph(
+    module_graph = generate_random_module_graph(
         num_modules=5,
         edge_probability=0.3,
         query_cost=0.08,
         rng=np.random.default_rng(42),
         num_incorrect_modules=2,
+        redundancy="AND",
     )
 
     state = True
