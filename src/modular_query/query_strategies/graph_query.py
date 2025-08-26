@@ -48,10 +48,15 @@ class GraphQueryStrategy(QueryStrategy):
         self,
         module_graph: ModuleGraph,
         computed_confidences: dict[Module, float],
+        force_query_for_module: str | None = None,
     ) -> nx.MultiDiGraph:
         """Create a query graph for the given module graph, excluding modules
-        that have already been queried when making query edges."""
+        that have already been queried when making query edges.
 
+        If force_query_for_module is provided, then the graph will be
+        created with only a query edge for the module at the given
+        index.
+        """
         # Create failure recovery graph.
         graph: nx.MultiDiGraph = nx.MultiDiGraph()
 
@@ -74,42 +79,44 @@ class GraphQueryStrategy(QueryStrategy):
         ## Add autonomous edges.
         ## (NOTE: no self-loop currently for the last module.)
         ## Autonomous edges between consecutive levels.
-        auto_cost = 1 - computed_confidences_str[modules_list[0]]
-        graph.add_edge(
-            "s_init", f"s_{modules_list[0]},success", key="a_auto", cost=auto_cost
-        )
-        graph.add_edge(
-            "s_init", f"s_{modules_list[0]},failure", key="a_auto", cost=auto_cost
-        )
+        if force_query_for_module != modules_list[0]:
+            auto_cost = 1 - computed_confidences_str[modules_list[0]]
+            graph.add_edge(
+                "s_init", f"s_{modules_list[0]},success", key="a_auto", cost=auto_cost
+            )
+            graph.add_edge(
+                "s_init", f"s_{modules_list[0]},failure", key="a_auto", cost=auto_cost
+            )
         for module_start, module_end in pairwise(modules_list):
-            auto_cost = 1 - computed_confidences_str[module_end]
-            # Add autonomous edges to the success and failure nodes.
-            graph.add_edge(
-                f"s_{module_start},success",
-                f"s_{module_end},success",
-                key="a_auto",
-                cost=auto_cost,
-            )
-            graph.add_edge(
-                f"s_{module_start},success",
-                f"s_{module_end},failure",
-                key="a_auto",
-                cost=auto_cost,
-            )
-            graph.add_edge(
-                f"s_{module_start},failure",
-                f"s_{module_end},success",
-                key="a_auto",
-                cost=auto_cost,
-            )
-            graph.add_edge(
-                f"s_{module_start},failure",
-                f"s_{module_end},failure",
-                key="a_auto",
-                cost=auto_cost,
-            )
+            if force_query_for_module != module_end:
+                auto_cost = 1 - computed_confidences_str[module_end]
+                # Add autonomous edges to the success and failure nodes.
+                graph.add_edge(
+                    f"s_{module_start},success",
+                    f"s_{module_end},success",
+                    key="a_auto",
+                    cost=auto_cost,
+                )
+                graph.add_edge(
+                    f"s_{module_start},success",
+                    f"s_{module_end},failure",
+                    key="a_auto",
+                    cost=auto_cost,
+                )
+                graph.add_edge(
+                    f"s_{module_start},failure",
+                    f"s_{module_end},success",
+                    key="a_auto",
+                    cost=auto_cost,
+                )
+                graph.add_edge(
+                    f"s_{module_start},failure",
+                    f"s_{module_end},failure",
+                    key="a_auto",
+                    cost=auto_cost,
+                )
 
-        ## Add query edges.
+        ## Add query edges (only for modules that have not been queried yet).
         query_costs_str = {
             module.get_name(): module.get_expert_query_cost()
             for module in module_graph.get_modules()
@@ -136,24 +143,11 @@ class GraphQueryStrategy(QueryStrategy):
                     key="a_query",
                     cost=query_cost,
                 )
-        ### Query edges from last failure node to each of the success nodes.
-        num_back_edges = 0
-        for module in modules_list:
-            if module not in self.queried_modules:
-                query_cost = query_costs_str[module] * self.workload_eps
-                graph.add_edge(
-                    f"s_{modules_list[-1]},failure",
-                    f"s_{module},success",
-                    key="a_query",
-                    cost=query_cost,
-                )
-                num_back_edges += 1
-        # print(f"Number of back edges: {num_back_edges}")
         return graph
 
     def run_a_star(
         self, graph: nx.MultiDiGraph, source: str, final_module: str
-    ) -> dict[str, bool]:
+    ) -> tuple[dict[str, bool], float]:
         """Run A* on the graph to find the best path."""
         # Step 1: Create + run A* search algorithm (returns list of nodes in the graph)
         try:
@@ -166,11 +160,12 @@ class GraphQueryStrategy(QueryStrategy):
             # (ideally, should have been a dict where all modules map to False,
             # but this is easier to implement for now)
             # print("No path found in the graph.")
-            return {}
+            return {}, float("inf")
 
         # Step 2: Get the path from the root to the leaf.
         # Determine whether we went down query path or not.
         path = {}
+        path_cost = 0
         for current_node, next_node in pairwise(a_star_path):
             # Get the module name from the current node.
             module_name = next_node.split(",")[0][2:]
@@ -188,9 +183,10 @@ class GraphQueryStrategy(QueryStrategy):
                 path[module_name] = True
             else:
                 path[module_name] = False
+            path_cost += graph[current_node][next_node][min_cost_edge]["cost"]
 
         # Step 3: Return the path.
-        return path
+        return path, path_cost
 
     def visualize_query_graph(self, graph: nx.MultiDiGraph, outfile: Path) -> None:
         """Visualize the query graph."""
@@ -204,19 +200,44 @@ class GraphQueryStrategy(QueryStrategy):
         computed_values: dict[Module, Any],
         computed_confidences: dict[Module, float],
     ) -> tuple[str | None, dict[str, float] | None]:
-        # Step 1: Create the query graph structure
-        graph = self.create_query_graph(module_graph, computed_confidences)
-        # Step 2: Run A* in the graph to return the best path
+        ## The key to constraining this method to query once is - we will
+        ## create N - |Q| copies of the graph (where N is the number of modules, and
+        ## |Q| is the number of modules that have been queried so far),
+        ## where copy i will not have autonomous edges for module i (i.e. forcing
+        ## the query strategy to query for module i).
+        ##
+        ## We'll just run A* in each of the N copies of the graph, and return the
+        ## best path from each of the N copies.
+
+        # Step 1: Create N - |Q| copies of the graph.
         modules_list = [module.get_name() for module in module_graph.topo_order]
+        # Remove the first module, which we will always assume to be the 'state' module.
+        modules_list = modules_list[1:]
+        graphs: dict[int, nx.MultiDiGraph] = {}
+        for i in range(len(modules_list)):
+            if modules_list[i] not in self.queried_modules:
+                graph = self.create_query_graph(
+                    module_graph,
+                    computed_confidences,
+                    force_query_for_module=modules_list[i],
+                )
+                graphs[i] = graph
+
+        # Step 2: Run A* in the graphs to return the best path.
         final_module = modules_list[-1]
         source = "s_init"
-        # print(f"Source node: {source}, Final module: {final_module}")
-        path = self.run_a_star(graph, source, final_module)
-        # print_and_log(f"Path: {path}")
-        # Step 3: Get the query from the result
-        # (just choose the first one in the sequence)
-        for module, is_query in path.items():
+
+        best_path = None
+        best_path_cost = float("inf")
+        for i, graph in graphs.items():
+            path, path_cost = self.run_a_star(graph, source, final_module)
+            if path_cost < best_path_cost:
+                best_path = path
+                best_path_cost = path_cost
+
+        if best_path is None:
+            return None, {}
+        for module, is_query in best_path.items():
             if is_query:
                 return module, {}
-        # If no module is found, return None
         return None, {}

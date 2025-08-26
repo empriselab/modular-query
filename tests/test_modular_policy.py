@@ -102,13 +102,14 @@ def test_modular_policy():
     assert abs(cost - 1.0) < 1e-6, f"Expected total query cost to be 1.0, got {cost}"
 
     # If we decide to query again (even though in this case the first query leads to
-    # success), we will not query for any module, but because of the caching behavior,
-    # we will still have the same (updated) expert values for the modules,
-    # leading to the action still being 4.
+    # success), the query algorithm will now force a query for the middle module,
+    # even though the first query led to success.
 
     action, cost, _, _, _, _, _ = policy.get_action(state=1)
     assert action == 4, f"Expected action to be 4, got {action}"
-    assert abs(cost - 0.0) < 1e-6, f"Expected total query cost to be 0.0, got {cost}"
+    assert (
+        abs(cost - 100.0) < 1e-6
+    ), f"Expected total query cost to be 100.0, got {cost}"
 
     # Test for BinaryTreeQueryStrategy
     query_strategy = BinaryTreeQueryStrategy(correct_answer_cost, incorrect_answer_cost)
