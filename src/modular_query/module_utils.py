@@ -389,3 +389,74 @@ def get_query_set_expected_cost(
     )
 
     return combined_cost
+
+
+def compare_query_set_expected_costs(
+    query_set_1: set[str],
+    query_set_2: set[str],
+    module_graph: ModuleGraph,
+    computed_confidences: dict[Module, float],
+    tolerance: float = 1e-6,
+) -> int:
+    """Compare the expected costs of two query sets.
+
+    Implemented in a numerically-stable manner (to handle cases where
+    the probability of correct answer would underflow).
+
+    Assume that correct_answer_cost and incorrect_answer_cost are 0.0
+    and 1.0, respectively.
+
+    Return 1 if query_set_1 is better than query_set_2, -1 if
+    query_set_2 is better than query_set_1, and 0 if they are the same.
+
+    Make sure that it's a total pre-order (reflexive, transitive, and
+    total)
+    """
+    # Edge case: if one query set is empty, return the other query set.
+    if not query_set_1:
+        return -1
+    if not query_set_2:
+        return 1
+
+    module_name_to_module = {m.get_name(): m for m in module_graph.get_modules()}
+    # Compute the query costs for each query option.
+    query_cost_1 = sum(
+        module_name_to_module[module_name].get_expert_query_cost()
+        for module_name in query_set_1
+    )
+    query_cost_2 = sum(
+        module_name_to_module[module_name].get_expert_query_cost()
+        for module_name in query_set_2
+    )
+
+    # Compute approximate probability of correct answer for each query option.
+    nonquery_set_1 = set(module_name_to_module) - query_set_1
+    nonquery_set_2 = set(module_name_to_module) - query_set_2
+
+    # Compute the sum of logs of the confidences for each query option.
+    log_confidence_1 = sum(
+        np.log(computed_confidences[module_name_to_module[module_name]])
+        for module_name in nonquery_set_1
+    )
+    log_confidence_2 = sum(
+        np.log(computed_confidences[module_name_to_module[module_name]])
+        for module_name in nonquery_set_2
+    )
+
+    # Case-by-case analysis based on query_cost_i and log_confidence_i values.
+    if query_cost_1 > query_cost_2 and log_confidence_1 < log_confidence_2:
+        # Case 1: query_set_1 is worse than query_set_2.
+        return -1
+    if query_cost_1 < query_cost_2 and log_confidence_1 > log_confidence_2:
+        # Case 2: query_set_2 is worse than query_set_1.
+        return 1
+
+    # If the absolute values of both log-confidences are smaller than the tolerance,
+    # we should compare the query costs directly.
+    if log_confidence_1 < np.log(tolerance) and log_confidence_2 < np.log(tolerance):
+        return 1 if query_cost_1 < query_cost_2 else -1
+
+    # Otherwise we should compare the raw objective values (without taking logs).
+    total_cost_1 = query_cost_1 + (1 - np.exp(log_confidence_1))
+    total_cost_2 = query_cost_2 + (1 - np.exp(log_confidence_2))
+    return 1 if total_cost_1 < total_cost_2 else -1

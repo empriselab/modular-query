@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 
 from modular_query.module_graph import ModuleGraph
-from modular_query.modules import Module
+from modular_query.modules import Module, StateModule
 from modular_query.query_strategies.base import QueryStrategy
 from modular_query.utils import timer
 
@@ -60,7 +60,11 @@ class BinaryTreeQueryStrategy(QueryStrategy):
         ## Add nodes. s_init,
         ## for each module in the module graph, create a nodes that track
         ## the full history of queries for previous modules.
-        self.modules_list = sorted(list(self.get_all_queryable_modules(module_graph)))
+        self.modules_list = [
+            module.get_name()
+            for module in module_graph.topo_order
+            if not isinstance(module, StateModule)
+        ]
 
         ## Create mapping from module name to list of valid node IDs (in binary)
         module_to_node_ids: dict[str, list[str]] = {}

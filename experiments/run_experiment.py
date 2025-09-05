@@ -6,9 +6,11 @@ import abc
 import argparse
 import itertools
 import json
+import multiprocessing as mp
 import pickle as pkl
 import time
 from datetime import datetime
+from functools import partial
 from typing import Any
 
 import matplotlib
@@ -296,6 +298,11 @@ def run_experiment(
                 policy = ModularPolicy(
                     module_graph=module_graph, query_strategy=strategy, verbose=False
                 )
+
+                # NOTE: skip graphquery for large graphs (>= 50)
+                # because computation time exceeds 1 s.
+                if strategy_name == "Graph Query" and size >= 50:
+                    continue
 
                 # Temporal loop.
                 # Initialize accumulators.
@@ -622,6 +629,134 @@ def run_experiment(
     return results
 
 
+def run_single_grid_search_experiment(
+    combo: tuple, combo_generator: list[tuple], variant: str, config: dict[str, Any]
+) -> tuple[int, dict[str, dict[str, dict[int, list[float]]]], dict[str, Any]]:
+    """Run a single experiment for the grid search.
+
+    Args:
+        combo: Tuple of (num_failures, confidence, redundancy, c_query)
+        variant: The variant to use
+        config: The configuration dictionary
+
+    Returns:
+        Tuple of (run_id, results, config_to_save)
+    """
+    (num_failures, confidence, redundancy, c_query) = combo
+    (correct_confidence, incorrect_confidence) = confidence
+
+    print_and_log(
+        f"Running experiment with num_failures={num_failures},"
+        f"correct_confidence={correct_confidence},"
+        f"incorrect_confidence={incorrect_confidence},"
+        f"redundancy={redundancy}, c_query={c_query}"
+    )
+
+    # Convert num_failures to a one-hot vector.
+    incorrect_module_count = np.zeros(num_failures + 1)
+    incorrect_module_count[-1] = config["num_trials"]
+
+    # Use only the graph sizes that are larger than the number of failures.
+    graph_sizes_to_use = [size for size in config["graph_sizes"] if size > num_failures]
+
+    results = run_experiment(
+        graph_sizes=graph_sizes_to_use,
+        num_trials=config["num_trials"],
+        correct_answer_cost=0.0,
+        incorrect_answer_cost=1.0,
+        query_cost=c_query,
+        workload_eps=1.0,
+        incorrect_module_count=incorrect_module_count,
+        variant=variant,
+        redundancy=redundancy,
+        correct_module_confidence=correct_confidence,
+        incorrect_module_confidence=incorrect_confidence,
+        disable_mip=True,
+    )
+
+    # Run ID is the index of the configuration in the grid.
+    run_id = combo_generator.index(combo)
+
+    # Save the variant and combo to a json file.
+    config_to_save = {
+        "run_id": run_id,
+        "variant": variant,
+        "num_failures": num_failures,
+        "correct_confidence": correct_confidence,
+        "incorrect_confidence": incorrect_confidence,
+        "redundancy": redundancy,
+        "c_query": c_query,
+    }
+
+    return run_id, results, config_to_save
+
+
+def exp_grid_search_parallel(
+    variant: str, config: dict[str, Any], num_processes: int = 0
+) -> None:
+    """Run the experiment over an experimental grid of parameters using
+    multiprocessing.
+
+    This is a parallelized version of exp_grid_search.
+
+    Args:
+        variant: The variant to use
+        config: The configuration dictionary
+        num_processes: Number of processes to use. If 0, uses CPU count.
+    """
+    if num_processes == 0:
+        num_processes = mp.cpu_count()
+
+    combo_generator = list(
+        itertools.product(
+            config["num_failures_list"],
+            config["confidences_list"],
+            config["redundancy_list"],
+            config["c_query_list"],
+        )
+    )
+
+    print_and_log(
+        f"Running {len(combo_generator)} experiments using {num_processes} processes"
+    )
+
+    # Create a partial function with fixed variant and config
+    run_single_experiment = partial(
+        run_single_grid_search_experiment,
+        variant=variant,
+        config=config,
+        combo_generator=combo_generator,
+    )
+
+    # Run experiments in parallel
+    with mp.Pool(processes=num_processes) as pool:
+        results_list = pool.map(run_single_experiment, combo_generator)
+
+    # Save results
+    # Run_ID is the index of the configuration in the grid.
+    # Format with number of digits equal to the length of the combo_generator.
+    run_id_length = len(str(len(combo_generator)))
+    for run_id, results, config_to_save in results_list:
+        # Save results to a pickle file
+        with open(
+            f"experiments/results/results_variant_{variant}_run_"
+            f"{run_id:0{run_id_length}d}.pkl",
+            "wb",
+        ) as f:
+            pkl.dump(results, f)
+
+        # Save config to a json file
+        with open(
+            f"experiments/results/config_variant_{variant}_run_"
+            f"{run_id:0{run_id_length}d}.json",
+            "w",
+            encoding="utf-8",
+        ) as f:
+            json.dump(config_to_save, f, indent=4)
+
+    print_and_log("All parallel experiments completed!")
+
+
 def exp_vary_cquery(variant: str, config: dict[str, Any]) -> None:
     """Run the experiment with varying query cost, where by default all trials
     have 1 'incorrect' module.
@@ -684,7 +819,6 @@ def exp_vary_num_failures(variant: str, config: dict[str, Any]) -> None:
             incorrect_answer_cost=1.0,
             query_cost=config["c_query"],
             incorrect_module_count=incorrect_module_count,
-            workload_eps=1.0,
             variant=variant,
         )
 
@@ -866,13 +1000,42 @@ def main(variant: str) -> None:
         "num_failures_list": [0, 1, 2, 3],
         "confidences_list": [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)],
         "redundancy_list": ["AND", "OR"],
-        "c_query_list": [0.04, 0.08, 0.16, 0.32, 0.64],
+        "c_query_list": [0.08, 0.16, 0.32, 0.64],
     }
+    # smaller test.
+    # config = {
+    #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
+    #     "num_trials": 100,
+    #     "num_failures_list": [1,2,3],
+    #     "confidences_list": [(0.9, 0.2)],
+    #     "redundancy_list": ["AND"],
+    #     "c_query_list": [0.08],
+    # }
+    # 8/27: specifically run with only 0.08 query cost and 'AND' networks for now.
+    # will also only run with the balanced variant.
+    # (want to do this as a mini-experiment prior to running the full grid search)
+    # config = {
+    #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
+    #     "num_trials": 100,
+    #     "num_failures_list": [0, 1, 2, 3],
+    #     "confidences_list": [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)],
+    #     "redundancy_list": ["AND"],
+    #     "c_query_list": [0.08],
+    # }
+    # 8/28: run only with the above, but also only num_failures = 0.
+    # config = {
+    #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
+    #     "num_trials": 100,
+    #     "num_failures_list": [0],
+    #     "confidences_list": [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)],
+    #     "redundancy_list": ["AND"],
+    #     "c_query_list": [0.08],
+    # }
     if variant == "all-variants":
         for variant_to_use in ["balanced", "greedy", "conservative", "balanced-2"]:
-            exp_grid_search(variant_to_use, config)
+            exp_grid_search_parallel(variant_to_use, config)
     else:
-        exp_grid_search(variant, config)
+        exp_grid_search_parallel(variant, config)
     print("Experiment complete!")
 
 

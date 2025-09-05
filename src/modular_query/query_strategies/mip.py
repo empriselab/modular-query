@@ -15,7 +15,7 @@ from pyomo.environ import (
 )
 
 from modular_query.module_graph import ModuleGraph
-from modular_query.modules import Module
+from modular_query.modules import Module, StateModule
 from modular_query.query_strategies.base import QueryStrategy
 from modular_query.utils import timer
 
@@ -33,11 +33,12 @@ class MIPQueryStrategy(QueryStrategy):
             "MIPQueryStrategy: Construct problem",
             verbose=False,
         ) as result:  # type: dict[str, float]
-            # Extract module info.
-            all_module_names = sorted(self.get_all_queryable_modules(module_graph))
-            # Filter out modules that have already been queried.
+            # Extract module info (use topological order).
             all_module_names = [
-                name for name in all_module_names if name not in self.queried_modules
+                module.get_name()
+                for module in module_graph.topo_order
+                if not isinstance(module, StateModule)
+                and module.get_name() not in self.queried_modules
             ]
             module_name_to_module = {
                 module.get_name(): module for module in module_graph.get_modules()

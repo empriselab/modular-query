@@ -11,7 +11,6 @@ Will create a parallel bar chart with 4 metrics:
 
 import argparse
 import json
-import os
 import pickle as pkl
 from datetime import datetime
 from pathlib import Path
@@ -158,6 +157,8 @@ def plot_results(
                     result_array = np.array(
                         results[strategy_name][metric][size], dtype=np.float64
                     )
+                    if len(result_array) == 0:
+                        continue
                     median = np.median(result_array)
                     upper_quartile, lower_quartile = np.percentile(
                         result_array, [75, 25]
@@ -228,7 +229,7 @@ def plot_results(
     plt.subplots_adjust(bottom=0.15)
 
     # Create directory if it doesn't exist
-    os.makedirs(save_dir, exist_ok=True)
+    Path(save_dir).mkdir(exist_ok=True)
 
     # Save the figure
     plt.savefig(Path(save_dir) / plot_name, dpi=300, bbox_inches="tight")
@@ -335,7 +336,11 @@ def plot_results_variants_bar_chart(
 
 
 def plot_results_across_graph_sizes(
-    num_failures: int, algorithm: str, data_dir: str
+    algorithm: str,
+    pkl_files: list[str],
+    data_dir: str,
+    title: str,
+    filename: str,
 ) -> None:
     """Plots where x-axis is the number of modules in the graph, and subplots
     correspond to different metrics. Each variant is a separate line.
@@ -349,23 +354,10 @@ def plot_results_across_graph_sizes(
         variant: {} for variant in variants
     }
 
-    for variant in variants:
-        pickle_path = (
-            Path(data_dir)
-            / f"strategy_comparison_num_failures_{variant}_{num_failures}.pkl"
-        )
-        if not pickle_path.exists():
-            print(
-                f"Pickle file not found for variant {variant}"
-                f"with {num_failures} failures."
-            )
-            continue
-        results[variant] = pkl.load(
-            open(
-                pickle_path,
-                "rb",
-            )
-        )
+    for pkl_file in pkl_files:
+        # extract the variant from the pkl file name.
+        variant = pkl_file.split("_")[2]
+        results[variant] = pkl.load(open(Path(data_dir) / pkl_file, "rb"))
 
     # Extract the graph sizes from the results.
     graph_sizes = list(results["greedy"][algorithm]["total_timesteps"].keys())
@@ -470,10 +462,7 @@ def plot_results_across_graph_sizes(
 
     # Add title.
     # If num_failures is 1, we should say "1 Failure" instead of "1 Failures".
-    fig.suptitle(
-        f"Variant Comparison for {algorithm}, "
-        f"{num_failures} Incorrect Module{'s' if num_failures > 1 else ''}"
-    )
+    fig.suptitle(title)
 
     # Save the figure.
 
@@ -493,13 +482,11 @@ def plot_results_across_graph_sizes(
     plt.subplots_adjust(bottom=0.15)
 
     # Create directory if it doesn't exist
-    os.makedirs("experiments/results", exist_ok=True)
+    Path(data_dir).mkdir(exist_ok=True)
 
     # Save the figure
     plt.savefig(
-        f"{data_dir}/"
-        f"strategy_comparison_num_failures_{num_failures}_"
-        f"algorithm_{algorithm}.png",
+        Path(data_dir) / filename,
         dpi=300,
         bbox_inches="tight",
     )
@@ -521,9 +508,6 @@ def main(
             plot_results_variants_bar_chart(
                 num_failures, graph_size, algorithm, data_dir
             )
-    elif plot_type == "compare_variants_by_graph_size":
-        for num_failures in failures_list:
-            plot_results_across_graph_sizes(num_failures, algorithm, data_dir)
     elif plot_type == "compare_algos_for_fixed_variant":
         for num_failures in failures_list:
             results = pkl.load(
