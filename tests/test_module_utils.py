@@ -6,6 +6,7 @@ from modular_query.module_utils import (
     generate_random_logic_gate_module_graph,
     generate_random_module_graph,
     generate_random_polynomial_module_graph,
+    generate_random_top_bottom_module_graph,
 )
 
 
@@ -120,3 +121,48 @@ def test_generate_random_and_gate_module_graph():
         "Expected leaf module value to be 0 (even with true initial state), "
         f"got {computed_values[leaf_module]}"
     )
+
+
+def test_generate_random_top_bottom_module_graph():
+    """Tests for generate_random_top_bottom_module_graph()."""
+
+    num_modules = 8
+    module_graph = generate_random_top_bottom_module_graph(
+        num_modules=num_modules,
+        edge_probability=0.5,
+        query_cost=1.0,
+        rng=np.random.default_rng(seed=123),
+        gate_top="AND",
+        gate_bottom="OR",
+    )
+
+    # Ensure the module graph has the expected number of modules.
+    assert (
+        len(module_graph.get_modules()) == num_modules
+    ), f"Expected {num_modules} modules in the graph."
+    # Ensure that the modules are connected in some way.
+
+    # Assert that the module graph has no isolated modules.
+    assert (
+        module_graph.validate_graph_connectivity()["isolated_modules"] == 0
+    ), "Expected no isolated modules in the graph."
+
+    # Create the same graph, but with the top and bottom gates swapped.
+    module_graph_swapped = generate_random_top_bottom_module_graph(
+        num_modules=num_modules,
+        edge_probability=0.5,
+        query_cost=1.0,
+        rng=np.random.default_rng(seed=123),
+        gate_top="OR",
+        gate_bottom="AND",
+    )
+
+    # Ensure that the swapped graph has the same number of modules.
+    assert (
+        len(module_graph_swapped.get_modules()) == num_modules
+    ), f"Expected {num_modules} modules in the graph."
+
+    # Assert that the swapped graph has no isolated modules.
+    assert (
+        module_graph_swapped.validate_graph_connectivity()["isolated_modules"] == 0
+    ), "Expected no isolated modules in the graph."

@@ -48,7 +48,10 @@ jobs:
     - name: Set up Python ${{ matrix.python-version }}
       run: uv python install ${{ matrix.python-version }}
     - name: Install the project
-      run: uv sync --all-extras --dev
+      run: |
+        set -ex
+        uv sync --all-extras --dev
+        uv add --dev pandas-stubs types-tqdm
     - name: Mypy
       run: |
         uv run mypy .

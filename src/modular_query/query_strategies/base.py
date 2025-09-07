@@ -14,15 +14,24 @@ class QueryStrategy(abc.ABC):
         1. The original modules are queried first.
         2. Given the computed values, this strategy chooses a set to query.
         3. The chosen module (if any) is queried for its expert value.
+
+    and_modules - modules that are treated as 'AND' gates in the proxy task cost.
+    or_modules - modules that are treated as 'OR' gates in the proxy task cost.
     """
 
     def __init__(
-        self, correct_answer_cost: float, incorrect_answer_cost: float
+        self,
+        correct_answer_cost: float,
+        incorrect_answer_cost: float,
+        and_modules: set[str] | None = None,
+        or_modules: set[str] | None = None,
     ) -> None:
         self.correct_answer_cost = correct_answer_cost
         self.incorrect_answer_cost = incorrect_answer_cost
         # State variable: Set of modules that we have queried for in this episode.
         self.queried_modules: set[str] = set()
+        self.and_modules = and_modules if and_modules is not None else set()
+        self.or_modules = or_modules if or_modules is not None else set()
 
     @abc.abstractmethod
     def get_expert_query_module(
@@ -30,9 +39,10 @@ class QueryStrategy(abc.ABC):
         module_graph: ModuleGraph,
         computed_values: dict[Module, Any],
         computed_confidences: dict[Module, float],
-    ) -> tuple[str | None, dict[str, float] | None]:
+    ) -> tuple[str | None, dict[str, float] | None, dict[str, Any]]:
         """Given a module graph and the already computed values, return a
-        module name to query and an optional dictionary of timing information.
+        module name to query and an optional dictionary of timing information,
+        along with solution information.
 
         Can also be None if we don't want to query for any of the
         modules.
@@ -59,7 +69,9 @@ class QueryStrategy(abc.ABC):
         state of the strategy."""
         self.queried_modules.add(module_name)
 
-    def remove_queried_modules(self, module_names: set[str]) -> None:
+    def remove_queried_modules(
+        self, _module_graph: ModuleGraph, module_names: set[str]
+    ) -> None:
         """Remove a set of modules from the set of queried modules, and update
         the internal state of the strategy."""
         self.queried_modules.difference_update(module_names)

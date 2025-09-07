@@ -12,6 +12,7 @@ from modular_query.modules import ActionModule, Module, StateModule
 from modular_query.query_strategies.binary_tree_query import BinaryTreeQueryStrategy
 from modular_query.query_strategies.brute_force import BruteForceQueryStrategy
 from modular_query.query_strategies.graph_query import GraphQueryStrategy
+from modular_query.query_strategies.hybrid_graph_query import HybridGraphQueryStrategy
 from modular_query.query_strategies.mip import MIPQueryStrategy
 from modular_query.query_strategies.never_query import NeverQueryStrategy
 
@@ -59,8 +60,14 @@ def test_modular_policy():
     correct_answer_cost = 0.0
     incorrect_answer_cost = 10.0
 
+    # Assume all modules are treated as 'AND' modules.
+    and_modules = {middle_module.get_name(), action_module.get_name()}
+    or_modules = set()
+
     graph = ModuleGraph(module_to_parents)
-    query_strategy = NeverQueryStrategy(correct_answer_cost, incorrect_answer_cost)
+    query_strategy = NeverQueryStrategy(
+        correct_answer_cost, incorrect_answer_cost, and_modules, or_modules
+    )
     policy = ModularPolicy(
         module_graph=graph,
         query_strategy=query_strategy,
@@ -70,7 +77,9 @@ def test_modular_policy():
     assert action == 3, f"Expected action to be 3, got {action}"
     assert abs(cost - 0.0) < 1e-6, f"Expected total query cost to be 0.0, got {cost}"
 
-    query_strategy = BruteForceQueryStrategy(correct_answer_cost, incorrect_answer_cost)
+    query_strategy = BruteForceQueryStrategy(
+        correct_answer_cost, incorrect_answer_cost, and_modules, or_modules
+    )
     policy = ModularPolicy(
         module_graph=graph,
         query_strategy=query_strategy,
@@ -80,7 +89,9 @@ def test_modular_policy():
     assert action == 4, f"Expected action to be 4, got {action}"
     assert abs(cost - 1.0) < 1e-6, f"Expected total query cost to be 1.0, got {cost}"
 
-    query_strategy = MIPQueryStrategy(correct_answer_cost, incorrect_answer_cost)
+    query_strategy = MIPQueryStrategy(
+        correct_answer_cost, incorrect_answer_cost, and_modules, or_modules
+    )
     policy = ModularPolicy(
         module_graph=graph,
         query_strategy=query_strategy,
@@ -90,7 +101,9 @@ def test_modular_policy():
     assert abs(cost - 1.0) < 1e-6, f"Expected total query cost to be 1.0, got {cost}"
 
     # Test for GraphQueryStrategy
-    query_strategy = GraphQueryStrategy(correct_answer_cost, incorrect_answer_cost)
+    query_strategy = GraphQueryStrategy(
+        correct_answer_cost, incorrect_answer_cost, and_modules, or_modules
+    )
     policy = ModularPolicy(
         module_graph=graph,
         query_strategy=query_strategy,
@@ -112,7 +125,9 @@ def test_modular_policy():
     ), f"Expected total query cost to be 100.0, got {cost}"
 
     # Test for BinaryTreeQueryStrategy
-    query_strategy = BinaryTreeQueryStrategy(correct_answer_cost, incorrect_answer_cost)
+    query_strategy = BinaryTreeQueryStrategy(
+        correct_answer_cost, incorrect_answer_cost, and_modules, or_modules
+    )
     policy = ModularPolicy(
         module_graph=graph,
         query_strategy=query_strategy,
@@ -133,6 +148,21 @@ def test_modular_policy():
     assert (
         queried
     ), f"Expected queried to be True (since we force a single query), got {queried}"
+    assert action == 4, f"Expected action to be 4, got {action}"
+    assert abs(cost - 1.0) < 1e-6, f"Expected total query cost to be 1.0, got {cost}"
+
+    # Test for HybridGraphQueryStrategy
+    query_strategy = HybridGraphQueryStrategy(
+        correct_answer_cost, incorrect_answer_cost, and_modules, or_modules
+    )
+    policy = ModularPolicy(
+        module_graph=graph,
+        query_strategy=query_strategy,
+    )
+
+    # For the given graph, will behave like BinaryTreeQueryStrategy.
+    # (since all modules are treated as 'AND' modules.)
+    action, cost, _, _, _, _, _ = policy.get_action(state=1)
     assert action == 4, f"Expected action to be 4, got {action}"
     assert abs(cost - 1.0) < 1e-6, f"Expected total query cost to be 1.0, got {cost}"
 
@@ -165,7 +195,12 @@ def test_graph_query_strategy():
     ground_truth_output = computed_values[module_graph.leaf]
 
     # Reset strategy's internal state.
-    strategy = GraphQueryStrategy(correct_answer_cost=0.0, incorrect_answer_cost=1.0)
+    strategy = GraphQueryStrategy(
+        correct_answer_cost=0.0,
+        incorrect_answer_cost=1.0,
+        and_modules=set(),
+        or_modules=set(),
+    )
     strategy.reset()
 
     policy = ModularPolicy(
@@ -245,10 +280,20 @@ def test_binary_tree_query_strategy():
         action_module: [middle_module_1, middle_module_2],
     }
 
+    # Assume all modules are treated as 'AND' modules.
+    and_modules = {
+        middle_module_1.get_name(),
+        middle_module_2.get_name(),
+        action_module.get_name(),
+    }
+    or_modules = set()
+
     graph = ModuleGraph(module_to_parents)
     correct_answer_cost = 0.0
     incorrect_answer_cost = 10.0
-    query_strategy = BinaryTreeQueryStrategy(correct_answer_cost, incorrect_answer_cost)
+    query_strategy = BinaryTreeQueryStrategy(
+        correct_answer_cost, incorrect_answer_cost, and_modules, or_modules
+    )
 
     # Visualize the planning graph with dummy confidences.
     dummy_confidences = {

@@ -4,6 +4,8 @@ import time
 from contextlib import contextmanager
 from typing import Generator
 
+from modular_query.modules import Module
+
 
 @contextmanager
 def timer(
@@ -28,3 +30,20 @@ def print_and_log(
     print(message)
     with open(log_file, "a", encoding="utf-8") as f:
         f.write(message + "\n")
+
+
+def product_of_confidences(confidences: dict[Module, float]) -> float:
+    """Compute the product of confidences."""
+    product = 1.0
+    for conf in confidences.values():
+        product *= conf
+    return product
+
+
+def sum_of_uncertainties(confidences: dict[Module, float]) -> float:
+    """Compute the sum of uncertainties."""
+    # Uncertainty is 1 - confidence.
+    uncertainty_sum = 0.0
+    for conf in confidences.values():
+        uncertainty_sum += 1.0 - conf
+    return uncertainty_sum

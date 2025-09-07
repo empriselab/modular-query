@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 
 from modular_query.module_graph import ModuleGraph
-from modular_query.modules import Module
+from modular_query.modules import Module, StateModule
 from modular_query.query_strategies.base import QueryStrategy
 
 
@@ -39,9 +39,13 @@ class GraphQueryStrategy(QueryStrategy):
         self,
         correct_answer_cost: float,
         incorrect_answer_cost: float,
+        and_modules: set[str] | None = None,
+        or_modules: set[str] | None = None,
         workload_eps: float = 0.1,
     ) -> None:
-        super().__init__(correct_answer_cost, incorrect_answer_cost)
+        super().__init__(
+            correct_answer_cost, incorrect_answer_cost, and_modules, or_modules
+        )
         self.workload_eps = workload_eps
 
     def create_query_graph(
@@ -199,7 +203,7 @@ class GraphQueryStrategy(QueryStrategy):
         module_graph: ModuleGraph,
         computed_values: dict[Module, Any],
         computed_confidences: dict[Module, float],
-    ) -> tuple[str | None, dict[str, float] | None]:
+    ) -> tuple[str | None, dict[str, float] | None, dict[str, Any]]:
         ## The key to constraining this method to query once is - we will
         ## create N - |Q| copies of the graph (where N is the number of modules, and
         ## |Q| is the number of modules that have been queried so far),
@@ -210,9 +214,11 @@ class GraphQueryStrategy(QueryStrategy):
         ## best path from each of the N copies.
 
         # Step 1: Create N - |Q| copies of the graph.
-        modules_list = [module.get_name() for module in module_graph.topo_order]
-        # Remove the first module, which we will always assume to be the 'state' module.
-        modules_list = modules_list[1:]
+        modules_list = [
+            module.get_name()
+            for module in module_graph.topo_order
+            if not isinstance(module, StateModule)
+        ]
         graphs: dict[int, nx.MultiDiGraph] = {}
         for i in range(len(modules_list)):
             if modules_list[i] not in self.queried_modules:
@@ -224,6 +230,9 @@ class GraphQueryStrategy(QueryStrategy):
                 graphs[i] = graph
 
         # Step 2: Run A* in the graphs to return the best path.
+        # Edge case: if modules_list is empty, then we return None.
+        if len(modules_list) == 0:
+            return None, {}, {"path_cost": 0.0}
         final_module = modules_list[-1]
         source = "s_init"
 
@@ -236,8 +245,8 @@ class GraphQueryStrategy(QueryStrategy):
                 best_path_cost = path_cost
 
         if best_path is None:
-            return None, {}
+            return None, {}, {"path_cost": 0.0}
         for module, is_query in best_path.items():
             if is_query:
-                return module, {}
-        return None, {}
+                return module, {}, {"path_cost": best_path_cost}
+        return None, {}, {"path_cost": 0.0}

@@ -11,6 +11,7 @@ Will create a parallel bar chart with 4 metrics:
 
 import argparse
 import json
+import os
 import pickle as pkl
 from datetime import datetime
 from pathlib import Path
@@ -18,113 +19,34 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
+from modular_query.plot_utils import STRATEGY_COLORS
+
 TITLES = {
     "query_cost": "Query Cost",
-    "query_cost_total": "Total Query Cost",
     "task_cost": "Final Task Cost",
     "total_cost": "Total Cost (Final Task + Query)",
     "proxy_obj_1": "Morphological Total Cost",
     "proxy_obj_2": "Morphological Total Cost",
     "execution_time": "Query Algorithm Runtime (s)",
-    "execution_time_total": "Computation Time (s)",
     "mean_queries": "Mean Queries per Time Step",
     "total_queries": "Total Queries",
-    "total_correct": "Total Successful Trials",
+    "total_correct": "Total Successful Recoveries",
     "total_timesteps": "Total Timesteps",
     "total_executions": "Total Executions",
-    "total_failed_attempts": "Total Failed Attempts",
 }
 
 YLABELS = {
     "query_cost": "Cost",
-    "query_cost_total": "Cost",
     "task_cost": "Cost",
     "total_cost": "Cost",
     "proxy_obj_1": "Cost",
     "proxy_obj_2": "Cost",
     "execution_time": "Runtime (s)",
-    "execution_time_total": "Computation Time (s)",
     "mean_queries": "Mean Queries",
     "total_queries": "Total Queries",
-    "total_correct": "Total Successful Trials",
+    "total_correct": "Total Successful Recoveries",
     "total_timesteps": "Total Timesteps",
     "total_executions": "Total Executions",
-    "total_failed_attempts": "Total Failed Attempts",
-}
-
-VARIANT_NAMES = {
-    "greedy": "Execute-First",
-    "balanced": "Query-Then-Execute",
-    "conservative": "Query-Until-Confident",
-    "balanced-2": "Query-Until-Confident-Workload-Aware",
-}
-
-# Define distinct line styles, markers, and colors for each strategy
-STRATEGY_COLORS = {
-    "Always Query": {
-        "color": "blue",
-        "linestyle": "-",
-        "marker": "o",
-        "linewidth": 2,
-    },
-    "Graph Query": {
-        "color": "purple",
-        "linestyle": "-",
-        "marker": "x",
-        "linewidth": 2,
-    },
-    "Never Query": {
-        "color": "red",
-        "linestyle": "--",
-        "marker": "s",
-        "linewidth": 2,
-    },
-    "Brute Force": {
-        "color": "green",
-        "linestyle": ":",
-        "marker": "^",
-        "linewidth": 2,
-    },
-    "MIP": {
-        "color": "orange",
-        "linestyle": "-.",
-        "marker": "D",
-        "linewidth": 2,
-    },
-    "Binary Tree Query": {
-        "color": "cyan",
-        "linestyle": "-",
-        "marker": "v",
-        "linewidth": 2,
-    },
-}
-
-# Variant-specific styles.
-VARIANT_STYLES = {
-    "greedy": {
-        "color": "blue",
-        "linestyle": "-",
-        "marker": "o",
-        "linewidth": 2,
-    },
-    "balanced": {
-        "color": "purple",
-        "linestyle": "-",
-        "marker": "x",
-        "linewidth": 2,
-    },
-    "conservative": {
-        "color": "red",
-        "linestyle": "--",
-        "marker": "s",
-        "linewidth": 2,
-    },
-    "balanced-2": {
-        "color": "green",
-        "linestyle": ":",
-        "marker": "^",
-        "linewidth": 2,
-    },
 }
 
 
@@ -133,8 +55,6 @@ def plot_results(
     graph_sizes: list[int],
     metrics_to_plot: list[str] | None = None,
     plot_name: str = "strategy_comparison.png",
-    save_dir: str = "experiments/results",
-    title: str = "",
 ) -> None:
     """Create plots showing the performance of different querying strategies.
 
@@ -169,46 +89,6 @@ def plot_results(
     num_rows = (len(metrics) + num_cols - 1) // num_cols
     fig, axes = plt.subplots(num_rows, num_cols, figsize=(24, 12), sharex=True)
 
-    # Define distinct line styles, markers, and colors for each strategy
-    styles = {
-        "Always Query": {
-            "color": "blue",
-            "linestyle": "-",
-            "marker": "o",
-            "linewidth": 2,
-        },
-        "Graph Query": {
-            "color": "purple",
-            "linestyle": "-",
-            "marker": "x",
-            "linewidth": 2,
-        },
-        "Never Query": {
-            "color": "red",
-            "linestyle": "--",
-            "marker": "s",
-            "linewidth": 2,
-        },
-        "Brute Force": {
-            "color": "green",
-            "linestyle": ":",
-            "marker": "^",
-            "linewidth": 2,
-        },
-        "MIP": {
-            "color": "orange",
-            "linestyle": "-.",
-            "marker": "D",
-            "linewidth": 2,
-        },
-        "Binary Tree Query": {
-            "color": "cyan",
-            "linestyle": "-",
-            "marker": "v",
-            "linewidth": 2,
-        },
-    }
-
     # Plot each metric
     lines = []
     labels = []
@@ -225,8 +105,6 @@ def plot_results(
                     result_array = np.array(
                         results[strategy_name][metric][size], dtype=np.float64
                     )
-                    if len(result_array) == 0:
-                        continue
                     median = np.median(result_array)
                     upper_quartile, lower_quartile = np.percentile(
                         result_array, [75, 25]
@@ -241,7 +119,7 @@ def plot_results(
                 lower_quartiles.append(lower_quartile)
 
             # Plot the data with strategy-specific styling
-            style = styles[strategy_name]
+            style = STRATEGY_COLORS[strategy_name]
             line = ax.plot(
                 graph_sizes[: len(medians)],
                 medians,
@@ -252,6 +130,9 @@ def plot_results(
                 markersize=8,
                 label=strategy_name,
             )
+
+            # print(f"Dumping values: medians: {medians},
+            # lower_quartiles: {lower_quartiles}, upper_quartiles: {upper_quartiles}")
 
             # Plot the interquartile range band
             ax.fill_between(
@@ -287,24 +168,20 @@ def plot_results(
         frameon=True,
     )
 
-    # Add overall title.
-    if title:
-        fig.suptitle(title)
-
     plt.tight_layout()
 
     # Add padding at the bottom for the legend
     plt.subplots_adjust(bottom=0.15)
 
     # Create directory if it doesn't exist
-    Path(save_dir).mkdir(exist_ok=True)
+    os.makedirs("experiments/results", exist_ok=True)
 
     # Save the figure
-    plt.savefig(Path(save_dir) / plot_name, dpi=300, bbox_inches="tight")
+    plt.savefig(f"experiments/results/{plot_name}", dpi=300, bbox_inches="tight")
     plt.close()
 
 
-def plot_results_variants_bar_chart(
+def plot_results_variants(
     num_failures: int, graph_size: int, algorithm: str, data_dir: str
 ) -> None:
     """Create bar plot of results for a fixed number of failures, graph size,
@@ -374,12 +251,7 @@ def plot_results_variants_bar_chart(
         means = [np.mean(results[algorithm][metric][graph_size]) for metric in metrics]
         stds = [np.std(results[algorithm][metric][graph_size]) for metric in metrics]
         ax.bar(
-            x_positions + i * width,
-            means,
-            width,
-            yerr=stds,
-            capsize=5,
-            label=VARIANT_NAMES[variant],
+            x_positions + i * width, means, width, yerr=stds, capsize=5, label=variant
         )
 
     # Add title.
@@ -404,11 +276,7 @@ def plot_results_variants_bar_chart(
 
 
 def plot_results_across_graph_sizes(
-    algorithm: str,
-    pkl_files: list[str],
-    data_dir: str,
-    title: str,
-    filename: str,
+    num_failures: int, algorithm: str, data_dir: str
 ) -> None:
     """Plots where x-axis is the number of modules in the graph, and subplots
     correspond to different metrics. Each variant is a separate line.
@@ -422,19 +290,35 @@ def plot_results_across_graph_sizes(
         variant: {} for variant in variants
     }
 
-    for pkl_file in pkl_files:
-        # extract the variant from the pkl file name.
-        variant = pkl_file.split("_")[2]
-        results[variant] = pkl.load(open(Path(data_dir) / pkl_file, "rb"))
+    for variant in variants:
+        pickle_path = (
+            Path(data_dir)
+            / f"strategy_comparison_num_failures_{variant}_{num_failures}.pkl"
+        )
+        if not pickle_path.exists():
+            print(
+                f"Pickle file not found for variant {variant}"
+                f"with {num_failures} failures."
+            )
+            continue
+        results[variant] = pkl.load(
+            open(
+                pickle_path,
+                "rb",
+            )
+        )
 
     # Extract the graph sizes from the results.
     graph_sizes = list(results["greedy"][algorithm]["total_timesteps"].keys())
 
     metrics = [
-        "query_cost_total",
-        "total_failed_attempts",
-        "execution_time_total",
+        "query_cost",
+        "task_cost",
+        "total_cost",
+        "proxy_obj_1",
+        "execution_time",
         "total_correct",
+        "total_executions",
         "total_timesteps",
     ]
 
@@ -444,6 +328,32 @@ def plot_results_across_graph_sizes(
     fig, axes = plt.subplots(num_rows, num_cols, figsize=(24, 12), sharex=True)
 
     # Define distinct line styles, markers, and colors for each strategy
+    styles = {
+        "greedy": {
+            "color": "blue",
+            "linestyle": "-",
+            "marker": "o",
+            "linewidth": 2,
+        },
+        "balanced": {
+            "color": "purple",
+            "linestyle": "-",
+            "marker": "x",
+            "linewidth": 2,
+        },
+        "conservative": {
+            "color": "red",
+            "linestyle": "--",
+            "marker": "s",
+            "linewidth": 2,
+        },
+        "balanced-2": {
+            "color": "green",
+            "linestyle": ":",
+            "marker": "^",
+            "linewidth": 2,
+        },
+    }
 
     # For each variant, we'll create a separate line plot for each metric
     # This allows us to use variant names in the legend
@@ -474,21 +384,21 @@ def plot_results_across_graph_sizes(
                 lower_quartiles.append(lower_quartile)
             line = ax.plot(
                 medians,
-                label=VARIANT_NAMES[variant],
-                color=VARIANT_STYLES[variant]["color"],
-                linestyle=VARIANT_STYLES[variant]["linestyle"],
-                marker=VARIANT_STYLES[variant]["marker"],
-                linewidth=VARIANT_STYLES[variant]["linewidth"],
+                label=variant,
+                color=styles[variant]["color"],
+                linestyle=styles[variant]["linestyle"],
+                marker=styles[variant]["marker"],
+                linewidth=styles[variant]["linewidth"],
             )
             if i == 0:
                 lines.append(line[0])
-                labels.append(VARIANT_NAMES[variant])
+                labels.append(variant)
             ax.fill_between(
                 np.arange(len(graph_sizes)),
                 lower_quartiles,
                 upper_quartiles,
                 alpha=0.3,
-                color=VARIANT_STYLES[variant]["color"],
+                color=styles[variant]["color"],
             )
             ax.set_title(TITLES[metric])
             ax.set_xlabel("Number of Graph Nodes")
@@ -504,7 +414,10 @@ def plot_results_across_graph_sizes(
 
     # Add title.
     # If num_failures is 1, we should say "1 Failure" instead of "1 Failures".
-    fig.suptitle(title)
+    fig.suptitle(
+        f"Variant Comparison for {algorithm}, "
+        f"{num_failures} Incorrect Module{'s' if num_failures > 1 else ''}"
+    )
 
     # Save the figure.
 
@@ -524,11 +437,13 @@ def plot_results_across_graph_sizes(
     plt.subplots_adjust(bottom=0.15)
 
     # Create directory if it doesn't exist
-    Path(data_dir).mkdir(exist_ok=True)
+    os.makedirs("experiments/results", exist_ok=True)
 
     # Save the figure
     plt.savefig(
-        Path(data_dir) / filename,
+        f"{data_dir}/"
+        f"strategy_comparison_num_failures_{num_failures}_"
+        f"algorithm_{algorithm}.png",
         dpi=300,
         bbox_inches="tight",
     )
@@ -547,9 +462,10 @@ def main(
     size, and algorithm."""
     if plot_type == "bar":
         for num_failures in failures_list:
-            plot_results_variants_bar_chart(
-                num_failures, graph_size, algorithm, data_dir
-            )
+            plot_results_variants(num_failures, graph_size, algorithm, data_dir)
+    elif plot_type == "compare_variants_by_graph_size":
+        for num_failures in failures_list:
+            plot_results_across_graph_sizes(num_failures, algorithm, data_dir)
     elif plot_type == "compare_algos_for_fixed_variant":
         for num_failures in failures_list:
             results = pkl.load(
@@ -560,10 +476,13 @@ def main(
                 )
             )
             metrics = [
-                "query_cost_total",
-                "total_failed_attempts",
-                "execution_time_total",
+                "query_cost",
+                "task_cost",
+                "total_cost",
+                "proxy_obj_1",
+                "execution_time",
                 "total_correct",
+                "total_executions",
                 "total_timesteps",
             ]
 

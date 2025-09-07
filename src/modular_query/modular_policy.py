@@ -66,7 +66,7 @@ class ModularPolicy:
         _, computed_values, computed_confidences = self.forward_pass_only(state)
 
         # Compute the expert query modules using the querying strategy.
-        expert_query_module_name, timing_info = (
+        expert_query_module_name, timing_info, _ = (
             self.query_strategy.get_expert_query_module(
                 module_graph=self.module_graph,
                 computed_values=computed_values,
@@ -123,7 +123,9 @@ class ModularPolicy:
             self.query_strategy.add_queried_module(expert_query_module_name)
             # - remove any downstream modules from the strategy's queried_modules set
             #  [triggers internal strategy changes]
-            self.query_strategy.remove_queried_modules(downstream_modules_to_remove)
+            self.query_strategy.remove_queried_modules(
+                self.module_graph, downstream_modules_to_remove
+            )
 
             # Cache the expert value for the queried module.
             expert_query_module = self.module_graph.get_module_str_to_module()[

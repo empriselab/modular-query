@@ -18,37 +18,26 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from modular_query.modular_policy import ModularPolicy
-from modular_query.module_utils import generate_random_module_graph
+from modular_query.module_utils import (
+    generate_random_module_graph,
+    generate_random_top_bottom_module_graph,
+    task_cost_proxy,
+)
 from modular_query.modules import Module, StateModule
-
-# from plot_results import plot_results
 from modular_query.plot_utils import plot_results
 from modular_query.query_strategies.binary_tree_query import BinaryTreeQueryStrategy
 from modular_query.query_strategies.brute_force import BruteForceQueryStrategy
 from modular_query.query_strategies.graph_query import GraphQueryStrategy
 from modular_query.query_strategies.mip import MIPQueryStrategy
 from modular_query.query_strategies.never_query import NeverQueryStrategy
-from modular_query.utils import print_and_log
+from modular_query.utils import (
+    print_and_log,
+    product_of_confidences,
+    sum_of_uncertainties,
+)
 
 # Set matplotlib backend to avoid tkinter conflicts with Pyomo
 matplotlib.use("Agg")  # Use non-interactive backend
-
-
-def product_of_confidences(confidences: dict[Module, float]) -> float:
-    """Compute the product of confidences."""
-    product = 1.0
-    for conf in confidences.values():
-        product *= conf
-    return product
-
-
-def sum_of_uncertainties(confidences: dict[Module, float]) -> float:
-    """Compute the sum of uncertainties."""
-    # Uncertainty is 1 - confidence.
-    uncertainty_sum = 0.0
-    for conf in confidences.values():
-        uncertainty_sum += 1.0 - conf
-    return uncertainty_sum
 
 
 class TerminationCondition(abc.ABC):
@@ -65,13 +54,16 @@ class TerminationCondition(abc.ABC):
         old_confidences: dict[Module, float],
         queried_module: Module,
         current_query_cost: float,
+        and_modules: set[str],
+        or_modules: set[str],
+        module_name_to_module: dict[str, Module],
     ) -> bool:
         """Evaluate whether to terminate the query loop."""
 
 
 class ConservativeTerminationCondition(TerminationCondition):
-    """Termination condition that stops when product of confidences exceeds
-    threshold."""
+    """Termination condition that stops when the proxy task cost is smaller
+    than a threshold."""
 
     def __init__(self, thresh: float) -> None:
         """Initialize with confidence threshold."""
@@ -84,13 +76,24 @@ class ConservativeTerminationCondition(TerminationCondition):
         old_confidences: dict[Module, float],
         queried_module: Module,
         current_query_cost: float,
+        and_modules: set[str],
+        or_modules: set[str],
+        module_name_to_module: dict[str, Module],
     ) -> bool:
-        return product_of_confidences(new_confidences) > self.thresh
+        return (
+            task_cost_proxy(
+                new_confidences, module_name_to_module, and_modules, or_modules
+            )
+            < self.thresh
+        )
 
 
 class Balanced2TerminationCondition(TerminationCondition):
     """Termination condition for balanced-2 variant (terminates when confidence
-    gain from querying is less than query cost)"""
+    gain from querying is less than query cost).
+
+    Assumes that confidence of a module after querying is 1.0.
+    """
 
     def __init__(self) -> None:
         """Initialize the balanced-2 termination condition."""
@@ -102,6 +105,9 @@ class Balanced2TerminationCondition(TerminationCondition):
         old_confidences: dict[Module, float],
         queried_module: Module,
         current_query_cost: float,
+        and_modules: set[str],
+        or_modules: set[str],
+        module_name_to_module: dict[str, Module],
     ) -> bool:
         return 1 - old_confidences[queried_module] < current_query_cost
 
@@ -119,6 +125,9 @@ class DummyTerminationCondition(TerminationCondition):
         old_confidences: dict[Module, float],
         queried_module: Module,
         current_query_cost: float,
+        and_modules: set[str],
+        or_modules: set[str],
+        module_name_to_module: dict[str, Module],
     ) -> bool:
         return False
 
@@ -136,7 +145,7 @@ def run_experiment(
     workload_eps: float = 0.1,
     incorrect_module_count: np.ndarray | None = None,
     variant: str = "balanced",
-    redundancy: str = "AND",
+    dependency_structure: str = "all_AND",
     disable_mip: bool = False,
 ) -> dict[str, dict[str, dict[int, list[float]]]]:
     """Run experiments with different graph sizes and querying strategies.
@@ -183,6 +192,8 @@ def run_experiment(
         raise ValueError(f"Invalid variant: {variant}")
 
     # Initialize strategies.
+    # (initially with null and_modules and or_modules,
+    # which will be set after the module graph is generated.)
     strategies = {
         "Never Query": NeverQueryStrategy(correct_answer_cost, incorrect_answer_cost),
         "Brute Force": BruteForceQueryStrategy(
@@ -197,6 +208,10 @@ def run_experiment(
             correct_answer_cost,
             incorrect_answer_cost,
         ),
+        # "Hybrid Graph Query": HybridGraphQueryStrategy(
+        #     correct_answer_cost,
+        #     incorrect_answer_cost,
+        # ),
     }
     if not disable_mip:
         strategies["MIP"] = MIPQueryStrategy(correct_answer_cost, incorrect_answer_cost)
@@ -262,17 +277,57 @@ def run_experiment(
             while trial_idx >= incorrect_module_counts_cumsum[num_incorrect_modules]:
                 num_incorrect_modules += 1
 
-            # Generate a random AND-gate graph.
-            module_graph = generate_random_module_graph(
-                num_modules=size,
-                edge_probability=edge_probability,
-                query_cost=query_cost,
-                rng=rng.spawn(1)[0],  # create a new RNG to avoid affecting main one
-                num_incorrect_modules=num_incorrect_modules,
-                correct_module_confidence=correct_module_confidence,
-                incorrect_module_confidence=incorrect_module_confidence,
-                redundancy=redundancy,
-            )
+            # Generate a random module graph.
+            if dependency_structure == "all_AND":
+                module_graph = generate_random_module_graph(
+                    num_modules=size,
+                    edge_probability=edge_probability,
+                    query_cost=query_cost,
+                    rng=rng.spawn(1)[0],  # create a new RNG to avoid affecting main one
+                    num_incorrect_modules=num_incorrect_modules,
+                    correct_module_confidence=correct_module_confidence,
+                    incorrect_module_confidence=incorrect_module_confidence,
+                    redundancy="AND",
+                )
+            elif dependency_structure == "all_OR":
+                module_graph = generate_random_module_graph(
+                    num_modules=size,
+                    edge_probability=edge_probability,
+                    query_cost=query_cost,
+                    rng=rng.spawn(1)[0],  # create a new RNG to avoid affecting main one
+                    num_incorrect_modules=num_incorrect_modules,
+                    correct_module_confidence=correct_module_confidence,
+                    incorrect_module_confidence=incorrect_module_confidence,
+                    redundancy="OR",
+                )
+            elif dependency_structure == "AND_then_OR":
+                module_graph = generate_random_top_bottom_module_graph(
+                    num_modules=size,
+                    edge_probability=edge_probability,
+                    query_cost=query_cost,
+                    rng=rng.spawn(1)[0],  # create a new RNG to avoid affecting main one
+                    num_incorrect_modules=num_incorrect_modules,
+                    correct_module_confidence=correct_module_confidence,
+                    incorrect_module_confidence=incorrect_module_confidence,
+                    gate_top="AND",
+                    gate_bottom="OR",
+                )
+            elif dependency_structure == "OR_then_AND":
+                module_graph = generate_random_top_bottom_module_graph(
+                    num_modules=size,
+                    edge_probability=edge_probability,
+                    query_cost=query_cost,
+                    rng=rng.spawn(1)[0],  # create a new RNG to avoid affecting main one
+                    num_incorrect_modules=num_incorrect_modules,
+                    correct_module_confidence=correct_module_confidence,
+                    incorrect_module_confidence=incorrect_module_confidence,
+                    gate_top="OR",
+                    gate_bottom="AND",
+                )
+            else:
+                raise ValueError(
+                    f"Invalid dependency structure: {dependency_structure}"
+                )
 
             # Always set state to True for AND-gate graph.
             state = True
@@ -288,12 +343,29 @@ def run_experiment(
                 expert_query_module_names=all_queryable_module_names,
                 expert_values_cache={},
             )
-            ground_truth_output = computed_values[module_graph.leaf]
+            try:
+                ground_truth_output = computed_values[module_graph.leaf]
+            except KeyError:
+                print(computed_values)
+                print([m.get_name() for m in module_graph.get_modules()])
+                print(f"topo order: {[m.get_name() for m in module_graph.topo_order]}")
+                raise KeyError(
+                    f"Module {module_graph.leaf.get_name()} not found in computed_values"
+                )
+            module_name_to_module = {
+                m.get_name(): m for m in module_graph.get_modules()
+            }
 
             # Run each strategy on the same graph.
             for strategy_name, strategy in strategies.items():
                 # Reset strategy's internal state.
                 strategy.reset()
+
+                # Set the strategy's and_modules and or_modules.
+                if dependency_structure == "all_AND":
+                    strategy.and_modules = all_queryable_module_names
+                elif dependency_structure == "all_OR":
+                    strategy.or_modules = all_queryable_module_names
 
                 policy = ModularPolicy(
                     module_graph=module_graph, query_strategy=strategy, verbose=False
@@ -357,6 +429,8 @@ def run_experiment(
                     num_queries_in_loop = 0
 
                     # Run the policy.
+                    # Measure execution time solely for get_action.
+                    start_time = time.perf_counter()
                     (
                         action,
                         current_query_cost,
@@ -398,6 +472,9 @@ def run_experiment(
                                 old_confidences=pre_query_confidences,
                                 queried_module=queried_module,
                                 current_query_cost=current_query_cost,
+                                and_modules=strategy.and_modules,
+                                or_modules=strategy.or_modules,
+                                module_name_to_module=module_name_to_module,
                             )
                         ):
                             # Then, do forward pass/query algorithm call.
@@ -411,7 +488,6 @@ def run_experiment(
                                 timing_info,
                             ) = policy.get_action(state=state)
                             acc_get_action_calls += 1
-                            acc_execution_time += computation_time
                             if queried:
                                 assert (
                                     current_query_cost > 0
@@ -429,6 +505,9 @@ def run_experiment(
                                     old_confidences=pre_query_confidences,
                                     queried_module=queried_module,
                                     current_query_cost=current_query_cost,
+                                    and_modules=strategy.and_modules,
+                                    or_modules=strategy.or_modules,
+                                    module_name_to_module=module_name_to_module,
                                 )
                             ):
                                 break
@@ -668,7 +747,7 @@ def run_single_grid_search_experiment(
         workload_eps=1.0,
         incorrect_module_count=incorrect_module_count,
         variant=variant,
-        redundancy=redundancy,
+        dependency_structure=redundancy,
         correct_module_confidence=correct_confidence,
         incorrect_module_confidence=incorrect_confidence,
         disable_mip=True,
@@ -684,7 +763,7 @@ def run_single_grid_search_experiment(
         "num_failures": num_failures,
         "correct_confidence": correct_confidence,
         "incorrect_confidence": incorrect_confidence,
-        "redundancy": redundancy,
+        "dependency_structure": redundancy,
         "c_query": c_query,
     }
 
@@ -797,7 +876,9 @@ def exp_vary_cquery(variant: str, config: dict[str, Any]) -> None:
     print("Experiment with varying query cost complete!")
 
 
-def exp_vary_num_failures(variant: str, config: dict[str, Any]) -> None:
+def exp_vary_num_failures(
+    variant: str, config: dict[str, Any], dependency_structure: str
+) -> None:
     """Run the experiment with varying number of incorrect modules; also saves
     results to a pickle file and plots the results.
 
@@ -820,22 +901,31 @@ def exp_vary_num_failures(variant: str, config: dict[str, Any]) -> None:
             query_cost=config["c_query"],
             incorrect_module_count=incorrect_module_count,
             variant=variant,
+            dependency_structure=dependency_structure,
         )
 
         # Save results to a pickle file.
         with open(
             "experiments/results/strategy_comparison_num_failures_"
-            f"{variant}_{num_failures}.pkl",
+            f"{variant}_{num_failures}_{dependency_structure}.pkl",
             "wb",
         ) as f:
             pkl.dump(results, f)
+
+        # Proxy objective depends on the dependency structure.
+        if dependency_structure == "all_AND":
+            proxy_objective_name = "proxy_obj_1"
+        elif dependency_structure == "all_OR":
+            proxy_objective_name = "proxy_obj_2"
+        else:
+            raise NotImplementedError
 
         # Plot the results
         metrics_to_plot = [
             "query_cost",
             "task_cost",
             "total_cost",
-            "proxy_obj_1",
+            proxy_objective_name,
             "execution_time",
             "total_correct",
             "total_executions",
@@ -844,7 +934,8 @@ def exp_vary_num_failures(variant: str, config: dict[str, Any]) -> None:
             results,
             graph_sizes_to_use,
             metrics_to_plot=metrics_to_plot,
-            plot_name=f"strategy_comparison_num_failures_{variant}_{num_failures}.png",
+            plot_name=f"strategy_comparison_num_failures_"
+            f"{variant}_{num_failures}_{dependency_structure}.png",
         )
 
 
@@ -930,7 +1021,7 @@ def exp_grid_search(variant: str, config: dict[str, Any]) -> None:
             workload_eps=1.0,
             incorrect_module_count=incorrect_module_count,
             variant=variant,
-            redundancy=redundancy,
+            dependency_structure=redundancy,
             correct_module_confidence=correct_confidence,
             incorrect_module_confidence=incorrect_confidence,
             disable_mip=True,
@@ -999,9 +1090,21 @@ def main(variant: str) -> None:
         "num_trials": 100,
         "num_failures_list": [0, 1, 2, 3],
         "confidences_list": [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)],
-        "redundancy_list": ["AND", "OR"],
+        "redundancy_list": ["all_AND", "all_OR", "AND_then_OR", "OR_then_AND"],
         "c_query_list": [0.08, 0.16, 0.32, 0.64],
     }
+    # simple test with different redundancies, but everything else fixed.
+    # config = {
+    #     "graph_sizes": [5, 10, 15, 18, 25, 50, 75, 100],
+    #     "num_trials": 100,
+    #     "num_failures_list": [1],
+    #     # "confidences_list": [(1.0, 0.1)],
+    #     "confidences_list": [(0.9, 0.2)],
+    #     # "redundancy_list": ["all_AND"],
+    #     # "redundancy_list": ["all_AND", "all_OR"],
+    #     "redundancy_list": ["AND_then_OR", "OR_then_AND"],
+    #     "c_query_list": [0.08],
+    # }
     # smaller test.
     # config = {
     #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],

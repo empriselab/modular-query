@@ -28,7 +28,7 @@ class MIPQueryStrategy(QueryStrategy):
         module_graph: ModuleGraph,
         computed_values: dict[Module, Any],
         computed_confidences: dict[Module, float],
-    ) -> tuple[str | None, dict[str, float] | None]:
+    ) -> tuple[str | None, dict[str, float] | None, dict[str, Any]]:
         with timer(
             "MIPQueryStrategy: Construct problem",
             verbose=False,
@@ -45,7 +45,6 @@ class MIPQueryStrategy(QueryStrategy):
             }
             all_modules = [module_name_to_module[n] for n in all_module_names]
             query_costs = [m.get_expert_query_cost() for m in all_modules]
-            probs_correct = [computed_confidences[m] for m in all_modules]
 
             model = ConcreteModel()
 
@@ -53,18 +52,17 @@ class MIPQueryStrategy(QueryStrategy):
             model.I = range(len(all_module_names))
             model.x = Var(model.I, domain=Binary)
 
-            # Create one continuous variable that should be equal to the probability
-            # of "all correct".
-            model.y = Var(domain=Reals, bounds=(0, 1))
+            # Create one continuous variable
+            # that should be equal to the proxy of task cost.
+            # (no longer bounded in [0, 1]
+            # because we are now using a proxy of task cost.)
+            model.y = Var(domain=Reals)
 
             # Objective: minimize the total expected cost.
             def obj_expression(m):
                 expert_cost_sum = sum(query_costs[i] * m.x[i] for i in m.I)
-                task_cost = (
-                    self.incorrect_answer_cost
-                    + (self.correct_answer_cost - self.incorrect_answer_cost) * m.y
-                )
-                return expert_cost_sum + task_cost
+                proxy_task_cost = m.y
+                return expert_cost_sum + proxy_task_cost
 
             model.obj = Objective(rule=obj_expression)
 
@@ -85,25 +83,59 @@ class MIPQueryStrategy(QueryStrategy):
                 print(f"model.one_module_constraint: {model.one_module_constraint}")
                 raise e
 
-            # Constraint: define y.
-            def product_constraint_rule(m):
-                prod_terms = []
-                for i in m.I:
-                    prod_terms.append(
-                        probs_correct[i] + (1 - probs_correct[i]) * m.x[i]
-                    )
+            # Create auxiliary variables for AND and OR proxies.
+            model.and_proxy = Var(domain=Reals)
+            model.or_proxy = Var(domain=Reals)
 
-                # We can multiply them with Pyomo's built-in ProductExpression:
-                #   product_expr = prod_terms[0] * prod_terms[1] * ...
-                # or we can do a quick reduce():
+            # Constraint: y = and_proxy + or_proxy.
+            def y_constraint_rule(m):
+                return m.y == m.and_proxy + m.or_proxy
+
+            model.y_constraint = Constraint(rule=y_constraint_rule)
+
+            # For AND modules.
+            and_module_indices = [
+                i for i, name in enumerate(all_module_names) if name in self.and_modules
+            ]
+
+            def and_proxy_rule(m):
+                and_terms = []
+                for i in and_module_indices:
+                    module_name = all_module_names[i]
+                    module = module_name_to_module[module_name]
+                    confidence = computed_confidences[module]
+                    # If x[i] = 0 (not queried), multiply by (1 - confidence).
+                    # If x[i] = 1 (queried), multiply by 1.
+                    and_terms.append(confidence + (1 - confidence) * m.x[i])
+
                 product_expr = 1
-                for term in prod_terms:
-                    product_expr = product_expr * term
+                for term in and_terms:
+                    product_expr *= term
+                and_proxy = 1 - product_expr
 
-                # Enforce m.y == product
-                return m.y - product_expr == 0
+                return m.and_proxy == and_proxy
 
-            model.product_constraint = Constraint(rule=product_constraint_rule)
+            model.and_proxy_constraint = Constraint(rule=and_proxy_rule)
+
+            # For OR modules.
+            or_module_indices = [
+                i for i, name in enumerate(all_module_names) if name in self.or_modules
+            ]
+
+            def or_proxy_rule(m):
+                or_terms = []
+                for i in or_module_indices:
+                    module_name = all_module_names[i]
+                    module = module_name_to_module[module_name]
+                    confidence = computed_confidences[module]
+                    # If x[i] = 0 (not queried), add (1 - confidence)
+                    # If x[i] = 1 (queried), add 0
+                    or_terms.append((1 - m.x[i]) * (1 - confidence))
+                or_proxy = sum(or_terms)
+
+                return m.or_proxy == or_proxy
+
+            model.or_proxy_constraint = Constraint(rule=or_proxy_rule)
 
         t_construct_problem = result["time"]
 
@@ -132,6 +164,6 @@ class MIPQueryStrategy(QueryStrategy):
 
         # Return selected module name, or None if none selected.
         if sum(query_mask) == 0:
-            return None, timing_info
+            return None, timing_info, {}
 
-        return all_module_names[query_mask.index(True)], timing_info
+        return all_module_names[query_mask.index(True)], timing_info, {}

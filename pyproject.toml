@@ -14,7 +14,9 @@ dependencies = [
    "tomsutils@git+https://github.com/tomsilver/toms-utils.git",
    "amplpy",
    "pyomo",
-   "networkx"
+   "networkx",
+   "pandas",
+   "tqdm"
 ]
 
 [project.optional-dependencies]

@@ -11,8 +11,16 @@ class ModuleGraph:
     """A graph of modules."""
 
     def __init__(
-        self, module_to_parents: dict[Module, list[Module]], verbose: bool = False
+        self,
+        module_to_parents: dict[Module, list[Module]],
+        root_leaf_check: bool = True,
+        verbose: bool = False,
     ) -> None:
+        """
+        root_leaf_check: if True,
+        then we assert that there is a unique root and leaf module.
+        If False, then we do not assert this.
+        """
         self.module_to_parents = module_to_parents
         self.module_to_children: dict[Module, list[Module]] = {
             m: [] for m in module_to_parents
@@ -26,15 +34,19 @@ class ModuleGraph:
         # Derive the unique root and the unique leaf, which we assume correspond
         # to state and action respectively.
         roots = [m for m, p in self.module_to_parents.items() if not p]
-        assert len(roots) == 1, "Root module must be unique"
-        self.root = roots[0]
+        if root_leaf_check:
+            assert len(roots) == 1, "Root module must be unique"
+        if len(roots) > 0:
+            self.root = roots[0]
         leaves = [m for m, c in self.module_to_children.items() if not c]
-        assert len(leaves) == 1, "Leaf module must be unique"
-        self.leaf = leaves[0]
+        if root_leaf_check:
+            assert len(leaves) == 1, "Leaf module must be unique."
+        if len(leaves) > 0:
+            self.leaf = leaves[0]
 
         # Compute a topological order of the modules from the root to the leaf.
         self.topo_order: list[Module] = []
-        queue = deque([self.root])
+        queue = deque(roots)
         visited = set()
 
         while queue:
@@ -86,6 +98,55 @@ class ModuleGraph:
             ]
             queue.extend(child_modules)
         return downstream_modules
+
+    def validate_graph_connectivity(self) -> dict[str, Any]:
+        """Validate the graph connectivity and return diagnostic information.
+
+        Returns a dictionary with information about:
+        - Number of modules
+        - Number of root modules (no parents)
+        - Number of leaf modules (no children)
+        - Number of isolated modules (no parents and no children)
+        - Number of modules in topological order
+        - Any connectivity issues found
+        """
+        all_modules = set(self.module_to_parents.keys())
+        root_modules = [m for m in all_modules if not self.module_to_parents[m]]
+        leaf_modules = [
+            m for m in all_modules if not self.module_to_children.get(m, [])
+        ]
+
+        # Find isolated modules (no parents and no children)
+        isolated_modules = []
+        for module in all_modules:
+            if not self.module_to_parents[module] and not self.module_to_children.get(
+                module, []
+            ):
+                isolated_modules.append(module)
+
+        # Check if all modules are in topological order
+        modules_in_topo = set(self.topo_order)
+        missing_from_topo = all_modules - modules_in_topo
+        extra_in_topo = modules_in_topo - all_modules
+
+        # Check for cycles (simplified check)
+        has_cycle = False
+        if len(self.topo_order) != len(all_modules):
+            has_cycle = True
+
+        return {
+            "total_modules": len(all_modules),
+            "root_modules": len(root_modules),
+            "leaf_modules": len(leaf_modules),
+            "isolated_modules": len(isolated_modules),
+            "modules_in_topo": len(self.topo_order),
+            "missing_from_topo": len(missing_from_topo),
+            "extra_in_topo": len(extra_in_topo),
+            "has_cycle": has_cycle,
+            "root_module_names": [m.get_name() for m in root_modules],
+            "isolated_module_names": [m.get_name() for m in isolated_modules],
+            "missing_module_names": [m.get_name() for m in missing_from_topo],
+        }
 
     def compute_values(
         self, expert_query_module_names: set[str], expert_values_cache: dict[str, Any]
