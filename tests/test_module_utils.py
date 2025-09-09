@@ -156,7 +156,6 @@ def test_generate_random_top_bottom_module_graph():
         gate_top="OR",
         gate_bottom="AND",
     )
-
     # Ensure that the swapped graph has the same number of modules.
     assert (
         len(module_graph_swapped.get_modules()) == num_modules

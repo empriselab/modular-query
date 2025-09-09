@@ -128,12 +128,10 @@ class ModuleGraph:
         modules_in_topo = set(self.topo_order)
         missing_from_topo = all_modules - modules_in_topo
         extra_in_topo = modules_in_topo - all_modules
-
         # Check for cycles (simplified check)
         has_cycle = False
         if len(self.topo_order) != len(all_modules):
             has_cycle = True
-
         return {
             "total_modules": len(all_modules),
             "root_modules": len(root_modules),

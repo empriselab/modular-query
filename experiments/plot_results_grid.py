@@ -123,6 +123,231 @@ def plot_results_grid_query_algorithms(results_dir: str) -> None:
         )
 
 
+def plot_results_grid_confidences(
+    results_dir: str, variant: str, graph_size: int
+) -> None:
+    """Plot results from a grid search experiment for varying confidences, for
+    a fixed set of metrics.
+
+    (analogous to plot_results_grid_graph_structures, but with
+    confidence setting as the IV.)
+    """
+    # Load the dataframe.
+    df = pd.read_pickle(os.path.join(results_dir, "combined_df.pkl"))
+    # The general structure is as follows:
+    # we want to produce a grouped bar chart with the following structure:
+    # x-axis: confidences,
+    # secondary x-axis: iterate over (correct_confidence, incorrect_confidence) pairs.
+    # y-axis: metric.
+    # so each group of bars corresponds to a different confidence setting,
+    # and each bar corresponds to a different
+    # (correct_confidence, incorrect_confidence) pair.
+
+    # Filter on the variant.
+    df = df[df["variant"] == variant]
+
+    # Get the unique values of the IVs.
+    ivs = df.columns.tolist()
+    ivs.remove("run_id")
+    ivs.remove("variant")
+    ivs.remove("results_dictionary")
+    ivs.remove("correct_confidence")
+    ivs.remove("incorrect_confidence")
+    # Get the unique combinations of values for the IVs.
+    unique_combinations = df[ivs].drop_duplicates()
+
+    metrics = [
+        "query_cost_total",
+        "total_failed_attempts",
+        "execution_time_total",
+        "total_correct",
+        "total_timesteps",
+    ]
+
+    # For each unique combination of IVs,
+    # we need to collect the run IDs that have that combination
+    # (there should be num_confidences of these run IDs in total.)
+    for _, combination in tqdm(unique_combinations.iterrows()):
+        _, axes = plt.subplots(ncols=len(metrics), figsize=(24, 8), sharex=True)
+        for i, metric in enumerate(metrics):
+            # Create a boolean mask for rows that match this combination
+            mask = True
+            for col in ivs:
+                mask = mask & (df[col] == combination[col])
+
+            run_ids = df[mask]["run_id"].unique()
+            # Filter the df for only those run IDs.
+            df_filtered = df[df["run_id"].isin(run_ids)]
+            # Create the grouped bar chart accordingly
+            # (need to write custom code for this).
+            # Step 1. Create a figure and axis.
+            ax = axes[i]
+            # Step 2. Iterate over the confidences, in a particular order
+
+            confidence_order = [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)]
+            # need to handle x offsets carefully here.
+            # Track which algorithms we've already added to legend
+            legend_added = set()
+            for i, confidence in enumerate(confidence_order):
+                # Filter the df for only those run IDs.
+                # (the confidence pairs are unique,
+                # so we can just filter on the first element of the tuple)
+                df_filtered_confidence = df_filtered[
+                    df_filtered["correct_confidence"] == confidence[0]
+                ]
+                # Extract the results (from the results_dictionary column)
+                results = df_filtered_confidence["results_dictionary"].values[0]
+                for j, algorithm in enumerate(results.keys()):
+                    # Only add label to legend if we haven't seen this algorithm before
+                    label = algorithm if algorithm not in legend_added else ""
+                    ax.bar(
+                        i * len(results.keys()) + j,
+                        np.median(results[algorithm][metric][graph_size]),
+                        label=label,
+                        color=STRATEGY_COLORS[algorithm]["color"],
+                    )
+                    legend_added.add(algorithm)
+            # Step 3. Add title. Put in all IV values too.
+            # ax.set_title(f"{metric}")
+            # Step 4. Add x-axis labels.
+            ax.set_xlabel("Confidences")
+            # Tick labels are the (correct_confidence, incorrect_confidence) pairs.
+            ax.set_xticks(np.arange(len(confidence_order)) * len(results.keys()))
+            ax.set_xticklabels(confidence_order)
+            # Step 5. Add y-axis labels.
+            ax.set_ylabel(metric)
+            # Step 6. Add legend.
+            # but I don't want it to repeatedly display the same variant names.
+            ax.legend()
+        # Add title before tight_layout to avoid overlap
+        plt.suptitle(f"Confidence Comparison for Graph Size {graph_size}")
+        plt.tight_layout()
+        # Add extra space at the top for the title
+        plt.subplots_adjust(top=0.9)
+        # Step 3. Save the figure.
+        plt.savefig(
+            f"{results_dir}/plot_{combination.to_dict()}.png",
+            dpi=300,
+            bbox_inches="tight",
+        )
+        plt.close()
+
+
+def plot_results_grid_confidences_fixed_module_selector(
+    results_dir: str, module_selector: str, graph_size: int
+) -> None:
+    """Plot results from a grid search experiment for varying confidences, for
+    a fixed set of metrics.
+
+    (analogous to plot_results_grid_graph_structures, but with
+    confidence setting as the IV.)
+    """
+    # Assumes module selector is fixed.
+    # Load the dataframe.
+    df = pd.read_pickle(os.path.join(results_dir, "combined_df.pkl"))
+
+    # The general structure is as follows:
+    # we want to produce a grouped bar chart with the following structure:
+    # x-axis: confidences,
+    # secondary x-axis: iterate over (correct_confidence, incorrect_confidence) pairs.
+    # y-axis: metric.
+    # so each group of bars corresponds to a different confidence setting,
+    # and each bar corresponds to a different
+    # (correct_confidence, incorrect_confidence) pair.
+    # Get the unique values of the IVs.
+    ivs = df.columns.tolist()
+    ivs.remove("run_id")
+    ivs.remove("variant")
+    ivs.remove("results_dictionary")
+    ivs.remove("correct_confidence")
+    ivs.remove("incorrect_confidence")
+    # Get the unique combinations of values for the IVs.
+    unique_combinations = df[ivs].drop_duplicates()
+
+    # so each group of bars corresponds to a different confidence setting,
+    # and each bar corresponds to a different
+    # (correct_confidence, incorrect_confidence) pair.
+    metrics = [
+        "query_cost_total",
+        "total_failed_attempts",
+        "execution_time_total",
+        "total_correct",
+        "total_timesteps",
+    ]
+
+    variant_order = ["greedy", "balanced", "conservative", "balanced-2"]
+
+    # For each unique combination of IVs,
+    # we need to collect the run IDs that have that combination
+    # (there should be num_confidences of these run IDs in total.)
+    for _, combination in tqdm(unique_combinations.iterrows()):
+        _, axes = plt.subplots(ncols=len(metrics), figsize=(24, 8), sharex=True)
+        for i, metric in enumerate(metrics):
+            # Create a boolean mask for rows that match this combination
+            mask = True
+            for col in ivs:
+                mask = mask & (df[col] == combination[col])
+            run_ids = df[mask]["run_id"].unique()
+            # Filter the df for only those run IDs.
+            df_filtered = df[df["run_id"].isin(run_ids)]
+            # Create the grouped bar chart accordingly
+            # (need to write custom code for this).
+            # Step 1. Create a figure and axis.
+            ax = axes[i]
+            # Step 2. Iterate over the confidences, in a particular order
+            confidence_order = [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)]
+            # need to handle x offsets carefully here.
+            # Track which algorithms we've already added to legend
+            legend_added = set()
+            for i, confidence in enumerate(confidence_order):
+                # Filter the df for only those run IDs.
+                df_filtered_confidence = df_filtered[
+                    df_filtered["correct_confidence"] == confidence[0]
+                ]
+                # Extract the results (from the results_dictionary column)
+                results = df_filtered_confidence["results_dictionary"].values[0]
+                for j, variant in enumerate(variant_order):
+                    # Only add label to legend if we haven't seen this algorithm before
+                    label = variant if variant not in legend_added else ""
+                    # Extract the row for this variant.
+                    row = df_filtered_confidence[
+                        df_filtered_confidence["variant"] == variant
+                    ]
+                    # Extract the results (from the results_dictionary column)
+                    results = row["results_dictionary"].values[0]
+                    ax.bar(
+                        i * len(confidence_order) + j,
+                        np.median(results[module_selector][metric][graph_size]),
+                        label=label,
+                        color=VARIANT_STYLES[variant]["color"],
+                    )
+                    legend_added.add(variant)
+            # Step 3. Add title. Put in all IV values too.
+            # ax.set_title(f"{metric}")
+            # Step 4. Add x-axis labels.
+            ax.set_xlabel("Confidences")
+            # Tick labels are the (correct_confidence, incorrect_confidence) pairs.
+            ax.set_xticks(np.arange(len(confidence_order)) * len(variant_order))
+            ax.set_xticklabels(confidence_order)
+            # Step 5. Add y-axis labels.
+            ax.set_ylabel(metric)
+            # Step 6. Add legend.
+            # but I don't want it to repeatedly display the same variant names.
+            ax.legend()
+        # Add title before tight_layout to avoid overlap
+        plt.suptitle(f"Confidence Comparison for Graph Size {graph_size}")
+        plt.tight_layout()
+        # Add extra space at the top for the title
+        plt.subplots_adjust(top=0.9)
+        # Step 3. Save the figure.
+        plt.savefig(
+            f"{results_dir}/plot_{combination.to_dict()}_{module_selector}.png",
+            dpi=300,
+            bbox_inches="tight",
+        )
+        plt.close()
+
+
 # Plot for graph structures.
 def plot_results_grid_graph_structures(
     results_dir: str, variant: str, graph_size: int

@@ -54,7 +54,6 @@ def main(data_dir: str) -> None:
             # Use pd.concat instead of deprecated df.append
             new_row = pd.DataFrame([dict_to_add])
             df = pd.concat([df, new_row], ignore_index=True)
-
     # Save df to pickle file.
     df.to_pickle(os.path.join(data_dir, "combined_df.pkl"))
 

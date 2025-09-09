@@ -153,7 +153,6 @@ def plot_results(
         ax.set_xlabel("Number of Graph Nodes")
         ax.set_ylabel(YLABELS[metric])
         ax.grid(True, linestyle="--", alpha=0.7)
-
     # Turn off unused subplots.
     for j in range(i + 1, num_rows * num_cols):
         axes[j // num_cols][j % num_cols].axis("off")
