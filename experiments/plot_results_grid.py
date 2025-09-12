@@ -571,11 +571,13 @@ def plot_results_grid_graph_structures_fixed_module_selector(
         )
         plt.close()
 
+
 def plot_results_grid_cquery(results_dir: str, variant: str, graph_size: int) -> None:
-    """Plot results from a grid search experiment for varying query costs,
-    for a fixed set of metrics.
-    
-    Analogous to plot_results_grid_confidences."""
+    """Plot results from a grid search experiment for varying query costs, for
+    a fixed set of metrics.
+
+    Analogous to plot_results_grid_confidences.
+    """
     # Load the dataframe.
     df = pd.read_pickle(os.path.join(results_dir, "combined_df.pkl"))
     # The general structure is as follows:
@@ -630,7 +632,9 @@ def plot_results_grid_cquery(results_dir: str, variant: str, graph_size: int) ->
             legend_added = set()
             for i, query_cost in enumerate(query_cost_order):
                 # Filter the df for only those run IDs.
-                df_filtered_query_cost = df_filtered[df_filtered["c_query"] == query_cost]
+                df_filtered_query_cost = df_filtered[
+                    df_filtered["c_query"] == query_cost
+                ]
                 # Extract the results (from the results_dictionary column)
                 results = df_filtered_query_cost["results_dictionary"].values[0]
                 for j, algorithm in enumerate(results.keys()):
@@ -669,11 +673,14 @@ def plot_results_grid_cquery(results_dir: str, variant: str, graph_size: int) ->
         plt.close()
 
 
-def plot_results_grid_cquery_fixed_module_selector(results_dir: str, module_selector: str, graph_size: int) -> None:
-    """Plot results from a grid search experiment for varying query costs,
-    for a fixed set of metrics.
-    
-    Analogous to plot_results_grid_confidences_fixed_module_selector."""
+def plot_results_grid_cquery_fixed_module_selector(
+    results_dir: str, module_selector: str, graph_size: int
+) -> None:
+    """Plot results from a grid search experiment for varying query costs, for
+    a fixed set of metrics.
+
+    Analogous to plot_results_grid_confidences_fixed_module_selector.
+    """
     # Load the dataframe.
     df = pd.read_pickle(os.path.join(results_dir, "combined_df.pkl"))
     # The general structure is as follows:
@@ -725,7 +732,9 @@ def plot_results_grid_cquery_fixed_module_selector(results_dir: str, module_sele
             legend_added = set()
             for i, query_cost in enumerate(query_cost_order):
                 # Filter the df for only those run IDs.
-                df_filtered_query_cost = df_filtered[df_filtered["c_query"] == query_cost]
+                df_filtered_query_cost = df_filtered[
+                    df_filtered["c_query"] == query_cost
+                ]
                 # Extract the results (from the results_dictionary column)
                 results = df_filtered_query_cost["results_dictionary"].values[0]
                 for j, variant in enumerate(variant_order):
@@ -769,6 +778,7 @@ def plot_results_grid_cquery_fixed_module_selector(results_dir: str, module_sele
         )
         plt.close()
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -784,4 +794,6 @@ if __name__ == "__main__":
     #     args.results_dir, "Brute Force", 10
     # )
     # plot_results_grid_cquery(args.results_dir, "balanced", fixed_graph_size)
-    plot_results_grid_cquery_fixed_module_selector(args.results_dir, "Brute Force", fixed_graph_size)
+    plot_results_grid_cquery_fixed_module_selector(
+        args.results_dir, "Brute Force", fixed_graph_size
+    )
