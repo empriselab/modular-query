@@ -135,6 +135,7 @@ def plot_results(
     plot_name: str = "strategy_comparison.png",
     save_dir: str = "experiments/results",
     title: str = "",
+    use_mean_for_total_correct: bool = False,
 ) -> None:
     """Create plots showing the performance of different querying strategies.
 
@@ -227,10 +228,17 @@ def plot_results(
                     )
                     if len(result_array) == 0:
                         continue
-                    median = np.median(result_array)
-                    upper_quartile, lower_quartile = np.percentile(
-                        result_array, [75, 25]
-                    )
+                    # Use mean for total_correct metric if requested, otherwise use median
+                    if use_mean_for_total_correct and metric == "total_correct":
+                        median = np.mean(result_array)
+                        std = np.std(result_array)
+                        upper_quartile = median + std
+                        lower_quartile = median - std
+                    else:
+                        median = np.median(result_array)
+                        upper_quartile, lower_quartile = np.percentile(
+                            result_array, [75, 25]
+                        )
                 except KeyError:
                     continue
                 except TypeError:
@@ -409,6 +417,7 @@ def plot_results_across_graph_sizes(
     data_dir: str,
     title: str,
     filename: str,
+    use_mean_for_total_correct: bool = False,
 ) -> None:
     """Plots where x-axis is the number of modules in the graph, and subplots
     correspond to different metrics. Each variant is a separate line.
@@ -460,10 +469,17 @@ def plot_results_across_graph_sizes(
                     result_array = np.array(
                         results[variant][algorithm][metric][size], dtype=np.float64
                     )
-                    median = np.median(result_array)
-                    upper_quartile, lower_quartile = np.percentile(
-                        result_array, [75, 25]
-                    )
+                    # Use mean for total_correct metric if requested, otherwise use median
+                    if use_mean_for_total_correct and metric == "total_correct":
+                        median = np.mean(result_array)
+                        std = np.std(result_array)
+                        upper_quartile = median + std
+                        lower_quartile = median - std
+                    else:
+                        median = np.median(result_array)
+                        upper_quartile, lower_quartile = np.percentile(
+                            result_array, [75, 25]
+                        )
                 except KeyError:
                     continue
                 except TypeError:

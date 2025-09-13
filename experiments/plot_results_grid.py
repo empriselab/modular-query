@@ -71,6 +71,7 @@ def plot_results_grid(results_dir: str) -> None:
             f"plot_{config['variant']}_{config['run_id']}.png",
             save_dir=results_dir,
             title=title,
+            use_mean_for_total_correct=True,
         )
 
 
@@ -120,6 +121,7 @@ def plot_results_grid_query_algorithms(results_dir: str) -> None:
             data_dir=results_dir,
             filename=f"plot_{run_id}.png",
             title=title,
+            use_mean_for_total_correct=True,
         )
 
 
@@ -200,9 +202,11 @@ def plot_results_grid_confidences(
                 for j, algorithm in enumerate(results.keys()):
                     # Only add label to legend if we haven't seen this algorithm before
                     label = algorithm if algorithm not in legend_added else ""
+                    # Use mean for total_correct metric, median for others
+                    value = np.mean(results[algorithm][metric][graph_size]) if metric == "total_correct" else np.median(results[algorithm][metric][graph_size])
                     ax.bar(
                         i * len(results.keys()) + j,
-                        np.median(results[algorithm][metric][graph_size]),
+                        value,
                         label=label,
                         color=STRATEGY_COLORS[algorithm]["color"],
                     )
@@ -315,9 +319,11 @@ def plot_results_grid_confidences_fixed_module_selector(
                     ]
                     # Extract the results (from the results_dictionary column)
                     results = row["results_dictionary"].values[0]
+                    # Use mean for total_correct metric, median for others
+                    value = np.mean(results[module_selector][metric][graph_size]) if metric == "total_correct" else np.median(results[module_selector][metric][graph_size])
                     ax.bar(
                         i * len(confidence_order) + j,
-                        np.median(results[module_selector][metric][graph_size]),
+                        value,
                         label=label,
                         color=VARIANT_STYLES[variant]["color"],
                     )
@@ -425,9 +431,11 @@ def plot_results_grid_graph_structures(
                 for j, algorithm in enumerate(results.keys()):
                     # Only add label to legend if we haven't seen this algorithm before
                     label = algorithm if algorithm not in legend_added else ""
+                    # Use mean for total_correct metric, median for others
+                    value = np.mean(results[algorithm][metric][graph_size]) if metric == "total_correct" else np.median(results[algorithm][metric][graph_size])
                     ax.bar(
                         i * len(results.keys()) + j,
-                        np.median(results[algorithm][metric][graph_size]),
+                        value,
                         label=label,
                         color=STRATEGY_COLORS[algorithm]["color"],
                     )
@@ -539,9 +547,11 @@ def plot_results_grid_graph_structures_fixed_module_selector(
                     ]
                     # Extract the results (from the results_dictionary column)
                     results = row["results_dictionary"].values[0]
+                    # Use mean for total_correct metric, median for others
+                    value = np.mean(results[module_selector][metric][graph_size]) if metric == "total_correct" else np.median(results[module_selector][metric][graph_size])
                     ax.bar(
                         i * len(variant_order) + j,
-                        np.median(results[module_selector][metric][graph_size]),
+                        value,
                         label=label,
                         color=VARIANT_STYLES[variant]["color"],
                     )
@@ -640,9 +650,11 @@ def plot_results_grid_cquery(results_dir: str, variant: str, graph_size: int) ->
                 for j, algorithm in enumerate(results.keys()):
                     # Only add label to legend if we haven't seen this algorithm before
                     label = algorithm if algorithm not in legend_added else ""
+                    # Use mean for total_correct metric, median for others
+                    value = np.mean(results[algorithm][metric][graph_size]) if metric == "total_correct" else np.median(results[algorithm][metric][graph_size])
                     ax.bar(
                         i * len(query_cost_order) + j,
-                        np.median(results[algorithm][metric][graph_size]),
+                        value,
                         label=label,
                         color=STRATEGY_COLORS[algorithm]["color"],
                     )
@@ -746,9 +758,11 @@ def plot_results_grid_cquery_fixed_module_selector(
                     ]
                     # Extract the results (from the results_dictionary column)
                     results = row["results_dictionary"].values[0]
+                    # Use mean for total_correct metric, median for others
+                    value = np.mean(results[module_selector][metric][graph_size]) if metric == "total_correct" else np.median(results[module_selector][metric][graph_size])
                     ax.bar(
                         i * len(query_cost_order) + j,
-                        np.median(results[module_selector][metric][graph_size]),
+                        value,
                         label=label,
                         color=VARIANT_STYLES[variant]["color"],
                     )
