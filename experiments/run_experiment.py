@@ -183,7 +183,7 @@ def run_experiment(
         pre_make_query_termination_condition = DummyTerminationCondition()
     elif variant == "balanced-2":
         loop_termination_condition = DummyTerminationCondition()
-        pre_make_query_termination_condition = Balanced2TerminationCondition()
+        pre_make_query_termination_condition = DummyTerminationCondition()  # No longer needed, because checking is done in get_action()
     elif variant in ("greedy", "balanced"):
         # Default case - these won't be used for other variants
         loop_termination_condition = DummyTerminationCondition()
@@ -368,7 +368,10 @@ def run_experiment(
                     strategy.or_modules = all_queryable_module_names
 
                 policy = ModularPolicy(
-                    module_graph=module_graph, query_strategy=strategy, verbose=False
+                    module_graph=module_graph, 
+                    query_strategy=strategy, 
+                    verbose=False,
+                    variant=variant
                 )
 
                 # NOTE: skip graphquery for large graphs (>= 50)
@@ -1085,13 +1088,22 @@ def main(variant: str) -> None:
     # exp_mixed_failure_population(variant)
 
     # Run the grid-search experiment.
+    # config = {
+    #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
+    #     "num_trials": 100,
+    #     "num_failures_list": [0, 1, 2, 3],
+    #     "confidences_list": [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)],
+    #     "redundancy_list": ["all_AND", "all_OR", "AND_then_OR", "OR_then_AND"],
+    #     "c_query_list": [0.08, 0.16, 0.32, 0.64],
+    # }
+    # 9/14/2025: much smaller test, 'canonical' setting for feeding.
     config = {
         "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
         "num_trials": 100,
-        "num_failures_list": [0, 1, 2, 3],
-        "confidences_list": [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)],
-        "redundancy_list": ["all_AND", "all_OR", "AND_then_OR", "OR_then_AND"],
-        "c_query_list": [0.08, 0.16, 0.32, 0.64],
+        "num_failures_list": [3],
+        "confidences_list": [(0.7, 0.4)],
+        "redundancy_list": ["all_AND"],
+        "c_query_list": [0.64],
     }
     # simple test with different redundancies, but everything else fixed.
     # config = {

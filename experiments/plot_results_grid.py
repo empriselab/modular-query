@@ -86,7 +86,7 @@ def plot_results_grid_query_algorithms(results_dir: str) -> None:
     # strip out the .pkl extension.
     run_ids = [run_id.split(".")[0] for run_id in run_ids]
     module_selector = "Brute Force"
-    for run_id in run_ids:
+    for run_id in tqdm(run_ids):
         # Load all pkl and json files associated with this run_id.
         # print(run_id)
         pkl_files = [
@@ -802,12 +802,14 @@ if __name__ == "__main__":
 
     fixed_graph_size = 10
     # plot_results_grid(args.results_dir)
-    # plot_results_grid_query_algorithms(args.results_dir)
+    plot_results_grid_query_algorithms(args.results_dir)
+    # plot_results_grid_confidences(args.results_dir, "balanced", fixed_graph_size)
+    # plot_results_grid_confidences_fixed_module_selector(args.results_dir, "Brute Force", fixed_graph_size)
     # plot_results_grid_graph_structures(args.results_dir, "balanced", 10)
     # plot_results_grid_graph_structures_fixed_module_selector(
     #     args.results_dir, "Brute Force", 10
     # )
     # plot_results_grid_cquery(args.results_dir, "balanced", fixed_graph_size)
-    plot_results_grid_cquery_fixed_module_selector(
-        args.results_dir, "Brute Force", fixed_graph_size
-    )
+    # plot_results_grid_cquery_fixed_module_selector(
+    #     args.results_dir, "Brute Force", fixed_graph_size
+    # )
