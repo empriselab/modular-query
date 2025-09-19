@@ -68,6 +68,7 @@ class ModularPolicy:
 
         # Passing through with the expert cache 
         # (where we know that expert cached values will have a confidence of p_expert)
+        self.module_graph.set_state(state)
         computed_values, computed_confidences, total_query_cost = (
             self.module_graph.compute_values(
                 expert_query_module_names=set(),

@@ -147,6 +147,7 @@ def run_experiment(
     variant: str = "balanced",
     dependency_structure: str = "all_AND",
     disable_mip: bool = False,
+    expert_query_confidence: float = 1.0,
 ) -> dict[str, dict[str, dict[int, list[float]]]]:
     """Run experiments with different graph sizes and querying strategies.
 
@@ -288,6 +289,7 @@ def run_experiment(
                     correct_module_confidence=correct_module_confidence,
                     incorrect_module_confidence=incorrect_module_confidence,
                     redundancy="AND",
+                    expert_query_confidence=expert_query_confidence,
                 )
             elif dependency_structure == "all_OR":
                 module_graph = generate_random_module_graph(
@@ -299,6 +301,7 @@ def run_experiment(
                     correct_module_confidence=correct_module_confidence,
                     incorrect_module_confidence=incorrect_module_confidence,
                     redundancy="OR",
+                    expert_query_confidence=expert_query_confidence,
                 )
             elif dependency_structure == "AND_then_OR":
                 module_graph = generate_random_top_bottom_module_graph(
@@ -311,6 +314,7 @@ def run_experiment(
                     incorrect_module_confidence=incorrect_module_confidence,
                     gate_top="AND",
                     gate_bottom="OR",
+                    expert_query_confidence=expert_query_confidence,
                 )
             elif dependency_structure == "OR_then_AND":
                 module_graph = generate_random_top_bottom_module_graph(
@@ -323,6 +327,7 @@ def run_experiment(
                     incorrect_module_confidence=incorrect_module_confidence,
                     gate_top="OR",
                     gate_bottom="AND",
+                    expert_query_confidence=expert_query_confidence,
                 )
             else:
                 raise ValueError(
@@ -724,14 +729,14 @@ def run_single_grid_search_experiment(
     Returns:
         Tuple of (run_id, results, config_to_save)
     """
-    (num_failures, confidence, redundancy, c_query) = combo
+    (num_failures, confidence, redundancy, c_query, expert_query_confidence) = combo
     (correct_confidence, incorrect_confidence) = confidence
 
     print_and_log(
         f"Running experiment with num_failures={num_failures},"
         f"correct_confidence={correct_confidence},"
         f"incorrect_confidence={incorrect_confidence},"
-        f"redundancy={redundancy}, c_query={c_query}"
+        f"redundancy={redundancy}, c_query={c_query}, expert_query_confidence={expert_query_confidence}"
     )
 
     # Convert num_failures to a one-hot vector.
@@ -768,6 +773,7 @@ def run_single_grid_search_experiment(
         "incorrect_confidence": incorrect_confidence,
         "dependency_structure": redundancy,
         "c_query": c_query,
+        "expert_query_confidence": expert_query_confidence,
     }
 
     return run_id, results, config_to_save
@@ -795,6 +801,7 @@ def exp_grid_search_parallel(
             config["confidences_list"],
             config["redundancy_list"],
             config["c_query_list"],
+            config["expert_query_confidence_list"],
         )
     )
 
@@ -998,15 +1005,16 @@ def exp_grid_search(variant: str, config: dict[str, Any]) -> None:
         config["confidences_list"],
         config["redundancy_list"],
         config["c_query_list"],
+        config["expert_query_confidence_list"],
     )
     for combo in combo_generator:
-        (num_failures, confidence, redundancy, c_query) = combo
+        (num_failures, confidence, redundancy, c_query, expert_query_confidence) = combo
         (correct_confidence, incorrect_confidence) = confidence
         print_and_log(
             f"Running experiment with num_failures={num_failures},"
             f"correct_confidence={correct_confidence},"
             f"incorrect_confidence={incorrect_confidence},"
-            f"redundancy={redundancy}, c_query={c_query}"
+            f"redundancy={redundancy}, c_query={c_query}, expert_query_confidence={expert_query_confidence}"
         )
         # Convert num_failures to a one-hot vector.
         incorrect_module_count = np.zeros(num_failures + 1)
@@ -1046,6 +1054,7 @@ def exp_grid_search(variant: str, config: dict[str, Any]) -> None:
             "incorrect_confidence": incorrect_confidence,
             "redundancy": redundancy,
             "c_query": c_query,
+            "expert_query_confidence": expert_query_confidence,
         }
         with open(
             f"experiments/results/config_{run_id}.json", "w", encoding="utf-8"
@@ -1104,6 +1113,7 @@ def main(variant: str) -> None:
         "confidences_list": [(0.7, 0.4)],
         "redundancy_list": ["all_AND"],
         "c_query_list": [0.64],
+        "expert_query_confidence_list": [1.0],
     }
     # simple test with different redundancies, but everything else fixed.
     # config = {

@@ -52,6 +52,7 @@ def construct_graph(
     num_modules: int,
     edge_probability: float,
     rng: np.random.Generator,
+    expert_query_confidence: float,
 ) -> ModuleGraph:
     """Construct a random directed acyclic graph (DAG) for the module
     dependencies."""
@@ -77,7 +78,7 @@ def construct_graph(
         leaves.add(module)
 
     # Create the module graph.
-    module_graph = ModuleGraph(module_to_parents)
+    module_graph = ModuleGraph(module_to_parents, expert_query_confidence=expert_query_confidence)
 
     return module_graph
 
@@ -89,6 +90,7 @@ def construct_graph_top_bottom(
     action_module: ActionModule,
     edge_probability: float,
     rng: np.random.Generator,
+    expert_query_confidence: float,
 ) -> ModuleGraph:
     """Construct a module graph with a single top gate type and a single bottom
     gate type.
@@ -177,7 +179,7 @@ def construct_graph_top_bottom(
         leaves.add(module)
 
     # Create the module graph.
-    module_graph = ModuleGraph(module_to_parents)
+    module_graph = ModuleGraph(module_to_parents, expert_query_confidence=expert_query_confidence)
     return module_graph
 
 
@@ -194,6 +196,7 @@ def generate_random_module_graph(
     correct_module_confidence: float = 1.0,
     incorrect_module_confidence: float = 0.1,
     redundancy: str = "AND",
+    expert_query_confidence: float = 1.0,
 ) -> ModuleGraph:
     """Generate a random module graph where all modules are a single type of
     gate. (either AND or OR gates).
@@ -292,6 +295,7 @@ def generate_random_module_graph(
         num_modules=num_modules,
         edge_probability=edge_probability,
         rng=rng,
+        expert_query_confidence=expert_query_confidence,
     )
 
     return module_graph
@@ -307,6 +311,7 @@ def generate_random_top_bottom_module_graph(
     incorrect_module_confidence: float = 0.1,
     gate_top: str = "AND",
     gate_bottom: str = "OR",
+    expert_query_confidence: float = 1.0,
 ) -> ModuleGraph:
     """Generate a random module graph where the first group of modules are a
     single gate type ("top"), and the last set of modules are a different gate
@@ -438,6 +443,7 @@ def generate_random_top_bottom_module_graph(
         action_module=action_module,  # type: ignore
         edge_probability=edge_probability,
         rng=rng,
+        expert_query_confidence=expert_query_confidence,
     )
     return module_graph
 
