@@ -15,6 +15,7 @@ class ModuleGraph:
         module_to_parents: dict[Module, list[Module]],
         root_leaf_check: bool = True,
         verbose: bool = False,
+        expert_query_confidence: float = 1.0,
     ) -> None:
         """
         root_leaf_check: if True,
@@ -63,6 +64,9 @@ class ModuleGraph:
 
         # Set verbose flag. Outputs model forward passes.
         self.verbose = verbose
+
+        # Set the expert query confidence.
+        self.expert_query_confidence = expert_query_confidence
 
     def get_modules(self) -> set[Module]:
         """Get all modules in the graph."""
@@ -171,16 +175,16 @@ class ModuleGraph:
                 module.get_name() in expert_values_cache
                 and expert_values_cache[module.get_name()] is not None
             ):
-                # Use the cached expert value, and set confidence to 1.0.
+                # Use the cached expert value, and set confidence to self.expert_query_confidence.
                 value = expert_values_cache[module.get_name()]
                 computed_values[module] = value
-                computed_confidences[module] = 1.0
+                computed_confidences[module] = self.expert_query_confidence
             elif module.get_name() in expert_query_module_names:
                 # If this module is the module to query, call the expert.
                 value = module.call_expert(parent_outputs)
-                # Use the expert's value, and set confidence to 1.0.
+                # Use the expert's value, and set confidence to self.expert_query_confidence.
                 computed_values[module] = value
-                computed_confidences[module] = 1.0
+                computed_confidences[module] = self.expert_query_confidence
                 # Add the expert query cost for this module.
                 query_cost = module.get_expert_query_cost()
                 assert (

@@ -65,7 +65,15 @@ class ModularPolicy:
         """Invoke the policy and return action and total querying cost and
         whether we queried for a module, as well as the post-query
         confidences."""
-        _, computed_values, computed_confidences = self.forward_pass_only(state)
+
+        # Passing through with the expert cache 
+        # (where we know that expert cached values will have a confidence of p_expert)
+        computed_values, computed_confidences, total_query_cost = (
+            self.module_graph.compute_values(
+                expert_query_module_names=set(),
+                expert_values_cache=self.expert_values_cache,
+            )
+        )
 
         # Compute the expert query modules using the querying strategy.
         expert_query_module_name, timing_info, _ = (
@@ -110,7 +118,7 @@ class ModularPolicy:
                 if self.verbose:
                     print_and_log(f"Balanced-2: Not querying {expert_query_module_name} "
                                 f"(confidence gain {confidence_gain:.3f} < cost {query_cost:.3f})")
-
+        
         computed_values, post_query_confidences, total_query_cost = (
             self.module_graph.compute_values(
                 expert_query_module_names=expert_query_module_names,
