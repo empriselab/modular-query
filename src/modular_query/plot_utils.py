@@ -432,9 +432,16 @@ def plot_results_across_graph_sizes(
     }
 
     for pkl_file in pkl_files:
-        # extract the variant from the pkl file name.
-        variant = pkl_file.split("_")[2]
+        # if there are any forward slashes in the pkl file name, extract the last part.
+        if "/" in pkl_file:
+            tail = pkl_file.split("/")[-1]
+            variant = tail.split("_")[2]
+        else:
+            # extract the variant from the pkl file name.
+            variant = pkl_file.split("_")[2]
         results[variant] = pkl.load(open(Path(data_dir) / pkl_file, "rb"))
+
+    import pdb; pdb.set_trace()
 
     # Extract the graph sizes from the results.
     graph_sizes = list(results["greedy"][algorithm]["total_timesteps"].keys())
@@ -499,13 +506,16 @@ def plot_results_across_graph_sizes(
             if i == 0:
                 lines.append(line[0])
                 labels.append(VARIANT_NAMES[variant])
-            ax.fill_between(
-                np.arange(len(graph_sizes)),
-                lower_quartiles,
-                upper_quartiles,
-                alpha=0.3,
-                color=VARIANT_STYLES[variant]["color"],
-            )
+            # Only fill between if we have data for all sizes
+            if len(lower_quartiles) == len(graph_sizes) and len(upper_quartiles) == len(graph_sizes):
+                ax.fill_between(
+                    np.arange(len(graph_sizes)),
+                    lower_quartiles,
+                    upper_quartiles,
+                    alpha=0.3,
+                    color=VARIANT_STYLES[variant]["color"],
+                )
+            print(variant, medians)
             ax.set_title(TITLES[metric])
             ax.set_xlabel("Number of Graph Nodes")
             ax.set_ylabel(YLABELS[metric])

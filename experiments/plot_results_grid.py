@@ -86,7 +86,7 @@ def plot_results_grid_query_algorithms(results_dir: str) -> None:
     # strip out the .pkl extension.
     run_ids = [run_id.split(".")[0] for run_id in run_ids]
     module_selector = "Brute Force"
-    for run_id in tqdm(run_ids):
+    for run_id in run_ids:
         # Load all pkl and json files associated with this run_id.
         # print(run_id)
         pkl_files = [
@@ -126,7 +126,7 @@ def plot_results_grid_query_algorithms(results_dir: str) -> None:
 
 
 def plot_results_grid_confidences(
-    results_dir: str, variant: str, graph_size: int
+    results_dir: str, variant: str, graph_size: int, pickle_name: str
 ) -> None:
     """Plot results from a grid search experiment for varying confidences, for
     a fixed set of metrics.
@@ -135,7 +135,7 @@ def plot_results_grid_confidences(
     confidence setting as the IV.)
     """
     # Load the dataframe.
-    df = pd.read_pickle(os.path.join(results_dir, "combined_df.pkl"))
+    df = pd.read_pickle(os.path.join(results_dir, f"{pickle_name}.pkl"))
     # The general structure is as follows:
     # we want to produce a grouped bar chart with the following structure:
     # x-axis: confidences,
@@ -238,7 +238,7 @@ def plot_results_grid_confidences(
 
 
 def plot_results_grid_confidences_fixed_module_selector(
-    results_dir: str, module_selector: str, graph_size: int
+    results_dir: str, module_selector: str, graph_size: int, pickle_name: str
 ) -> None:
     """Plot results from a grid search experiment for varying confidences, for
     a fixed set of metrics.
@@ -248,7 +248,7 @@ def plot_results_grid_confidences_fixed_module_selector(
     """
     # Assumes module selector is fixed.
     # Load the dataframe.
-    df = pd.read_pickle(os.path.join(results_dir, "combined_df.pkl"))
+    df = pd.read_pickle(os.path.join(results_dir, f"{pickle_name}.pkl"))
 
     # The general structure is as follows:
     # we want to produce a grouped bar chart with the following structure:
@@ -356,12 +356,12 @@ def plot_results_grid_confidences_fixed_module_selector(
 
 # Plot for graph structures.
 def plot_results_grid_graph_structures(
-    results_dir: str, variant: str, graph_size: int
+    results_dir: str, variant: str, graph_size: int, pickle_name: str
 ) -> None:
     """Plot results from a grid search experiment for varying graph structures,
     for a fixed set of metrics."""
     # Load the dataframe.
-    df = pd.read_pickle(os.path.join(results_dir, "combined_df.pkl"))
+    df = pd.read_pickle(os.path.join(results_dir, f"{pickle_name}.pkl"))
 
     # The general structure is as follows:
     # we want to produce a grouped bar chart with the following structure:
@@ -469,7 +469,7 @@ def plot_results_grid_graph_structures(
 # Analogous function to above,
 # but we fix the module selector/strategy, and vary the variant.
 def plot_results_grid_graph_structures_fixed_module_selector(
-    results_dir: str, module_selector: str, graph_size: int
+    results_dir: str, module_selector: str, graph_size: int, pickle_name: str
 ) -> None:
     """Plot results from a grid search experiment for varying graph structures,
     for a fixed set of metrics.
@@ -477,7 +477,7 @@ def plot_results_grid_graph_structures_fixed_module_selector(
     Assumes module selector is fixed.
     """
     # Load the dataframe.
-    df = pd.read_pickle(os.path.join(results_dir, "combined_df.pkl"))
+    df = pd.read_pickle(os.path.join(results_dir, f"{pickle_name}.pkl"))
     # The general structure is as follows:
     # we want to produce a grouped bar chart with the following structure:
     # x-axis: graph structures, secondary x-axis: iterate over variants.
@@ -582,14 +582,14 @@ def plot_results_grid_graph_structures_fixed_module_selector(
         plt.close()
 
 
-def plot_results_grid_cquery(results_dir: str, variant: str, graph_size: int) -> None:
+def plot_results_grid_cquery(results_dir: str, variant: str, graph_size: int, pickle_name: str) -> None:
     """Plot results from a grid search experiment for varying query costs, for
     a fixed set of metrics.
 
     Analogous to plot_results_grid_confidences.
     """
     # Load the dataframe.
-    df = pd.read_pickle(os.path.join(results_dir, "combined_df.pkl"))
+    df = pd.read_pickle(os.path.join(results_dir, f"{pickle_name}.pkl"))
     # The general structure is as follows:
     # we want to produce a grouped bar chart with the following structure:
     # x-axis: query costs, secondary x-axis: iterate over algorithms/module selectors.
@@ -686,7 +686,7 @@ def plot_results_grid_cquery(results_dir: str, variant: str, graph_size: int) ->
 
 
 def plot_results_grid_cquery_fixed_module_selector(
-    results_dir: str, module_selector: str, graph_size: int
+    results_dir: str, module_selector: str, graph_size: int, pickle_name: str
 ) -> None:
     """Plot results from a grid search experiment for varying query costs, for
     a fixed set of metrics.
@@ -694,7 +694,7 @@ def plot_results_grid_cquery_fixed_module_selector(
     Analogous to plot_results_grid_confidences_fixed_module_selector.
     """
     # Load the dataframe.
-    df = pd.read_pickle(os.path.join(results_dir, "combined_df.pkl"))
+    df = pd.read_pickle(os.path.join(results_dir, f"{pickle_name}.pkl"))
     # The general structure is as follows:
     # we want to produce a grouped bar chart with the following structure:
     # x-axis: query costs, secondary x-axis: iterate over variants.
@@ -801,15 +801,116 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     fixed_graph_size = 10
+    fixed_variant = "conservative"
+    fixed_module_selector = "Brute Force"
+    df_stem = "combined_dataframes/combined_df_corrected"
+
     # plot_results_grid(args.results_dir)
-    plot_results_grid_query_algorithms(args.results_dir)
-    # plot_results_grid_confidences(args.results_dir, "balanced", fixed_graph_size)
-    # plot_results_grid_confidences_fixed_module_selector(args.results_dir, "Brute Force", fixed_graph_size)
-    # plot_results_grid_graph_structures(args.results_dir, "balanced", 10)
+    # plot_results_grid_query_algorithms(args.results_dir)
+    plot_results_grid_graph_structures(args.results_dir, fixed_variant, fixed_graph_size, df_stem)
     # plot_results_grid_graph_structures_fixed_module_selector(
-    #     args.results_dir, "Brute Force", 10
+    #     args.results_dir, fixed_module_selector, 10, df_stem
     # )
-    # plot_results_grid_cquery(args.results_dir, "balanced", fixed_graph_size)
+    plot_results_grid_confidences(args.results_dir, fixed_variant, fixed_graph_size, df_stem)
+    # plot_results_grid_confidences_fixed_module_selector(
+    #     args.results_dir, fixed_module_selector, fixed_graph_size, df_stem
+    # )
+    plot_results_grid_cquery(args.results_dir, fixed_variant, fixed_graph_size, df_stem)
     # plot_results_grid_cquery_fixed_module_selector(
-    #     args.results_dir, "Brute Force", fixed_graph_size
+    #     args.results_dir, fixed_module_selector, fixed_graph_size, df_stem  
     # )
+
+    # # HACKY code for night of 9-14-2025.
+    # # Get all the run IDs that exist in the results directory.
+    # # (all pkl files have the form results_variant_[variant_name]_run_[run_id].pkl)
+    # # Print files that end with .pkl.
+    # run_id = 243
+    # results_dir = args.results_dir
+    # module_selector = fixed_module_selector
+    # # Don't put in pickle file corresponding to balanced-2.
+    # pkl_files = [
+    #     f
+    #     for f in os.listdir(results_dir)
+    #     if f.endswith(".pkl") and f.split("_")[4] == f"{run_id}.pkl" and f.split("_")[2] != "balanced-2"
+    # ]
+    # # print(pkl_files)
+    # config_files = [
+    #     f
+    #     for f in os.listdir(results_dir)
+    #     if f.endswith(".json") and f.split("_")[4] == f"{run_id}.json" and f.split("_")[2] != "balanced-2"
+    # ]
+    # # add in corrected pkl and config files
+    # pkl_files.append(f"corrected_results/results_variant_balanced-2_run_0.pkl")
+    # config_files.append(f"corrected_results/config_variant_balanced-2_run_0.json")
+    # with open(
+    #     os.path.join(results_dir, config_files[0]), "r", encoding="utf-8"
+    # ) as f:
+    #     config = json.load(f)
+    # title = (
+    #     f"Grid Search: Module selector={module_selector},"
+    #     + f" Num Failures={config['num_failures']},"
+    #     + f" Correct Confidence={config['correct_confidence']},"
+    #     + f" Incorrect Confidence={config['incorrect_confidence']},"
+    #     + f" Redundancy={config['dependency_structure']},"
+    #     + f" Query Cost={config['c_query']}"
+    # )
+    # # Pass the pickle files to plot_results_across_graph_sizes.
+    # plot_results_across_graph_sizes(
+    #     algorithm=module_selector,
+    #     pkl_files=pkl_files,
+    #     data_dir=results_dir,
+    #     filename=f"plot_{run_id}.png",
+    #     title=title,
+    #     use_mean_for_total_correct=True,
+    # )
+
+    # Mute in general.
+    # Look up all pkl files in the results directory.
+    # pkl_files = [f for f in os.listdir(results_dir) if f.endswith(".pkl")]
+    # for pkl_file in pkl_files:
+    #     print(f"Plotting {pkl_file}")
+    #     # Load pickle file
+    #     with open(os.path.join(results_dir, pkl_file), "rb") as f:
+    #         results = pkl.load(f)
+    #     # Load the config from the json file.
+    #     # Same name as pkl file, but (1) with .json extension,
+    #     # and (2) with 'config' instead of 'results'.
+    #     with open(
+    #         os.path.join(
+    #             results_dir,
+    #             pkl_file.replace(".pkl", ".json").replace("results", "config"),
+    #         ),
+    #         "r",
+    #         encoding="utf-8",
+    #     ) as f2:
+    #         config = json.load(f2)
+    #     metrics = [
+    #         "query_cost_total",
+    #         "total_failed_attempts",
+    #         "execution_time_total",
+    #         "total_correct",
+    #         "total_timesteps",
+    #     ]
+
+    #     # infer graph sizes from results.
+    #     graph_sizes = list(results["Brute Force"]["total_timesteps"].keys())
+    #     # Create a title based on the following config keys:
+    #     # variant, num_failures, correct_confidence, incorrect_confidence,
+    #     # redundancy, c_query
+    #     title = (
+    #         f"Grid Search: Variant={config['variant']},"
+    #         + f"Num Failures={config['num_failures']},"
+    #         + f"Correct Confidence={config['correct_confidence']},"
+    #         + f"Incorrect Confidence={config['incorrect_confidence']},"
+    #         + f"Redundancy={config['redundancy']},"
+    #         + f"Query Cost={config['c_query']}"
+    #     )
+    #     plot_results(
+    #         results,
+    #         graph_sizes,
+    #         metrics,
+    #         f"plot_{config['variant']}_{config['run_id']}.png",
+    #         save_dir=results_dir,
+    #         title=title,
+    #         use_mean_for_total_correct=True,
+    #     )
