@@ -128,25 +128,23 @@ class GraphQueryStrategy(QueryStrategy):
         }
         ### Query edges between consecutive levels.
         query_cost = query_costs_str[modules_list[0]] * self.workload_eps
-        if modules_list[0] not in self.queried_modules:
-            graph.add_edge(
-                "s_init", f"s_{modules_list[0]},success", key="a_query", cost=query_cost
-            )
+        graph.add_edge(
+            "s_init", f"s_{modules_list[0]},success", key="a_query", cost=query_cost
+        )
         for module_start, module_end in pairwise(modules_list):
-            if module_end not in self.queried_modules:
-                query_cost = query_costs_str[module_end] * self.workload_eps
-                graph.add_edge(
-                    f"s_{module_start},success",
-                    f"s_{module_end},success",
-                    key="a_query",
-                    cost=query_cost,
-                )
-                graph.add_edge(
-                    f"s_{module_start},failure",
-                    f"s_{module_end},success",
-                    key="a_query",
-                    cost=query_cost,
-                )
+            query_cost = query_costs_str[module_end] * self.workload_eps
+            graph.add_edge(
+                f"s_{module_start},success",
+                f"s_{module_end},success",
+                key="a_query",
+                cost=query_cost,
+            )
+            graph.add_edge(
+                f"s_{module_start},failure",
+                f"s_{module_end},success",
+                key="a_query",
+                cost=query_cost,
+            )
         return graph
 
     def run_a_star(

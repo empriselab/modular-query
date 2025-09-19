@@ -24,7 +24,6 @@ class BruteForceQueryStrategy(QueryStrategy):
             module.get_name()
             for module in module_graph.topo_order
             if not isinstance(module, StateModule)
-            and module.get_name() not in self.queried_modules
         ]
         best_query_module = None
         # Force to ask at least one module.

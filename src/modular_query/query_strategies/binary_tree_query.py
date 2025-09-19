@@ -116,32 +116,30 @@ class BinaryTreeQueryStrategy(QueryStrategy):
         ### Query edges between consecutive levels.
         query_cost = query_costs_str[self.modules_list[0]]
         # First level.
-        if self.modules_list[0] not in self.queried_modules:
+        graph.add_edge(
+            "s_init",
+            f"s_{self.modules_list[0]},0",
+            key="a_query",
+            cost=query_cost,
+        )
+        for module_start, module_end in pairwise(self.modules_list):
+            query_cost = query_costs_str[module_end]
+            # Only the special node j = "111...1" (all 1s),
+            # corresponding to not querying any previous modules,
+            # can have query edges to the next module.
+            # And it will go to k = "111...10" (all 1s, last bit is 0),
+            # which corresponds to querying the module_end module.
+            j_binary_str = "1" * (self.modules_list.index(module_start) + 1)
+            k_binary_str = j_binary_str + "0"
+            j = int(j_binary_str, 2)
+            k = int(k_binary_str, 2)
+            # Add the query edge from s_{module_start},j to s_{module_end},k.
             graph.add_edge(
-                "s_init",
-                f"s_{self.modules_list[0]},0",
+                f"s_{module_start},{j}",
+                f"s_{module_end},{k}",
                 key="a_query",
                 cost=query_cost,
             )
-        for module_start, module_end in pairwise(self.modules_list):
-            if module_end not in self.queried_modules:
-                query_cost = query_costs_str[module_end]
-                # Only the special node j = "111...1" (all 1s),
-                # corresponding to not querying any previous modules,
-                # can have query edges to the next module.
-                # And it will go to k = "111...10" (all 1s, last bit is 0),
-                # which corresponds to querying the module_end module.
-                j_binary_str = "1" * (self.modules_list.index(module_start) + 1)
-                k_binary_str = j_binary_str + "0"
-                j = int(j_binary_str, 2)
-                k = int(k_binary_str, 2)
-                # Add the query edge from s_{module_start},j to s_{module_end},k.
-                graph.add_edge(
-                    f"s_{module_start},{j}",
-                    f"s_{module_end},{k}",
-                    key="a_query",
-                    cost=query_cost,
-                )
 
         ### Add autonomous edges.
         ## Autonomous edges between consecutive levels.

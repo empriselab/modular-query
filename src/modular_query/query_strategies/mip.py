@@ -38,7 +38,6 @@ class MIPQueryStrategy(QueryStrategy):
                 module.get_name()
                 for module in module_graph.topo_order
                 if not isinstance(module, StateModule)
-                and module.get_name() not in self.queried_modules
             ]
             module_name_to_module = {
                 module.get_name(): module for module in module_graph.get_modules()

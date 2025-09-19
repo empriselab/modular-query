@@ -108,7 +108,6 @@ class HybridGraphQueryStrategy(QueryStrategy):
             module: conf
             for module, conf in computed_confidences.items()
             if module.get_name() in self.or_modules
-            and module.get_name() not in self.queried_modules
         }
         autonomous_OR_cost = sum_of_uncertainties(restricted_confidences)
         configuration_1_cost = and_solution_info["path_cost"] + autonomous_OR_cost
@@ -118,7 +117,6 @@ class HybridGraphQueryStrategy(QueryStrategy):
             module: conf
             for module, conf in computed_confidences.items()
             if module.get_name() in self.and_modules
-            and module.get_name() not in self.queried_modules
         }
         autonomous_AND_cost = 1 - product_of_confidences(restricted_confidences)
         OR_module, or_timing_info, or_solution_info = (
