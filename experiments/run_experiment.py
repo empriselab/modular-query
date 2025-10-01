@@ -1110,10 +1110,10 @@ def main(variant: str) -> None:
         "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
         "num_trials": 100,
         "num_failures_list": [3],
-        "confidences_list": [(0.7, 0.4)],
+        "confidences_list": [(1,0.1)],
         "redundancy_list": ["all_AND"],
-        "c_query_list": [0.64],
-        "expert_query_confidence_list": [1.0],
+        "c_query_list": [0.32],
+        "expert_query_confidence_list": [1.0, 0.9, 0.8, 0.7],
     }
     # simple test with different redundancies, but everything else fixed.
     # config = {
