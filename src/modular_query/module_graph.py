@@ -1,6 +1,7 @@
 """Module graph."""
 
 from collections import deque
+import random
 from typing import Any
 
 from modular_query.modules import Module
@@ -182,6 +183,9 @@ class ModuleGraph:
             elif module.get_name() in expert_query_module_names:
                 # If this module is the module to query, call the expert.
                 value = module.call_expert(parent_outputs)
+                # Here, we should flip the 'value' with probability 1-self.expert_query_confidence.
+                if random.random() < 1 - self.expert_query_confidence:
+                    value = not value
                 # Use the expert's value, and set confidence to self.expert_query_confidence.
                 computed_values[module] = value
                 computed_confidences[module] = self.expert_query_confidence
