@@ -5,6 +5,7 @@ each of them.
 """
 
 import argparse
+from hashlib import algorithms_available
 import json
 import os
 import pickle as pkl
@@ -793,6 +794,217 @@ def plot_results_grid_cquery_fixed_module_selector(
         plt.close()
 
 
+# Two analogous plots for expert query confidence.
+def plot_results_grid_expert_query_confidence(results_dir: str, variant: str, graph_size: int, pickle_name: str) -> None:
+    """Plot results from a grid search experiment for varying expert query confidence, for
+    a fixed set of metrics.
+    """
+    # Load the dataframe.
+    df = pd.read_pickle(os.path.join(results_dir, f"{pickle_name}.pkl"))
+    # The general structure is as follows:
+    # we want to produce a grouped bar chart with the following structure:
+    # x-axis: expert query confidence, secondary x-axis: iterate over variants.
+    # y-axis: metric.
+    # so each group of bars corresponds to a different expert query confidence,
+    # and each bar corresponds to a different variant.
+    # Get the unique values of the IVs.
+    ivs = df.columns.tolist()
+    ivs.remove("run_id")
+    ivs.remove("variant")
+    ivs.remove("results_dictionary")
+    ivs.remove("expert_query_confidence")
+    # Get the unique combinations of values for the IVs.
+    unique_combinations = df[ivs].drop_duplicates()
+    metrics = [
+        "query_cost_total",
+        "total_failed_attempts",
+        "execution_time_total",
+        "total_correct",
+        "total_timesteps",
+    ]
+    # For each unique combination of IVs, we need to collect the run IDs
+    # that have that combination
+    # (there should be num_graph_structures of these run IDs in total.)
+    for _, combination in tqdm(unique_combinations.iterrows()):
+        _, axes = plt.subplots(ncols=len(metrics), figsize=(24, 8), sharex=True)
+        for i, metric in enumerate(metrics):
+            # Create a boolean mask for rows that match this combination
+            mask = True
+            for col in ivs:
+                mask = mask & (df[col] == combination[col])
+            run_ids = df[mask]["run_id"].unique()
+            # Filter the df for only those run IDs.
+            df_filtered = df[df["run_id"].isin(run_ids)]
+            # Create the grouped bar chart accordingly
+            # (need to write custom code for this).
+            # Step 1. Create a figure and axis.
+            ax = axes[i]
+            # Step 2. Iterate over the expert query confidence, in a particular order
+            expert_query_confidence_order = [0.7, 0.8, 0.9, 1.0]
+            # need to handle x offsets carefully here.
+            # Track which algorithms we've already added to legend
+            legend_added = set()
+            for i, expert_query_confidence in enumerate(expert_query_confidence_order):
+                # Filter the df for only those run IDs.
+                df_filtered_expert_query_confidence = df_filtered[
+                    df_filtered["expert_query_confidence"] == expert_query_confidence
+                ]
+                # Extract the results (from the results_dictionary column)
+                results = df_filtered_expert_query_confidence["results_dictionary"].values[0]
+                for j, algorithm in enumerate(results.keys()):
+                    # Only add label to legend if we haven't seen this algorithm before
+                    label = algorithm if algorithm not in legend_added else ""
+                    # Extract the row for this variant.
+                    row = df_filtered_expert_query_confidence[
+                        df_filtered_expert_query_confidence["variant"] == algorithm
+                    ]
+                    # Extract the results (from the results_dictionary column)
+                    if len(row["results_dictionary"].values) == 0:
+                        # print(f"Warning: No results found for {row['variant'].values[0]} with expert_query_confidence={expert_query_confidence}")
+                        print("No results found for this combination.")
+                        continue
+                    results = row["results_dictionary"].values[0]
+                    # Use mean for total_correct metric, median for others
+                    value = np.mean(results[algorithm][metric][graph_size]) if metric == "total_correct" else np.median(results[algorithm][metric][graph_size])
+                    ax.bar(
+                        i * len(expert_query_confidence_order) + j,
+                        value,
+                        label=label,
+                        color=STRATEGY_COLORS[algorithm]["color"],
+                    )
+                    legend_added.add(algorithm)
+            # Step 3. Add title. Put in all IV values too.
+            # ax.set_title(f"{metric}")
+            # Step 4. Add x-axis labels.
+            ax.set_xlabel("Expert Query Confidence")
+            # Tick labels are the expert query confidence.
+            ax.set_xticks(np.arange(len(expert_query_confidence_order)) * len(results.keys()))
+            ax.set_xticklabels(expert_query_confidence_order)
+            # Step 5. Add y-axis labels.
+            ax.set_ylabel(metric)
+            # Step 6. Add legend.
+            # but I don't want it to repeatedly display the same algorithm names.
+            ax.legend()
+        # Add title before tight_layout to avoid overlap
+        plt.suptitle(f"Expert Query Confidence Comparison for Graph Size {graph_size}")
+        plt.tight_layout()
+        # Add extra space at the top for the title
+        plt.subplots_adjust(top=0.9)
+        # Step 3. Save the figure.
+        plt.savefig(
+            f"{results_dir}/plot_{combination.to_dict()}_expert_query_confidence.png",
+            dpi=300,
+            bbox_inches="tight",
+        )
+        plt.close()
+
+def plot_results_grid_expert_query_confidence_fixed_module_selector(results_dir: str, module_selector: str, graph_size: int, pickle_name: str) -> None:
+    """Plot results from a grid search experiment for varying expert query confidence, for
+    a fixed set of metrics.
+    """
+    # Load the dataframe.
+    df = pd.read_pickle(os.path.join(results_dir, f"{pickle_name}.pkl"))
+    # The general structure is as follows:
+    # we want to produce a grouped bar chart with the following structure:
+    # x-axis: expert query confidence, secondary x-axis: iterate over variants.
+    # y-axis: metric.
+    # so each group of bars corresponds to a different expert query confidence,
+    # and each bar corresponds to a different variant.
+    # Get the unique values of the IVs.
+    ivs = df.columns.tolist()
+    ivs.remove("run_id")
+    ivs.remove("variant")
+    ivs.remove("results_dictionary")
+    ivs.remove("expert_query_confidence")
+    # Get the unique combinations of values for the IVs.
+    unique_combinations = df[ivs].drop_duplicates()
+    metrics = [
+        "query_cost_total",
+        "total_failed_attempts",
+        "execution_time_total",
+        "total_correct",
+        "total_timesteps",
+    ]
+    
+    variant_order = ["greedy", "balanced", "conservative", "balanced-2"]
+
+    # For each unique combination of IVs, we need to collect the run IDs
+    # that have that combination
+    # (there should be num_graph_structures of these run IDs in total.)
+    for _, combination in tqdm(unique_combinations.iterrows()):
+        _, axes = plt.subplots(ncols=len(metrics), figsize=(24, 8), sharex=True)
+        for i, metric in enumerate(metrics):
+            # Create a boolean mask for rows that match this combination
+            mask = True
+            for col in ivs:
+                mask = mask & (df[col] == combination[col])
+            run_ids = df[mask]["run_id"].unique()
+            # Filter the df for only those run IDs.
+            df_filtered = df[df["run_id"].isin(run_ids)]
+            # Create the grouped bar chart accordingly
+            # (need to write custom code for this).
+            # Step 1. Create a figure and axis.
+            ax = axes[i]
+            # Step 2. Iterate over the expert query confidence, in a particular order
+            expert_query_confidence_order = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+            # need to handle x offsets carefully here.
+            # Track which algorithms we've already added to legend
+            legend_added = set()
+            for i, expert_query_confidence in enumerate(expert_query_confidence_order):
+                # Filter the df for only those run IDs.
+                df_filtered_expert_query_confidence = df_filtered[
+                    df_filtered["expert_query_confidence"] == expert_query_confidence
+                ]
+                # Extract the results (from the results_dictionary column)
+                if len(df_filtered_expert_query_confidence["results_dictionary"].values) == 0:
+                    # print(f"Warning: No results found for {row['variant'].values[0]} with expert_query_confidence={expert_query_confidence}")
+                    print("No results found for this combination.")
+                    continue
+                results = df_filtered_expert_query_confidence["results_dictionary"].values[0]
+                for j, variant in enumerate(variant_order):
+                    # Only add label to legend if we haven't seen this algorithm before
+                    label = variant if variant not in legend_added else ""
+                    # Extract the row for this variant.
+                    row = df_filtered_expert_query_confidence[
+                        df_filtered_expert_query_confidence["variant"] == variant
+                    ]
+                    # Extract the results (from the results_dictionary column)
+                    results = row["results_dictionary"].values[0]
+                    # Use mean for total_correct metric, median for others
+                    value = np.mean(results[module_selector][metric][graph_size]) if metric == "total_correct" else np.median(results[module_selector][metric][graph_size])
+                    ax.bar(
+                        i * len(expert_query_confidence_order) + j,
+                        value,
+                        label=label,
+                        color=VARIANT_STYLES[variant]["color"],
+                    )
+                    legend_added.add(variant)
+            # Step 3. Add title. Put in all IV values too.
+            # ax.set_title(f"{metric}")
+            # Step 4. Add x-axis labels.
+            ax.set_xlabel("Expert Query Confidence")
+            # Tick labels are the expert query confidence.
+            ax.set_xticks(np.arange(len(expert_query_confidence_order)) * len(results.keys()))
+            ax.set_xticklabels(expert_query_confidence_order)
+            # Step 5. Add y-axis labels.
+            ax.set_ylabel(metric)
+            # Step 6. Add legend.
+            # but I don't want it to repeatedly display the same algorithm names.
+            ax.legend()
+        # Add title before tight_layout to avoid overlap
+        plt.suptitle(f"Expert Query Confidence Comparison for Graph Size {graph_size}")
+        plt.tight_layout()
+        # Add extra space at the top for the title
+        plt.subplots_adjust(top=0.9)
+        # Step 3. Save the figure.
+        plt.savefig(
+            f"{results_dir}/plot_{combination.to_dict()}_expert_query_confidence_{module_selector}.png",
+            dpi=300,
+            bbox_inches="tight",
+        )
+        plt.close()
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -801,116 +1013,26 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     fixed_graph_size = 10
-    fixed_variant = "conservative"
-    fixed_module_selector = "Brute Force"
-    df_stem = "combined_dataframes/combined_df_corrected"
+    fixed_variant = "balanced-2"
+    fixed_module_selector = "Graph Query"
+    df_stem = "combined_df"
 
-    # plot_results_grid(args.results_dir)
-    # plot_results_grid_query_algorithms(args.results_dir)
-    plot_results_grid_graph_structures(args.results_dir, fixed_variant, fixed_graph_size, df_stem)
-    # plot_results_grid_graph_structures_fixed_module_selector(
-    #     args.results_dir, fixed_module_selector, 10, df_stem
-    # )
-    plot_results_grid_confidences(args.results_dir, fixed_variant, fixed_graph_size, df_stem)
-    # plot_results_grid_confidences_fixed_module_selector(
-    #     args.results_dir, fixed_module_selector, fixed_graph_size, df_stem
-    # )
-    plot_results_grid_cquery(args.results_dir, fixed_variant, fixed_graph_size, df_stem)
-    # plot_results_grid_cquery_fixed_module_selector(
-    #     args.results_dir, fixed_module_selector, fixed_graph_size, df_stem  
-    # )
+    # # plot_results_grid(args.results_dir)
+    # # plot_results_grid_query_algorithms(args.results_dir)
+    # plot_results_grid_graph_structures(args.results_dir, fixed_variant, fixed_graph_size, df_stem)
+    # # plot_results_grid_graph_structures_fixed_module_selector(
+    # #     args.results_dir, fixed_module_selector, 10, df_stem
+    # # )
+    # plot_results_grid_confidences(args.results_dir, fixed_variant, fixed_graph_size, df_stem)
+    # # plot_results_grid_confidences_fixed_module_selector(
+    # #     args.results_dir, fixed_module_selector, fixed_graph_size, df_stem
+    # # )
+    # plot_results_grid_cquery(args.results_dir, fixed_variant, fixed_graph_size, df_stem)
+    # # plot_results_grid_cquery_fixed_module_selector(
+    # #     args.results_dir, fixed_module_selector, fixed_graph_size, df_stem  
+    # # )
 
-    # # HACKY code for night of 9-14-2025.
-    # # Get all the run IDs that exist in the results directory.
-    # # (all pkl files have the form results_variant_[variant_name]_run_[run_id].pkl)
-    # # Print files that end with .pkl.
-    # run_id = 243
-    # results_dir = args.results_dir
-    # module_selector = fixed_module_selector
-    # # Don't put in pickle file corresponding to balanced-2.
-    # pkl_files = [
-    #     f
-    #     for f in os.listdir(results_dir)
-    #     if f.endswith(".pkl") and f.split("_")[4] == f"{run_id}.pkl" and f.split("_")[2] != "balanced-2"
-    # ]
-    # # print(pkl_files)
-    # config_files = [
-    #     f
-    #     for f in os.listdir(results_dir)
-    #     if f.endswith(".json") and f.split("_")[4] == f"{run_id}.json" and f.split("_")[2] != "balanced-2"
-    # ]
-    # # add in corrected pkl and config files
-    # pkl_files.append(f"corrected_results/results_variant_balanced-2_run_0.pkl")
-    # config_files.append(f"corrected_results/config_variant_balanced-2_run_0.json")
-    # with open(
-    #     os.path.join(results_dir, config_files[0]), "r", encoding="utf-8"
-    # ) as f:
-    #     config = json.load(f)
-    # title = (
-    #     f"Grid Search: Module selector={module_selector},"
-    #     + f" Num Failures={config['num_failures']},"
-    #     + f" Correct Confidence={config['correct_confidence']},"
-    #     + f" Incorrect Confidence={config['incorrect_confidence']},"
-    #     + f" Redundancy={config['dependency_structure']},"
-    #     + f" Query Cost={config['c_query']}"
-    # )
-    # # Pass the pickle files to plot_results_across_graph_sizes.
-    # plot_results_across_graph_sizes(
-    #     algorithm=module_selector,
-    #     pkl_files=pkl_files,
-    #     data_dir=results_dir,
-    #     filename=f"plot_{run_id}.png",
-    #     title=title,
-    #     use_mean_for_total_correct=True,
-    # )
 
-    # Mute in general.
-    # Look up all pkl files in the results directory.
-    # pkl_files = [f for f in os.listdir(results_dir) if f.endswith(".pkl")]
-    # for pkl_file in pkl_files:
-    #     print(f"Plotting {pkl_file}")
-    #     # Load pickle file
-    #     with open(os.path.join(results_dir, pkl_file), "rb") as f:
-    #         results = pkl.load(f)
-    #     # Load the config from the json file.
-    #     # Same name as pkl file, but (1) with .json extension,
-    #     # and (2) with 'config' instead of 'results'.
-    #     with open(
-    #         os.path.join(
-    #             results_dir,
-    #             pkl_file.replace(".pkl", ".json").replace("results", "config"),
-    #         ),
-    #         "r",
-    #         encoding="utf-8",
-    #     ) as f2:
-    #         config = json.load(f2)
-    #     metrics = [
-    #         "query_cost_total",
-    #         "total_failed_attempts",
-    #         "execution_time_total",
-    #         "total_correct",
-    #         "total_timesteps",
-    #     ]
-
-    #     # infer graph sizes from results.
-    #     graph_sizes = list(results["Brute Force"]["total_timesteps"].keys())
-    #     # Create a title based on the following config keys:
-    #     # variant, num_failures, correct_confidence, incorrect_confidence,
-    #     # redundancy, c_query
-    #     title = (
-    #         f"Grid Search: Variant={config['variant']},"
-    #         + f"Num Failures={config['num_failures']},"
-    #         + f"Correct Confidence={config['correct_confidence']},"
-    #         + f"Incorrect Confidence={config['incorrect_confidence']},"
-    #         + f"Redundancy={config['redundancy']},"
-    #         + f"Query Cost={config['c_query']}"
-    #     )
-    #     plot_results(
-    #         results,
-    #         graph_sizes,
-    #         metrics,
-    #         f"plot_{config['variant']}_{config['run_id']}.png",
-    #         save_dir=results_dir,
-    #         title=title,
-    #         use_mean_for_total_correct=True,
-    #     )
+    # Expert query confidence.
+    plot_results_grid_expert_query_confidence(args.results_dir, fixed_variant, fixed_graph_size, df_stem)
+    plot_results_grid_expert_query_confidence_fixed_module_selector(args.results_dir, fixed_module_selector, fixed_graph_size, df_stem)

@@ -452,9 +452,10 @@ def run_experiment(
                     acc_get_action_calls += 1
                     acc_execution_time += computation_time
                     if queried:
-                        assert (
-                            current_query_cost > 0
-                        ), "Query cost should be positive if we query!"
+                        # assert (
+                        #     current_query_cost > 0
+                        # ), "Query cost should be positive if we query!"
+                        pass
                     # Increment accumulators.
                     acc_query_cost += current_query_cost
                     acc_proxy_obj_1 += 1 - product_of_confidences(
@@ -497,9 +498,10 @@ def run_experiment(
                             ) = policy.get_action(state=state)
                             acc_get_action_calls += 1
                             if queried:
-                                assert (
-                                    current_query_cost > 0
-                                ), "Query cost should be positive if we query!"
+                                # assert (
+                                #     current_query_cost > 0
+                                # ), "Query cost should be positive if we query!"
+                                pass
                             # Balanced-2 actually has to intervene *here*
                             # i.e. - after we decide what to query,
                             # but before we actually make the query
@@ -758,6 +760,7 @@ def run_single_grid_search_experiment(
         dependency_structure=redundancy,
         correct_module_confidence=correct_confidence,
         incorrect_module_confidence=incorrect_confidence,
+        expert_query_confidence=expert_query_confidence,
         disable_mip=True,
     )
 

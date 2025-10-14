@@ -28,6 +28,7 @@ def main(data_dir: str) -> None:
             "dependency_structure",
             "c_query",
             "results_dictionary",
+            "expert_query_confidence",
         ]
     )
     for config_file in os.listdir(data_dir):
@@ -50,6 +51,7 @@ def main(data_dir: str) -> None:
                 "dependency_structure": config["dependency_structure"],
                 "c_query": config["c_query"],
                 "results_dictionary": results,
+                "expert_query_confidence": config["expert_query_confidence"],
             }
             # Use pd.concat instead of deprecated df.append
             new_row = pd.DataFrame([dict_to_add])

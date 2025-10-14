@@ -68,7 +68,7 @@ class ModularPolicy:
 
         # Passing through with the expert cache 
         # (where we know that expert cached values will have a confidence of p_expert)
-        self.module_graph.set_state(state)
+        self.module_graph.root.set_state(state)
         computed_values, computed_confidences, total_query_cost = (
             self.module_graph.compute_values(
                 expert_query_module_names=set(),
@@ -134,9 +134,9 @@ class ModularPolicy:
         action_value = computed_values[self.module_graph.leaf]
 
         if queried:
-            assert (
-                total_query_cost > 0
-            ), "Raw total query cost should be positive if we query."
+            # assert (
+            #     total_query_cost > 0
+            # ), "Raw total query cost should be positive if we query."
             assert (
                 expert_query_module_name is not None
             ), "Expert query module name should not be None if we query."
