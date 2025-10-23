@@ -16,12 +16,14 @@ class ModularPolicy:
         module_graph: ModuleGraph,
         query_strategy: QueryStrategy,
         verbose: bool = False,
+        variant: str = "balanced",
     ) -> None:
         self.module_graph = module_graph
         self.query_strategy = query_strategy
         assert isinstance(self.module_graph.root, StateModule)
         assert isinstance(self.module_graph.leaf, ActionModule)
         self.verbose = verbose
+        self.variant = variant
         # Keep a cache of the expert values for each queried module.
         self.expert_values_cache: dict[str, Any] = {}
 
@@ -88,6 +90,40 @@ class ModularPolicy:
         expert_query_module_names = (
             set([expert_query_module_name]) if expert_query_module_name else set()
         )
+
+        # Balanced-2 variant intervention: check termination condition
+        # before making query
+        if (
+            self.variant == "balanced-2"
+            and expert_query_module_name is not None
+            and expert_query_module_names
+        ):
+            # Get the module and its current confidence
+            queried_module = self.module_graph.get_module_by_name(
+                expert_query_module_name
+            )
+            if queried_module is None:
+                raise ValueError(
+                    f"Queried module {expert_query_module_name}"
+                    "not found in module graph."
+                )
+            current_confidence = computed_confidences[queried_module]
+            query_cost = queried_module.get_expert_query_cost()
+
+            # Check if confidence gain is less than query cost
+            confidence_gain = 1.0 - current_confidence
+            if confidence_gain < query_cost:
+                # Don't query - set expert_query_module_names to empty set
+                # Also, set queried to False.
+                expert_query_module_names = set()
+                queried = False
+                if self.verbose:
+                    print_and_log(
+                        f"Balanced-2: Not querying {expert_query_module_name} "
+                        f"(confidence gain {confidence_gain:.3f}"
+                        f" < cost {query_cost:.3f})"
+                    )
+
         computed_values, post_query_confidences, total_query_cost = (
             self.module_graph.compute_values(
                 expert_query_module_names=expert_query_module_names,

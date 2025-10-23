@@ -135,6 +135,7 @@ def plot_results(
     plot_name: str = "strategy_comparison.png",
     save_dir: str = "experiments/results",
     title: str = "",
+    use_mean_for_total_correct: bool = False,
 ) -> None:
     """Create plots showing the performance of different querying strategies.
 
@@ -227,10 +228,18 @@ def plot_results(
                     )
                     if len(result_array) == 0:
                         continue
-                    median = np.median(result_array)
-                    upper_quartile, lower_quartile = np.percentile(
-                        result_array, [75, 25]
-                    )
+                    # Use mean for total_correct metric if requested,
+                    # otherwise use median
+                    if use_mean_for_total_correct and metric == "total_correct":
+                        median = np.mean(result_array)
+                        std = np.std(result_array)
+                        upper_quartile = median + std
+                        lower_quartile = median - std
+                    else:
+                        median = np.median(result_array)
+                        upper_quartile, lower_quartile = np.percentile(
+                            result_array, [75, 25]
+                        )
                 except KeyError:
                     continue
                 except TypeError:
@@ -409,6 +418,7 @@ def plot_results_across_graph_sizes(
     data_dir: str,
     title: str,
     filename: str,
+    use_mean_for_total_correct: bool = False,
 ) -> None:
     """Plots where x-axis is the number of modules in the graph, and subplots
     correspond to different metrics. Each variant is a separate line.
@@ -423,8 +433,13 @@ def plot_results_across_graph_sizes(
     }
 
     for pkl_file in pkl_files:
-        # extract the variant from the pkl file name.
-        variant = pkl_file.split("_")[2]
+        # if there are any forward slashes in the pkl file name, extract the last part.
+        if "/" in pkl_file:
+            tail = pkl_file.split("/")[-1]
+            variant = tail.split("_")[2]
+        else:
+            # extract the variant from the pkl file name.
+            variant = pkl_file.split("_")[2]
         results[variant] = pkl.load(open(Path(data_dir) / pkl_file, "rb"))
 
     # Extract the graph sizes from the results.
@@ -460,10 +475,22 @@ def plot_results_across_graph_sizes(
                     result_array = np.array(
                         results[variant][algorithm][metric][size], dtype=np.float64
                     )
-                    median = np.median(result_array)
-                    upper_quartile, lower_quartile = np.percentile(
-                        result_array, [75, 25]
-                    )
+                    # Skip if result_array is empty
+                    if len(result_array) == 0:
+                        continue
+
+                    # Use mean for total_correct metric if requested,
+                    # otherwise use median
+                    if use_mean_for_total_correct and metric == "total_correct":
+                        median = np.mean(result_array)
+                        std = np.std(result_array)
+                        upper_quartile = median + std
+                        lower_quartile = median - std
+                    else:
+                        median = np.median(result_array)
+                        upper_quartile, lower_quartile = np.percentile(
+                            result_array, [75, 25]
+                        )
                 except KeyError:
                     continue
                 except TypeError:
@@ -483,13 +510,18 @@ def plot_results_across_graph_sizes(
             if i == 0:
                 lines.append(line[0])
                 labels.append(VARIANT_NAMES[variant])
-            ax.fill_between(
-                np.arange(len(graph_sizes)),
-                lower_quartiles,
-                upper_quartiles,
-                alpha=0.3,
-                color=VARIANT_STYLES[variant]["color"],
-            )
+            # Only fill between if we have data for all sizes
+            if len(lower_quartiles) == len(graph_sizes) and len(upper_quartiles) == len(
+                graph_sizes
+            ):
+                ax.fill_between(
+                    np.arange(len(graph_sizes)),
+                    lower_quartiles,
+                    upper_quartiles,
+                    alpha=0.3,
+                    color=VARIANT_STYLES[variant]["color"],
+                )
+            print(variant, medians)
             ax.set_title(TITLES[metric])
             ax.set_xlabel("Number of Graph Nodes")
             ax.set_ylabel(YLABELS[metric])

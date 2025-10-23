@@ -672,7 +672,9 @@ def compare_query_set_expected_costs(
     computed_confidences: dict[Module, float],
     tolerance: float = 1e-6,
 ) -> int:
-    """Compare the expected costs of two query sets.
+    """(assumes the product-of-confidences proxy objective)
+
+    Compare the expected costs of two query sets.
 
     Implemented in a numerically-stable manner (to handle cases where
     the probability of correct answer would underflow).
