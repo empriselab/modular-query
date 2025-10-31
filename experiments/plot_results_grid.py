@@ -22,6 +22,8 @@ from modular_query.plot_utils import (
 )
 
 
+## VARIABLE 01: number of modules.
+
 def plot_results_grid(results_dir: str) -> None:
     """Plot results from a grid search experiment."""
     # Look up all pkl files in the results directory.
@@ -134,6 +136,247 @@ def plot_results_grid_query_algorithms(results_dir: str, module_selector: str) -
             title=title,
             use_mean_for_total_correct=True,
         )
+
+
+## VARIABLE 02: graph structures.
+
+# Plot for graph structures.
+def plot_results_grid_graph_structures(
+    results_dir: str, variant: str, graph_size: int, pickle_name: str
+) -> None:
+    """Plot results from a grid search experiment for varying graph structures,
+    for a fixed set of metrics."""
+    # Load the dataframe.
+    df = pd.read_pickle(os.path.join(results_dir, f"{pickle_name}.pkl"))
+
+    # The general structure is as follows:
+    # we want to produce a grouped bar chart with the following structure:
+    # x-axis: graph structures,
+    # secondary x-axis: iterate over algorithms/module selectors.
+    # y-axis: metric.
+    # so each group of bars corresponds to a different graph structure,
+    # and each bar corresponds to a different algorithm/module selector.
+
+    # First, we only want to look at run IDs for the given variant.
+    # Then, we need to collect the run IDs
+    # that have fixed values of the IVs except for the graph structure.
+    df = df[df["variant"] == variant]
+    # Get the unique values of the IVs.
+    ivs = df.columns.tolist()
+    ivs.remove("variant")
+    ivs.remove("run_id")
+    ivs.remove("results_dictionary")
+    ivs.remove("dependency_structure")
+    # Get the unique combinations of values for the IVs.
+    unique_combinations = df[ivs].drop_duplicates()
+
+    metrics = [
+        "query_cost_total",
+        "total_failed_attempts",
+        "execution_time_total",
+        "total_correct",
+        "total_timesteps",
+    ]
+
+    # For each unique combination of IVs, we need to collect the run IDs
+    # that have that combination
+    # (there should be num_graph_structures of these run IDs in total.)
+    for _, combination in tqdm(unique_combinations.iterrows()):
+        _, axes = plt.subplots(ncols=len(metrics), figsize=(24, 8), sharex=True)
+        for i, metric in enumerate(metrics):
+            # Create a boolean mask for rows that match this combination
+            mask = True
+            for col in ivs:
+                mask = mask & (df[col] == combination[col])
+            run_ids = df[mask]["run_id"].unique()
+            # print(f"Run IDs for combination {combination.to_dict()}: {run_ids}")
+            # Filter the df for only those run IDs.
+            df_filtered = df[df["run_id"].isin(run_ids)]
+            # Create the grouped bar chart accordingly
+            # (need to write custom code for this).
+            # Step 1. Create a figure and axis.
+            ax = axes[i]
+            # Step 2. Iterate over the graph structures, in a particular order
+            graph_structure_order = ["all_AND", "all_OR", "AND_then_OR", "OR_then_AND"]
+            # need to handle x offsets carefully here.
+            # Track which algorithms we've already added to legend
+            legend_added = set()
+            for i, graph_structure in enumerate(graph_structure_order):
+                # Filter the df for only those run IDs.
+                df_filtered_graph_structure = df_filtered[
+                    df_filtered["dependency_structure"] == graph_structure
+                ]
+                # Extract the results (from the results_dictionary column)
+                results = df_filtered_graph_structure["results_dictionary"].values[0]
+                # Plot the results for this graph structure.
+                # results is structured with keys
+                # equal to the different algorithms/module selectors.
+                # We want to plot the values of the metric
+                # for each algorithm/module selector.
+                # want bars of the same algorithm to have the same color.
+                for j, algorithm in enumerate(results.keys()):
+                    # Only add label to legend if we haven't seen this algorithm before
+                    label = algorithm if algorithm not in legend_added else ""
+                    # Use mean for total_correct metric, median for others
+                    value = (
+                        np.mean(results[algorithm][metric][graph_size])
+                        if metric == "total_correct"
+                        else np.median(results[algorithm][metric][graph_size])
+                    )
+                    ax.bar(
+                        i * len(results.keys()) + j,
+                        value,
+                        label=label,
+                        color=STRATEGY_COLORS[algorithm]["color"],
+                    )
+                    legend_added.add(algorithm)
+            # Step 3. Add title. Put in all IV values too.
+            # ax.set_title(f"{metric}")
+            # Step 4. Add x-axis labels.
+            ax.set_xlabel("Algorithms")
+            # Tick labels are the graph structures.
+            ax.set_xticks(np.arange(len(graph_structure_order)) * len(results.keys()))
+            ax.set_xticklabels(graph_structure_order)
+            # Step 5. Add y-axis labels.
+            ax.set_ylabel(metric)
+            # Step 6. Add legend.
+            # but I don't want it to repeatedly display the same algorithm names.
+            ax.legend()
+        # Add title before tight_layout to avoid overlap
+        plt.suptitle(f"Graph Structure Comparison for Graph Size {graph_size}")
+        plt.tight_layout()
+        # Add extra space at the top for the title
+        plt.subplots_adjust(top=0.9)
+        # Step 3. Save the figure.
+        plt.savefig(
+            f"{results_dir}/plot_{combination.to_dict()}_{variant}.png",
+            dpi=300,
+            bbox_inches="tight",
+        )
+        plt.close()
+
+
+# Analogous function to above,
+# but we fix the module selector/strategy, and vary the variant.
+def plot_results_grid_graph_structures_fixed_module_selector(
+    results_dir: str, module_selector: str, graph_size: int, pickle_name: str
+) -> None:
+    """Plot results from a grid search experiment for varying graph structures,
+    for a fixed set of metrics.
+
+    Assumes module selector is fixed.
+    """
+    # Load the dataframe.
+    df = pd.read_pickle(os.path.join(results_dir, f"{pickle_name}.pkl"))
+    # The general structure is as follows:
+    # we want to produce a grouped bar chart with the following structure:
+    # x-axis: graph structures, secondary x-axis: iterate over variants.
+    # y-axis: metric.
+    # so each group of bars corresponds to a different graph structure,
+    # and each bar corresponds to a different variant.
+
+    # Get the unique values of the IVs.
+    ivs = df.columns.tolist()
+    ivs.remove("run_id")
+    ivs.remove("variant")
+    ivs.remove("results_dictionary")
+    ivs.remove("dependency_structure")
+
+    # Get the unique combinations of values for the IVs.
+    unique_combinations = df[ivs].drop_duplicates()
+
+    metrics = [
+        "query_cost_total",
+        "total_failed_attempts",
+        "execution_time_total",
+        "total_correct",
+        "total_timesteps",
+    ]
+
+    variant_order = ["greedy", "balanced", "conservative", "balanced-2"]
+
+    # For each unique combination of IVs,
+    # we need to collect the run IDs that have that combination
+    # (there should be num_graph_structures of these run IDs in total.)
+    for _, combination in tqdm(unique_combinations.iterrows()):
+        _, axes = plt.subplots(ncols=len(metrics), figsize=(24, 8), sharex=True)
+        for i, metric in enumerate(metrics):
+            # Create a boolean mask for rows that match this combination
+            mask = True
+            for col in ivs:
+                mask = mask & (df[col] == combination[col])
+            run_ids = df[mask]["run_id"].unique()
+            # Filter the df for only those run IDs.
+            df_filtered = df[df["run_id"].isin(run_ids)]
+            # Create the grouped bar chart accordingly
+            # (need to write custom code for this).
+            # Step 1. Create a figure and axis.
+            ax = axes[i]
+            # Step 2. Iterate over the graph structures, in a particular order
+            graph_structure_order = ["all_AND", "all_OR", "AND_then_OR", "OR_then_AND"]
+            # need to handle x offsets carefully here.
+            # Track which algorithms we've already added to legend
+            legend_added = set()
+            for i, graph_structure in enumerate(graph_structure_order):
+                # Filter the df for only those run IDs.
+                df_filtered_graph_structure = df_filtered[
+                    df_filtered["dependency_structure"] == graph_structure
+                ]
+                # Plot the results for this graph structure.
+                # results is structured with keys
+                # equal to the different algorithms/module selectors.
+                # We want to plot the values of the metric
+                # for each algorithm/module selector.
+                # want bars of the same algorithm to have the same color.
+                for j, variant in enumerate(variant_order):
+                    # Only add label to legend if we haven't seen this algorithm before
+                    label = variant if variant not in legend_added else ""
+                    # Extract the row for this variant.
+                    row = df_filtered_graph_structure[
+                        df_filtered_graph_structure["variant"] == variant
+                    ]
+                    # Extract the results (from the results_dictionary column)
+                    results = row["results_dictionary"].values[0]
+                    # Use mean for total_correct metric, median for others
+                    value = (
+                        np.mean(results[module_selector][metric][graph_size])
+                        if metric == "total_correct"
+                        else np.median(results[module_selector][metric][graph_size])
+                    )
+                    ax.bar(
+                        i * len(variant_order) + j,
+                        value,
+                        label=label,
+                        color=VARIANT_STYLES[variant]["color"],
+                    )
+                    legend_added.add(variant)
+            # Step 3. Add title. Put in all IV values too.
+            # ax.set_title(f"{metric}")
+            # Step 4. Add x-axis labels.
+            ax.set_xlabel("Variants")
+            # Tick labels are the graph structures.
+            ax.set_xticks(np.arange(len(graph_structure_order)) * len(variant_order))
+            ax.set_xticklabels(graph_structure_order)
+            # Step 5. Add y-axis labels.
+            ax.set_ylabel(metric)
+            # Step 6. Add legend.
+            # but I don't want it to repeatedly display the same algorithm names.
+            ax.legend()
+        # Add title before tight_layout to avoid overlap
+        plt.suptitle(f"Variant Comparison for Graph Size {graph_size}")
+        plt.tight_layout()
+        # Add extra space at the top for the title
+        plt.subplots_adjust(top=0.9)
+        # Step 3. Save the figure.
+        plt.savefig(
+            f"{results_dir}/plot_{combination.to_dict()}_{module_selector}.png",
+            dpi=300,
+            bbox_inches="tight",
+        )
+        plt.close()
+
+
+## VARIABLE 03: confidence settings.
 
 
 def plot_results_grid_confidences(
@@ -373,241 +616,7 @@ def plot_results_grid_confidences_fixed_module_selector(
         plt.close()
 
 
-# Plot for graph structures.
-def plot_results_grid_graph_structures(
-    results_dir: str, variant: str, graph_size: int, pickle_name: str
-) -> None:
-    """Plot results from a grid search experiment for varying graph structures,
-    for a fixed set of metrics."""
-    # Load the dataframe.
-    df = pd.read_pickle(os.path.join(results_dir, f"{pickle_name}.pkl"))
-
-    # The general structure is as follows:
-    # we want to produce a grouped bar chart with the following structure:
-    # x-axis: graph structures,
-    # secondary x-axis: iterate over algorithms/module selectors.
-    # y-axis: metric.
-    # so each group of bars corresponds to a different graph structure,
-    # and each bar corresponds to a different algorithm/module selector.
-
-    # First, we only want to look at run IDs for the given variant.
-    # Then, we need to collect the run IDs
-    # that have fixed values of the IVs except for the graph structure.
-    df = df[df["variant"] == variant]
-    # Get the unique values of the IVs.
-    ivs = df.columns.tolist()
-    ivs.remove("variant")
-    ivs.remove("run_id")
-    ivs.remove("results_dictionary")
-    ivs.remove("dependency_structure")
-    # Get the unique combinations of values for the IVs.
-    unique_combinations = df[ivs].drop_duplicates()
-
-    metrics = [
-        "query_cost_total",
-        "total_failed_attempts",
-        "execution_time_total",
-        "total_correct",
-        "total_timesteps",
-    ]
-
-    # For each unique combination of IVs, we need to collect the run IDs
-    # that have that combination
-    # (there should be num_graph_structures of these run IDs in total.)
-    for _, combination in tqdm(unique_combinations.iterrows()):
-        _, axes = plt.subplots(ncols=len(metrics), figsize=(24, 8), sharex=True)
-        for i, metric in enumerate(metrics):
-            # Create a boolean mask for rows that match this combination
-            mask = True
-            for col in ivs:
-                mask = mask & (df[col] == combination[col])
-            run_ids = df[mask]["run_id"].unique()
-            # print(f"Run IDs for combination {combination.to_dict()}: {run_ids}")
-            # Filter the df for only those run IDs.
-            df_filtered = df[df["run_id"].isin(run_ids)]
-            # Create the grouped bar chart accordingly
-            # (need to write custom code for this).
-            # Step 1. Create a figure and axis.
-            ax = axes[i]
-            # Step 2. Iterate over the graph structures, in a particular order
-            graph_structure_order = ["all_AND", "all_OR", "AND_then_OR", "OR_then_AND"]
-            # need to handle x offsets carefully here.
-            # Track which algorithms we've already added to legend
-            legend_added = set()
-            for i, graph_structure in enumerate(graph_structure_order):
-                # Filter the df for only those run IDs.
-                df_filtered_graph_structure = df_filtered[
-                    df_filtered["dependency_structure"] == graph_structure
-                ]
-                # Extract the results (from the results_dictionary column)
-                results = df_filtered_graph_structure["results_dictionary"].values[0]
-                # Plot the results for this graph structure.
-                # results is structured with keys
-                # equal to the different algorithms/module selectors.
-                # We want to plot the values of the metric
-                # for each algorithm/module selector.
-                # want bars of the same algorithm to have the same color.
-                for j, algorithm in enumerate(results.keys()):
-                    # Only add label to legend if we haven't seen this algorithm before
-                    label = algorithm if algorithm not in legend_added else ""
-                    # Use mean for total_correct metric, median for others
-                    value = (
-                        np.mean(results[algorithm][metric][graph_size])
-                        if metric == "total_correct"
-                        else np.median(results[algorithm][metric][graph_size])
-                    )
-                    ax.bar(
-                        i * len(results.keys()) + j,
-                        value,
-                        label=label,
-                        color=STRATEGY_COLORS[algorithm]["color"],
-                    )
-                    legend_added.add(algorithm)
-            # Step 3. Add title. Put in all IV values too.
-            # ax.set_title(f"{metric}")
-            # Step 4. Add x-axis labels.
-            ax.set_xlabel("Algorithms")
-            # Tick labels are the graph structures.
-            ax.set_xticks(np.arange(len(graph_structure_order)) * len(results.keys()))
-            ax.set_xticklabels(graph_structure_order)
-            # Step 5. Add y-axis labels.
-            ax.set_ylabel(metric)
-            # Step 6. Add legend.
-            # but I don't want it to repeatedly display the same algorithm names.
-            ax.legend()
-        # Add title before tight_layout to avoid overlap
-        plt.suptitle(f"Graph Structure Comparison for Graph Size {graph_size}")
-        plt.tight_layout()
-        # Add extra space at the top for the title
-        plt.subplots_adjust(top=0.9)
-        # Step 3. Save the figure.
-        plt.savefig(
-            f"{results_dir}/plot_{combination.to_dict()}_{variant}.png",
-            dpi=300,
-            bbox_inches="tight",
-        )
-        plt.close()
-
-
-# Analogous function to above,
-# but we fix the module selector/strategy, and vary the variant.
-def plot_results_grid_graph_structures_fixed_module_selector(
-    results_dir: str, module_selector: str, graph_size: int, pickle_name: str
-) -> None:
-    """Plot results from a grid search experiment for varying graph structures,
-    for a fixed set of metrics.
-
-    Assumes module selector is fixed.
-    """
-    # Load the dataframe.
-    df = pd.read_pickle(os.path.join(results_dir, f"{pickle_name}.pkl"))
-    # The general structure is as follows:
-    # we want to produce a grouped bar chart with the following structure:
-    # x-axis: graph structures, secondary x-axis: iterate over variants.
-    # y-axis: metric.
-    # so each group of bars corresponds to a different graph structure,
-    # and each bar corresponds to a different variant.
-
-    # Get the unique values of the IVs.
-    ivs = df.columns.tolist()
-    ivs.remove("run_id")
-    ivs.remove("variant")
-    ivs.remove("results_dictionary")
-    ivs.remove("dependency_structure")
-
-    # Get the unique combinations of values for the IVs.
-    unique_combinations = df[ivs].drop_duplicates()
-
-    metrics = [
-        "query_cost_total",
-        "total_failed_attempts",
-        "execution_time_total",
-        "total_correct",
-        "total_timesteps",
-    ]
-
-    variant_order = ["greedy", "balanced", "conservative", "balanced-2"]
-
-    # For each unique combination of IVs,
-    # we need to collect the run IDs that have that combination
-    # (there should be num_graph_structures of these run IDs in total.)
-    for _, combination in tqdm(unique_combinations.iterrows()):
-        _, axes = plt.subplots(ncols=len(metrics), figsize=(24, 8), sharex=True)
-        for i, metric in enumerate(metrics):
-            # Create a boolean mask for rows that match this combination
-            mask = True
-            for col in ivs:
-                mask = mask & (df[col] == combination[col])
-            run_ids = df[mask]["run_id"].unique()
-            # Filter the df for only those run IDs.
-            df_filtered = df[df["run_id"].isin(run_ids)]
-            # Create the grouped bar chart accordingly
-            # (need to write custom code for this).
-            # Step 1. Create a figure and axis.
-            ax = axes[i]
-            # Step 2. Iterate over the graph structures, in a particular order
-            graph_structure_order = ["all_AND", "all_OR", "AND_then_OR", "OR_then_AND"]
-            # need to handle x offsets carefully here.
-            # Track which algorithms we've already added to legend
-            legend_added = set()
-            for i, graph_structure in enumerate(graph_structure_order):
-                # Filter the df for only those run IDs.
-                df_filtered_graph_structure = df_filtered[
-                    df_filtered["dependency_structure"] == graph_structure
-                ]
-                # Plot the results for this graph structure.
-                # results is structured with keys
-                # equal to the different algorithms/module selectors.
-                # We want to plot the values of the metric
-                # for each algorithm/module selector.
-                # want bars of the same algorithm to have the same color.
-                for j, variant in enumerate(variant_order):
-                    # Only add label to legend if we haven't seen this algorithm before
-                    label = variant if variant not in legend_added else ""
-                    # Extract the row for this variant.
-                    row = df_filtered_graph_structure[
-                        df_filtered_graph_structure["variant"] == variant
-                    ]
-                    # Extract the results (from the results_dictionary column)
-                    results = row["results_dictionary"].values[0]
-                    # Use mean for total_correct metric, median for others
-                    value = (
-                        np.mean(results[module_selector][metric][graph_size])
-                        if metric == "total_correct"
-                        else np.median(results[module_selector][metric][graph_size])
-                    )
-                    ax.bar(
-                        i * len(variant_order) + j,
-                        value,
-                        label=label,
-                        color=VARIANT_STYLES[variant]["color"],
-                    )
-                    legend_added.add(variant)
-            # Step 3. Add title. Put in all IV values too.
-            # ax.set_title(f"{metric}")
-            # Step 4. Add x-axis labels.
-            ax.set_xlabel("Variants")
-            # Tick labels are the graph structures.
-            ax.set_xticks(np.arange(len(graph_structure_order)) * len(variant_order))
-            ax.set_xticklabels(graph_structure_order)
-            # Step 5. Add y-axis labels.
-            ax.set_ylabel(metric)
-            # Step 6. Add legend.
-            # but I don't want it to repeatedly display the same algorithm names.
-            ax.legend()
-        # Add title before tight_layout to avoid overlap
-        plt.suptitle(f"Variant Comparison for Graph Size {graph_size}")
-        plt.tight_layout()
-        # Add extra space at the top for the title
-        plt.subplots_adjust(top=0.9)
-        # Step 3. Save the figure.
-        plt.savefig(
-            f"{results_dir}/plot_{combination.to_dict()}_{module_selector}.png",
-            dpi=300,
-            bbox_inches="tight",
-        )
-        plt.close()
-
+## VARIABLE 04: query costs.
 
 def plot_results_grid_cquery(
     results_dir: str, variant: str, graph_size: int, pickle_name: str
@@ -850,20 +859,24 @@ if __name__ == "__main__":
 
     df_stem = "combined_df"
 
-    # plot_results_grid_graph_structures(args.results_dir, fixed_variant,
-    # fixed_graph_size, df_stem)
-    # plot_results_grid_graph_structures_fixed_module_selector(
-    #     args.results_dir, fixed_module_selector, 10, df_stem
-    # )
-    # plot_results_grid_confidences(args.results_dir, fixed_variant,
-    # fixed_graph_size, df_stem)
-    # plot_results_grid_confidences_fixed_module_selector(
-    #     args.results_dir, fixed_module_selector, fixed_graph_size, df_stem
-    # )
+    # Variable 01: number of modules.
+    plot_results_grid(args.results_dir)
+    plot_results_grid_query_algorithms(args.results_dir, fixed_module_selector)
+
+    # Variable 02: graph structures.
+    plot_results_grid_graph_structures(args.results_dir, fixed_variant, fixed_graph_size, df_stem)
+    plot_results_grid_graph_structures_fixed_module_selector(
+        args.results_dir, fixed_module_selector, fixed_graph_size, df_stem
+    )
+
+    # Variable 03: confidence settings.
+    plot_results_grid_confidences(args.results_dir, fixed_variant, fixed_graph_size, df_stem)
+    plot_results_grid_confidences_fixed_module_selector(
+        args.results_dir, fixed_module_selector, fixed_graph_size, df_stem
+    )
+
+    # Variable 04: query costs.
     plot_results_grid_cquery(args.results_dir, fixed_variant, fixed_graph_size, df_stem)
     plot_results_grid_cquery_fixed_module_selector(
         args.results_dir, fixed_module_selector, fixed_graph_size, df_stem
     )
-
-    # plot_results_grid(args.results_dir)
-    # plot_results_grid_query_algorithms(args.results_dir, fixed_module_selector)
