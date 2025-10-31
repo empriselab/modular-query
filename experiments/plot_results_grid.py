@@ -24,7 +24,7 @@ from modular_query.plot_utils import (
 
 ## VARIABLE 01: number of modules.
 
-def plot_results_grid(results_dir: str) -> None:
+def plot_results_grid(results_dir: str, output_dir: str) -> None:
     """Plot results from a grid search experiment."""
     # Look up all pkl files in the results directory.
     pkl_files = [f for f in os.listdir(results_dir) if f.endswith(".pkl")]
@@ -74,14 +74,14 @@ def plot_results_grid(results_dir: str) -> None:
             graph_sizes,
             metrics,
             f"plot_{config['variant']}_{config['run_id']}.png",
-            save_dir=results_dir,
+            save_dir=output_dir,
             title=title,
             use_mean_for_total_correct=True,
         )
 
 
 # Make the plot for varying variants..
-def plot_results_grid_query_algorithms(results_dir: str, module_selector: str) -> None:
+def plot_results_grid_query_algorithms(results_dir: str, output_dir: str, module_selector: str) -> None:
     """Plot results from a grid search experiment for varying query
     algorithms."""
     # Get all the run IDs that exist in the results directory.
@@ -131,7 +131,7 @@ def plot_results_grid_query_algorithms(results_dir: str, module_selector: str) -
         plot_results_across_graph_sizes(
             algorithm=module_selector,
             pkl_files=pkl_files,
-            data_dir=results_dir,
+            data_dir=output_dir,
             filename=f"plot_{module_selector}_{run_id}.png",
             title=title,
             use_mean_for_total_correct=True,
@@ -140,9 +140,12 @@ def plot_results_grid_query_algorithms(results_dir: str, module_selector: str) -
 
 ## VARIABLE 02: graph structures.
 
+# Font size for tick labels in graph structure plots
+GRAPH_STRUCTURE_TICK_FONTSIZE = 12
+
 # Plot for graph structures.
 def plot_results_grid_graph_structures(
-    results_dir: str, variant: str, graph_size: int, pickle_name: str
+    results_dir: str, output_dir: str, variant: str, graph_size: int, pickle_name: str
 ) -> None:
     """Plot results from a grid search experiment for varying graph structures,
     for a fixed set of metrics."""
@@ -236,7 +239,7 @@ def plot_results_grid_graph_structures(
             ax.set_xlabel("Algorithms")
             # Tick labels are the graph structures.
             ax.set_xticks(np.arange(len(graph_structure_order)) * len(results.keys()))
-            ax.set_xticklabels(graph_structure_order)
+            ax.set_xticklabels(graph_structure_order, fontsize=GRAPH_STRUCTURE_TICK_FONTSIZE)
             # Step 5. Add y-axis labels.
             ax.set_ylabel(metric)
             # Step 6. Add legend.
@@ -249,7 +252,7 @@ def plot_results_grid_graph_structures(
         plt.subplots_adjust(top=0.9)
         # Step 3. Save the figure.
         plt.savefig(
-            f"{results_dir}/plot_{combination.to_dict()}_{variant}.png",
+            f"{output_dir}/plot_{combination.to_dict()}_{variant}.png",
             dpi=300,
             bbox_inches="tight",
         )
@@ -259,7 +262,7 @@ def plot_results_grid_graph_structures(
 # Analogous function to above,
 # but we fix the module selector/strategy, and vary the variant.
 def plot_results_grid_graph_structures_fixed_module_selector(
-    results_dir: str, module_selector: str, graph_size: int, pickle_name: str
+    results_dir: str, output_dir: str, module_selector: str, graph_size: int, pickle_name: str
 ) -> None:
     """Plot results from a grid search experiment for varying graph structures,
     for a fixed set of metrics.
@@ -356,7 +359,7 @@ def plot_results_grid_graph_structures_fixed_module_selector(
             ax.set_xlabel("Variants")
             # Tick labels are the graph structures.
             ax.set_xticks(np.arange(len(graph_structure_order)) * len(variant_order))
-            ax.set_xticklabels(graph_structure_order)
+            ax.set_xticklabels(graph_structure_order, fontsize=GRAPH_STRUCTURE_TICK_FONTSIZE)
             # Step 5. Add y-axis labels.
             ax.set_ylabel(metric)
             # Step 6. Add legend.
@@ -369,7 +372,7 @@ def plot_results_grid_graph_structures_fixed_module_selector(
         plt.subplots_adjust(top=0.9)
         # Step 3. Save the figure.
         plt.savefig(
-            f"{results_dir}/plot_{combination.to_dict()}_{module_selector}.png",
+            f"{output_dir}/plot_{combination.to_dict()}_{module_selector}.png",
             dpi=300,
             bbox_inches="tight",
         )
@@ -378,9 +381,12 @@ def plot_results_grid_graph_structures_fixed_module_selector(
 
 ## VARIABLE 03: confidence settings.
 
+# Font size for tick labels in confidence plots
+CONFIDENCE_TICK_FONTSIZE = 12
+
 
 def plot_results_grid_confidences(
-    results_dir: str, variant: str, graph_size: int, pickle_name: str
+    results_dir: str, output_dir: str, variant: str, graph_size: int, pickle_name: str
 ) -> None:
     """Plot results from a grid search experiment for varying confidences, for
     a fixed set of metrics.
@@ -475,7 +481,7 @@ def plot_results_grid_confidences(
             ax.set_xlabel("Confidences")
             # Tick labels are the (correct_confidence, incorrect_confidence) pairs.
             ax.set_xticks(np.arange(len(confidence_order)) * len(results.keys()))
-            ax.set_xticklabels(confidence_order)
+            ax.set_xticklabels(confidence_order, fontsize=CONFIDENCE_TICK_FONTSIZE)
             # Step 5. Add y-axis labels.
             ax.set_ylabel(metric)
             # Step 6. Add legend.
@@ -488,7 +494,7 @@ def plot_results_grid_confidences(
         plt.subplots_adjust(top=0.9)
         # Step 3. Save the figure.
         plt.savefig(
-            f"{results_dir}/plot_{combination.to_dict()}_{variant}.png",
+            f"{output_dir}/plot_{combination.to_dict()}_{variant}.png",
             dpi=300,
             bbox_inches="tight",
         )
@@ -496,7 +502,7 @@ def plot_results_grid_confidences(
 
 
 def plot_results_grid_confidences_fixed_module_selector(
-    results_dir: str, module_selector: str, graph_size: int, pickle_name: str
+    results_dir: str, output_dir: str, module_selector: str, graph_size: int, pickle_name: str
 ) -> None:
     """Plot results from a grid search experiment for varying confidences, for
     a fixed set of metrics.
@@ -596,7 +602,7 @@ def plot_results_grid_confidences_fixed_module_selector(
             ax.set_xlabel("Confidences")
             # Tick labels are the (correct_confidence, incorrect_confidence) pairs.
             ax.set_xticks(np.arange(len(confidence_order)) * len(variant_order))
-            ax.set_xticklabels(confidence_order)
+            ax.set_xticklabels(confidence_order, fontsize=CONFIDENCE_TICK_FONTSIZE)
             # Step 5. Add y-axis labels.
             ax.set_ylabel(metric)
             # Step 6. Add legend.
@@ -609,7 +615,7 @@ def plot_results_grid_confidences_fixed_module_selector(
         plt.subplots_adjust(top=0.9)
         # Step 3. Save the figure.
         plt.savefig(
-            f"{results_dir}/plot_{combination.to_dict()}_{module_selector}.png",
+            f"{output_dir}/plot_{combination.to_dict()}_{module_selector}.png",
             dpi=300,
             bbox_inches="tight",
         )
@@ -618,8 +624,11 @@ def plot_results_grid_confidences_fixed_module_selector(
 
 ## VARIABLE 04: query costs.
 
+# Font size for tick labels in query cost plots
+QUERY_COST_TICK_FONTSIZE = 12
+
 def plot_results_grid_cquery(
-    results_dir: str, variant: str, graph_size: int, pickle_name: str
+    results_dir: str, output_dir: str, variant: str, graph_size: int, pickle_name: str
 ) -> None:
     """Plot results from a grid search experiment for varying query costs, for
     a fixed set of metrics.
@@ -707,7 +716,7 @@ def plot_results_grid_cquery(
             ax.set_xlabel("Query Costs")
             # Tick labels are the query costs.
             ax.set_xticks(np.arange(len(query_cost_order)) * len(results.keys()))
-            ax.set_xticklabels(query_cost_order)
+            ax.set_xticklabels(query_cost_order, fontsize=QUERY_COST_TICK_FONTSIZE)
             # Step 5. Add y-axis labels.
             ax.set_ylabel(metric)
             # Step 6. Add legend.
@@ -720,7 +729,7 @@ def plot_results_grid_cquery(
         plt.subplots_adjust(top=0.9)
         # Step 3. Save the figure.
         plt.savefig(
-            f"{results_dir}/plot_{combination.to_dict()}_c_query_{variant}.png",
+            f"{output_dir}/plot_{combination.to_dict()}_c_query_{variant}.png",
             dpi=300,
             bbox_inches="tight",
         )
@@ -728,7 +737,7 @@ def plot_results_grid_cquery(
 
 
 def plot_results_grid_cquery_fixed_module_selector(
-    results_dir: str, module_selector: str, graph_size: int, pickle_name: str
+    results_dir: str, output_dir: str, module_selector: str, graph_size: int, pickle_name: str
 ) -> None:
     """Plot results from a grid search experiment for varying query costs, for
     a fixed set of metrics.
@@ -819,7 +828,7 @@ def plot_results_grid_cquery_fixed_module_selector(
             ax.set_xlabel("Query Costs")
             # Tick labels are the query costs.
             ax.set_xticks(np.arange(len(query_cost_order)) * len(results.keys()))
-            ax.set_xticklabels(query_cost_order)
+            ax.set_xticklabels(query_cost_order, fontsize=QUERY_COST_TICK_FONTSIZE)
             # Step 5. Add y-axis labels.
             ax.set_ylabel(metric)
             # Step 6. Add legend.
@@ -832,7 +841,7 @@ def plot_results_grid_cquery_fixed_module_selector(
         plt.subplots_adjust(top=0.9)
         # Step 3. Save the figure.
         plt.savefig(
-            f"{results_dir}/plot_{combination.to_dict()}_c_query_{module_selector}.png",
+            f"{output_dir}/plot_{combination.to_dict()}_c_query_{module_selector}.png",
             dpi=300,
             bbox_inches="tight",
         )
@@ -841,9 +850,11 @@ def plot_results_grid_cquery_fixed_module_selector(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("--plot_variable", type=str, choices=["num_modules", "graph_structures", "confidences", "query_costs"], required=True)
     parser.add_argument(
         "--results_dir", type=str, default="experiments/results", required=True
     )
+    parser.add_argument("--output_dir", type=str, default="experiments/results/", required=True, help="Directory to save the plots to.")
     parser.add_argument("--fixed_graph_size", type=int, default=10, required=False)
     parser.add_argument(
         "--fixed_variant", type=str, default="balanced-2", required=True
@@ -860,23 +871,23 @@ if __name__ == "__main__":
     df_stem = "combined_df"
 
     # Variable 01: number of modules.
-    plot_results_grid(args.results_dir)
-    plot_results_grid_query_algorithms(args.results_dir, fixed_module_selector)
-
-    # Variable 02: graph structures.
-    plot_results_grid_graph_structures(args.results_dir, fixed_variant, fixed_graph_size, df_stem)
-    plot_results_grid_graph_structures_fixed_module_selector(
-        args.results_dir, fixed_module_selector, fixed_graph_size, df_stem
-    )
-
-    # Variable 03: confidence settings.
-    plot_results_grid_confidences(args.results_dir, fixed_variant, fixed_graph_size, df_stem)
-    plot_results_grid_confidences_fixed_module_selector(
-        args.results_dir, fixed_module_selector, fixed_graph_size, df_stem
-    )
-
-    # Variable 04: query costs.
-    plot_results_grid_cquery(args.results_dir, fixed_variant, fixed_graph_size, df_stem)
-    plot_results_grid_cquery_fixed_module_selector(
-        args.results_dir, fixed_module_selector, fixed_graph_size, df_stem
-    )
+    if args.plot_variable == "num_modules":
+        plot_results_grid(args.results_dir, args.output_dir)
+        plot_results_grid_query_algorithms(args.results_dir, args.output_dir, fixed_module_selector)
+    elif args.plot_variable == "graph_structures":
+        plot_results_grid_graph_structures(args.results_dir, args.output_dir, fixed_variant, fixed_graph_size, df_stem)
+        plot_results_grid_graph_structures_fixed_module_selector(
+            args.results_dir, args.output_dir, fixed_module_selector, fixed_graph_size, df_stem
+        )
+    elif args.plot_variable == "confidences":
+        plot_results_grid_confidences(args.results_dir, args.output_dir, fixed_variant, fixed_graph_size, df_stem)
+        plot_results_grid_confidences_fixed_module_selector(
+            args.results_dir, args.output_dir, fixed_module_selector, fixed_graph_size, df_stem
+        )
+    elif args.plot_variable == "query_costs":
+        plot_results_grid_cquery(args.results_dir, args.output_dir, fixed_variant, fixed_graph_size, df_stem)
+        plot_results_grid_cquery_fixed_module_selector(
+            args.results_dir, args.output_dir, fixed_module_selector, fixed_graph_size, df_stem
+        )
+    else:
+        raise ValueError(f"Invalid plot variable: {args.plot_variable}")
