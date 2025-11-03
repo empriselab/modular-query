@@ -37,10 +37,21 @@ QUERY_COST_XTICK_OFFSET = 1.5
 
 ## VARIABLE 01: number of modules.
 
-def plot_results_grid(results_dir: str, output_dir: str) -> None:
-    """Plot results from a grid search experiment."""
+def plot_results_grid(results_dir: str, output_dir: str,\
+     mode='search_results_directory', pkl_file: str = None) -> None:
+    """Plot results from a grid search experiment.
+    
+    mode:
+    - 'search_results_directory': finds all pkl files in the results directory.
+    - 'single_pkl_file': plots results for a single pkl file in the results directory, specified by the pkl_file parameter.
+    """
     # Look up all pkl files in the results directory.
-    pkl_files = [f for f in os.listdir(results_dir) if f.endswith(".pkl")]
+    if mode == 'search_results_directory':
+        pkl_files = [f for f in os.listdir(results_dir) if f.endswith(".pkl")]
+    elif mode == 'single_pkl_file':
+        pkl_files = [pkl_file]
+    else:
+        raise ValueError(f"Invalid mode: {mode}")
     # filter out combined.pkl if it exists.
     if "combined_df.pkl" in pkl_files:
         pkl_files.remove("combined_df.pkl")
@@ -94,19 +105,30 @@ def plot_results_grid(results_dir: str, output_dir: str) -> None:
 
 
 # Make the plot for varying variants..
-def plot_results_grid_query_algorithms(results_dir: str, output_dir: str, module_selector: str) -> None:
-    """Plot results from a grid search experiment for varying query
-    algorithms."""
-    # Get all the run IDs that exist in the results directory.
-    # (all pkl files have the form results_variant_[variant_name]_run_[run_id].pkl)
-    # Print files that end with .pkl.
-    run_ids = [
-        f.split("_")[4]
-        for f in os.listdir(results_dir)
-        if f.endswith(".pkl") and f != "combined_df.pkl"
-    ]
-    # strip out the .pkl extension.
-    run_ids = [run_id.split(".")[0] for run_id in run_ids]
+def plot_results_grid_fixed_module_selector(results_dir: str, output_dir: str, module_selector: str,\
+     mode='search_results_directory', run_id: str = None) -> None:
+    """Plot results from a grid search experiment for varying variants,
+    for a fixed module selector.
+    
+    mode:
+    - 'search_results_directory': finds all run IDs in the results directory.
+    - 'single_run_id': plots results for a single run ID, specified by the run_id parameter.
+    """
+    if mode == 'search_results_directory':
+        # Get all the run IDs that exist in the results directory.
+        # (all pkl files have the form results_variant_[variant_name]_run_[run_id].pkl)
+        # Print files that end with .pkl.
+        run_ids = [
+            f.split("_")[4]
+            for f in os.listdir(results_dir)
+            if f.endswith(".pkl") and f != "combined_df.pkl"
+        ]
+        # strip out the .pkl extension.
+        run_ids = [run_id.split(".")[0] for run_id in run_ids]
+    elif mode == 'single_run_id':
+        run_ids = [run_id]
+    else:
+        raise ValueError(f"Invalid mode: {mode}")
     for run_id in run_ids:
         # Load all pkl and json files associated with this run_id.
         # print(run_id)
@@ -126,7 +148,7 @@ def plot_results_grid_query_algorithms(results_dir: str, output_dir: str, module
             and f.endswith(".json")
             and f.split("_")[4] == f"{run_id}.json"
         ]
-        # print(config_files)
+        print(config_files)
         # open one of the config files to get common parameters.
         with open(
             os.path.join(results_dir, config_files[0]), "r", encoding="utf-8"
@@ -144,7 +166,8 @@ def plot_results_grid_query_algorithms(results_dir: str, output_dir: str, module
         plot_results_across_graph_sizes(
             algorithm=module_selector,
             pkl_files=pkl_files,
-            data_dir=output_dir,
+            data_dir=results_dir,
+            output_dir=output_dir,
             filename=f"plot_{module_selector}_{run_id}.png",
             title=title,
             use_mean_for_total_correct=True,
@@ -868,6 +891,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--fixed_module_selector", type=str, default="Graph Query", required=True
     )
+    parser.add_argument("--pkl_file", type=str, default=None, required=False, help="PKL file to plot results for [variable 01 only.]")
+    parser.add_argument("--run_id", type=str, default=None, required=False, help="Run ID to plot results for [variable 01 only.]")
     args = parser.parse_args()
 
     fixed_graph_size = args.fixed_graph_size
@@ -878,8 +903,9 @@ if __name__ == "__main__":
 
     # Variable 01: number of modules.
     if args.plot_variable == "num_modules":
-        plot_results_grid(args.results_dir, args.output_dir)
-        plot_results_grid_query_algorithms(args.results_dir, args.output_dir, fixed_module_selector)
+        print("Ignoring fixed_graph_size, fixed_variant, and fixed_module_selector, and plotting a fixed pkl file and run ID.")
+        plot_results_grid(args.results_dir, args.output_dir, mode='single_pkl_file', pkl_file=args.pkl_file)
+        plot_results_grid_fixed_module_selector(args.results_dir, args.output_dir, fixed_module_selector, mode='single_run_id', run_id=args.run_id)
     elif args.plot_variable == "graph_structures":
         plot_results_grid_graph_structures(args.results_dir, args.output_dir, fixed_variant, fixed_graph_size, df_stem)
         plot_results_grid_graph_structures_fixed_module_selector(

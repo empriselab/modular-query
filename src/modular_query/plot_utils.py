@@ -416,6 +416,7 @@ def plot_results_across_graph_sizes(
     algorithm: str,
     pkl_files: list[str],
     data_dir: str,
+    output_dir: str,
     title: str,
     filename: str,
     use_mean_for_total_correct: bool = False,
@@ -556,11 +557,11 @@ def plot_results_across_graph_sizes(
     plt.subplots_adjust(bottom=0.15)
 
     # Create directory if it doesn't exist
-    Path(data_dir).mkdir(exist_ok=True)
+    Path(output_dir).mkdir(exist_ok=True)
 
     # Save the figure
     plt.savefig(
-        Path(data_dir) / filename,
+        Path(output_dir) / filename,
         dpi=300,
         bbox_inches="tight",
     )
