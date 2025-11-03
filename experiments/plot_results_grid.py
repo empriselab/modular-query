@@ -376,7 +376,7 @@ def plot_results_grid_graph_structures_fixed_module_selector(
                 # want bars of the same algorithm to have the same color.
                 for j, variant in enumerate(variant_order):
                     # Only add label to legend if we haven't seen this algorithm before
-                    label = variant if variant not in legend_added else ""
+                    label = VARIANT_STYLES[variant]["name"] if variant not in legend_added else ""
                     # Extract the row for this variant.
                     row = df_filtered_graph_structure[
                         df_filtered_graph_structure["variant"] == variant
@@ -623,7 +623,7 @@ def plot_results_grid_confidences_fixed_module_selector(
                 results = df_filtered_confidence["results_dictionary"].values[0]
                 for j, variant in enumerate(variant_order):
                     # Only add label to legend if we haven't seen this algorithm before
-                    label = variant if variant not in legend_added else ""
+                    label = VARIANT_STYLES[variant]["name"] if variant not in legend_added else ""
                     # Extract the row for this variant.
                     row = df_filtered_confidence[
                         df_filtered_confidence["variant"] == variant
@@ -852,7 +852,7 @@ def plot_results_grid_cquery_fixed_module_selector(
                 results = df_filtered_query_cost["results_dictionary"].values[0]
                 for j, variant in enumerate(variant_order):
                     # Only add label to legend if we haven't seen this algorithm before
-                    label = variant if variant not in legend_added else ""
+                    label = VARIANT_STYLES[variant]["name"] if variant not in legend_added else ""
                     # Extract the row for this variant.
                     row = df_filtered_query_cost[
                         df_filtered_query_cost["variant"] == variant

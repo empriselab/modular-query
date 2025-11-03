@@ -106,24 +106,28 @@ VARIANT_STYLES = {
         "linestyle": "-",
         "marker": "o",
         "linewidth": 2,
+        "name": "Execute-First",
     },
     "balanced": {
         "color": "#fc8d59",
         "linestyle": "-",
         "marker": "x",
         "linewidth": 2,
+        "name": "Query-Then-Execute",
     },
     "conservative": {
         "color": "#e34a33",
         "linestyle": "--",
         "marker": "s",
         "linewidth": 2,
+        "name": "Query-Until-Confident",
     },
     "balanced-2": {
         "color": "#b30000",
         "linestyle": ":",
         "marker": "^",
         "linewidth": 2,
+        "name": "Query-Until-Confident-Workload-Aware",
     },
 }
 
