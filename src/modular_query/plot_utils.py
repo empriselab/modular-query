@@ -61,40 +61,40 @@ VARIANT_NAMES = {
 
 # Define distinct line styles, markers, and colors for each strategy
 STRATEGY_COLORS = {
-    "Always Query": {
-        "color": "blue",
-        "linestyle": "-",
-        "marker": "o",
-        "linewidth": 2,
-    },
-    "Graph Query": {
-        "color": "purple",
-        "linestyle": "-",
-        "marker": "x",
-        "linewidth": 2,
-    },
     "Never Query": {
-        "color": "red",
+        "color": "#b2e2e2",
         "linestyle": "--",
         "marker": "s",
         "linewidth": 2,
     },
     "Brute Force": {
-        "color": "green",
+        "color": "#006d2c",
         "linestyle": ":",
         "marker": "^",
         "linewidth": 2,
     },
-    "MIP": {
+    "Graph Query": {
+        "color": "#2ca25f",
+        "linestyle": "-",
+        "marker": "x",
+        "linewidth": 2,
+    },
+    "Binary Tree Query": {
+        "color": "#66c2a4",
+        "linestyle": "-",
+        "marker": "v",
+        "linewidth": 2,
+    },
+        "MIP": {
         "color": "orange",
         "linestyle": "-.",
         "marker": "D",
         "linewidth": 2,
     },
-    "Binary Tree Query": {
-        "color": "cyan",
+    "Always Query": {
+        "color": "blue",
         "linestyle": "-",
-        "marker": "v",
+        "marker": "o",
         "linewidth": 2,
     },
 }
@@ -102,25 +102,25 @@ STRATEGY_COLORS = {
 # Variant-specific styles.
 VARIANT_STYLES = {
     "greedy": {
-        "color": "blue",
+        "color": "#fdcc8a",
         "linestyle": "-",
         "marker": "o",
         "linewidth": 2,
     },
     "balanced": {
-        "color": "purple",
+        "color": "#fc8d59",
         "linestyle": "-",
         "marker": "x",
         "linewidth": 2,
     },
     "conservative": {
-        "color": "red",
+        "color": "#e34a33",
         "linestyle": "--",
         "marker": "s",
         "linewidth": 2,
     },
     "balanced-2": {
-        "color": "green",
+        "color": "#b30000",
         "linestyle": ":",
         "marker": "^",
         "linewidth": 2,
@@ -172,45 +172,6 @@ def plot_results(
     num_rows = (len(metrics) + num_cols - 1) // num_cols
     fig, axes = plt.subplots(num_rows, num_cols, figsize=figsize, sharex=True)
 
-    # Define distinct line styles, markers, and colors for each strategy
-    styles = {
-        "Always Query": {
-            "color": "blue",
-            "linestyle": "-",
-            "marker": "o",
-            "linewidth": 2,
-        },
-        "Graph Query": {
-            "color": "purple",
-            "linestyle": "-",
-            "marker": "x",
-            "linewidth": 2,
-        },
-        "Never Query": {
-            "color": "red",
-            "linestyle": "--",
-            "marker": "s",
-            "linewidth": 2,
-        },
-        "Brute Force": {
-            "color": "green",
-            "linestyle": ":",
-            "marker": "^",
-            "linewidth": 2,
-        },
-        "MIP": {
-            "color": "orange",
-            "linestyle": "-.",
-            "marker": "D",
-            "linewidth": 2,
-        },
-        "Binary Tree Query": {
-            "color": "cyan",
-            "linestyle": "-",
-            "marker": "v",
-            "linewidth": 2,
-        },
-    }
 
     # Plot each metric
     lines = []
@@ -252,7 +213,7 @@ def plot_results(
                 lower_quartiles.append(lower_quartile)
 
             # Plot the data with strategy-specific styling
-            style = styles[strategy_name]
+            style = STRATEGY_COLORS[strategy_name]
             line = ax.plot(
                 graph_sizes[: len(medians)],
                 medians,
