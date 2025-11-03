@@ -225,7 +225,7 @@ def plot_results_grid_graph_structures(
     # that have that combination
     # (there should be num_graph_structures of these run IDs in total.)
     for _, combination in tqdm(unique_combinations.iterrows()):
-        _, axes = plt.subplots(ncols=len(metrics), figsize=GRAPH_STRUCTURE_FIGSIZE, sharex=True)
+        fig, axes = plt.subplots(ncols=len(metrics), figsize=GRAPH_STRUCTURE_FIGSIZE, sharex=True)
         for i, metric in enumerate(metrics):
             # Create a boolean mask for rows that match this combination
             mask = True
@@ -284,7 +284,10 @@ def plot_results_grid_graph_structures(
             ax.set_ylabel(metric)
             # Step 6. Add legend.
             # but I don't want it to repeatedly display the same algorithm names.
-            ax.legend()
+            # ax.legend()
+            handles, labels = ax.get_legend_handles_labels()
+            
+        fig.legend(handles, labels, loc='lower center',bbox_to_anchor=(0.5, -0.1),ncol=len(labels))
         # Add title before tight_layout to avoid overlap
         plt.suptitle(f"Graph Structure Comparison for Graph Size {graph_size}")
         plt.tight_layout()
@@ -342,7 +345,7 @@ def plot_results_grid_graph_structures_fixed_module_selector(
     # we need to collect the run IDs that have that combination
     # (there should be num_graph_structures of these run IDs in total.)
     for _, combination in tqdm(unique_combinations.iterrows()):
-        _, axes = plt.subplots(ncols=len(metrics), figsize=GRAPH_STRUCTURE_FIGSIZE, sharex=True)
+        fig, axes = plt.subplots(ncols=len(metrics), figsize=GRAPH_STRUCTURE_FIGSIZE, sharex=True)
         for i, metric in enumerate(metrics):
             # Create a boolean mask for rows that match this combination
             mask = True
@@ -404,7 +407,10 @@ def plot_results_grid_graph_structures_fixed_module_selector(
             ax.set_ylabel(metric)
             # Step 6. Add legend.
             # but I don't want it to repeatedly display the same algorithm names.
-            ax.legend()
+            # ax.legend()
+            handles, labels = ax.get_legend_handles_labels()
+
+        fig.legend(handles, labels, loc='lower center',bbox_to_anchor=(0.5, -0.1),ncol=len(labels))
         # Add title before tight_layout to avoid overlap
         plt.suptitle(f"Variant Comparison for Graph Size {graph_size}")
         plt.tight_layout()
@@ -468,7 +474,7 @@ def plot_results_grid_confidences(
     # we need to collect the run IDs that have that combination
     # (there should be num_confidences of these run IDs in total.)
     for _, combination in tqdm(unique_combinations.iterrows()):
-        _, axes = plt.subplots(ncols=len(metrics), figsize=CONFIDENCE_FIGSIZE, sharex=True)
+        fig, axes = plt.subplots(ncols=len(metrics), figsize=CONFIDENCE_FIGSIZE, sharex=True)
         for i, metric in enumerate(metrics):
             # Create a boolean mask for rows that match this combination
             mask = True
@@ -524,7 +530,10 @@ def plot_results_grid_confidences(
             ax.set_ylabel(metric)
             # Step 6. Add legend.
             # but I don't want it to repeatedly display the same variant names.
-            ax.legend()
+            # ax.legend()
+            handles, labels = ax.get_legend_handles_labels()
+        
+        fig.legend(handles, labels, loc='lower center',bbox_to_anchor=(0.5, -0.1),ncol=len(labels))
         # Add title before tight_layout to avoid overlap
         plt.suptitle(f"Confidence Comparison for Graph Size {graph_size}")
         plt.tight_layout()
@@ -587,7 +596,7 @@ def plot_results_grid_confidences_fixed_module_selector(
     # we need to collect the run IDs that have that combination
     # (there should be num_confidences of these run IDs in total.)
     for _, combination in tqdm(unique_combinations.iterrows()):
-        _, axes = plt.subplots(ncols=len(metrics), figsize=CONFIDENCE_FIGSIZE, sharex=True)
+        fig, axes = plt.subplots(ncols=len(metrics), figsize=CONFIDENCE_FIGSIZE, sharex=True)
         for i, metric in enumerate(metrics):
             # Create a boolean mask for rows that match this combination
             mask = True
@@ -645,7 +654,9 @@ def plot_results_grid_confidences_fixed_module_selector(
             ax.set_ylabel(metric)
             # Step 6. Add legend.
             # but I don't want it to repeatedly display the same variant names.
-            ax.legend()
+            # ax.legend()
+            handles, labels = ax.get_legend_handles_labels()
+        fig.legend(handles, labels, loc='lower center',bbox_to_anchor=(0.5, -0.1),ncol=len(labels))
         # Add title before tight_layout to avoid overlap
         plt.suptitle(f"Confidence Comparison for Graph Size {graph_size}")
         plt.tight_layout()
@@ -705,7 +716,7 @@ def plot_results_grid_cquery(
     # that have that combination
     # (there should be num_graph_structures of these run IDs in total.)
     for _, combination in tqdm(unique_combinations.iterrows()):
-        _, axes = plt.subplots(ncols=len(metrics), figsize=QUERY_COST_FIGSIZE, sharex=True)
+        fig, axes = plt.subplots(ncols=len(metrics), figsize=QUERY_COST_FIGSIZE, sharex=True)
         for i, metric in enumerate(metrics):
             # Create a boolean mask for rows that match this combination
             mask = True
@@ -757,7 +768,10 @@ def plot_results_grid_cquery(
             ax.set_ylabel(metric)
             # Step 6. Add legend.
             # but I don't want it to repeatedly display the same algorithm names.
-            ax.legend()
+            # ax.legend()
+            handles, labels = ax.get_legend_handles_labels()
+        
+        fig.legend(handles, labels, loc='lower center',bbox_to_anchor=(0.5, -0.1),ncol=len(labels))
         # Add title before tight_layout to avoid overlap
         plt.suptitle(f"Query Cost Comparison for Graph Size {graph_size}")
         plt.tight_layout()
@@ -811,7 +825,7 @@ def plot_results_grid_cquery_fixed_module_selector(
     # that have that combination
     # (there should be num_graph_structures of these run IDs in total.)
     for _, combination in tqdm(unique_combinations.iterrows()):
-        _, axes = plt.subplots(ncols=len(metrics), figsize=QUERY_COST_FIGSIZE, sharex=True)
+        fig, axes = plt.subplots(ncols=len(metrics), figsize=QUERY_COST_FIGSIZE, sharex=True)
         for i, metric in enumerate(metrics):
             # Create a boolean mask for rows that match this combination
             mask = True
@@ -869,7 +883,9 @@ def plot_results_grid_cquery_fixed_module_selector(
             ax.set_ylabel(metric)
             # Step 6. Add legend.
             # but I don't want it to repeatedly display the same algorithm names.
-            ax.legend()
+            # ax.legend()
+            handles, labels = ax.get_legend_handles_labels()
+        fig.legend(handles, labels, loc='lower center',bbox_to_anchor=(0.5, -0.1),ncol=len(labels))
         # Add title before tight_layout to avoid overlap
         plt.suptitle(f"Query Cost Comparison for Graph Size {graph_size}")
         plt.tight_layout()
