@@ -148,7 +148,7 @@ def plot_results_grid_fixed_module_selector(results_dir: str, output_dir: str, m
             and f.endswith(".json")
             and f.split("_")[4] == f"{run_id}.json"
         ]
-        print(config_files)
+        # print(config_files)
         # open one of the config files to get common parameters.
         with open(
             os.path.join(results_dir, config_files[0]), "r", encoding="utf-8"

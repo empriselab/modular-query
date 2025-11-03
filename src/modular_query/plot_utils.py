@@ -278,7 +278,9 @@ def plot_results(
                 labels.append(strategy_name)
 
         ax.set_title(TITLES[metric])
-        ax.set_xlabel("Number of Graph Nodes")
+        # ax.set_xlabel("Number of Graph Nodes")
+        # Explicitly enable x-axis tick labels for all subplots (not just bottom)
+        ax.tick_params(labelbottom=True)
         ax.set_ylabel(YLABELS[metric])
         ax.grid(True, linestyle="--", alpha=0.7)
 
@@ -524,12 +526,14 @@ def plot_results_across_graph_sizes(
                 )
             print(variant, medians)
             ax.set_title(TITLES[metric])
-            ax.set_xlabel("Number of Graph Nodes")
+            # ax.set_xlabel("Number of Graph Nodes")
             ax.set_ylabel(YLABELS[metric])
             ax.grid(True, linestyle="--", alpha=0.7)
             # Show x-axis values as integers.
             ax.set_xticks(np.arange(len(graph_sizes)))
             ax.set_xticklabels(graph_sizes)
+            # Explicitly enable x-axis tick labels for all subplots (not just bottom)
+            ax.tick_params(labelbottom=True)
 
     # Turn off unused subplots.
     for j in range(i + 1, num_rows * num_cols):
