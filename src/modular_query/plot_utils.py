@@ -136,6 +136,8 @@ def plot_results(
     save_dir: str = "experiments/results",
     title: str = "",
     use_mean_for_total_correct: bool = False,
+    tick_fontsize: int = 12,
+    figsize: tuple[int, int] = (24, 12),
 ) -> None:
     """Create plots showing the performance of different querying strategies.
 
@@ -168,7 +170,7 @@ def plot_results(
     # Set up figure
     num_cols = 3
     num_rows = (len(metrics) + num_cols - 1) // num_cols
-    fig, axes = plt.subplots(num_rows, num_cols, figsize=(24, 12), sharex=True)
+    fig, axes = plt.subplots(num_rows, num_cols, figsize=figsize, sharex=True)
 
     # Define distinct line styles, markers, and colors for each strategy
     styles = {
@@ -281,6 +283,8 @@ def plot_results(
         # ax.set_xlabel("Number of Graph Nodes")
         # Explicitly enable x-axis tick labels for all subplots (not just bottom)
         ax.tick_params(labelbottom=True)
+        # Set x-tick label size (not y-tick label size)
+        ax.tick_params(labelsize=tick_fontsize, axis='x')
         ax.set_ylabel(YLABELS[metric])
         ax.grid(True, linestyle="--", alpha=0.7)
 
@@ -422,6 +426,8 @@ def plot_results_across_graph_sizes(
     title: str,
     filename: str,
     use_mean_for_total_correct: bool = False,
+    tick_fontsize: int = 12,
+    figsize: tuple[int, int] = (24, 12),
 ) -> None:
     """Plots where x-axis is the number of modules in the graph, and subplots
     correspond to different metrics. Each variant is a separate line.
@@ -459,7 +465,7 @@ def plot_results_across_graph_sizes(
     # Create a figure and axis.
     num_cols = 3
     num_rows = (len(metrics) + num_cols - 1) // num_cols
-    fig, axes = plt.subplots(num_rows, num_cols, figsize=(24, 12), sharex=True)
+    fig, axes = plt.subplots(num_rows, num_cols, figsize=figsize, sharex=True)
 
     # Define distinct line styles, markers, and colors for each strategy
 
@@ -531,10 +537,9 @@ def plot_results_across_graph_sizes(
             ax.grid(True, linestyle="--", alpha=0.7)
             # Show x-axis values as integers.
             ax.set_xticks(np.arange(len(graph_sizes)))
-            ax.set_xticklabels(graph_sizes)
+            ax.set_xticklabels(graph_sizes, size=tick_fontsize)
             # Explicitly enable x-axis tick labels for all subplots (not just bottom)
             ax.tick_params(labelbottom=True)
-
     # Turn off unused subplots.
     for j in range(i + 1, num_rows * num_cols):
         axes[j // num_cols][j % num_cols].axis("off")

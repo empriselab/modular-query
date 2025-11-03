@@ -22,6 +22,9 @@ from modular_query.plot_utils import (
 )
 
 # Constants:
+# Font size for tick labels in number of modules plots
+NUM_MODULES_TICK_FONTSIZE = 20
+NUM_MODULES_FIGSIZE = (20, 12)
 # Font size for tick labels in graph structure plots
 GRAPH_STRUCTURE_TICK_FONTSIZE = 14
 GRAPH_STRUCTURE_FIGSIZE = (36, 9)
@@ -101,6 +104,8 @@ def plot_results_grid(results_dir: str, output_dir: str,\
             save_dir=output_dir,
             title=title,
             use_mean_for_total_correct=True,
+            tick_fontsize=NUM_MODULES_TICK_FONTSIZE,
+            figsize=NUM_MODULES_FIGSIZE,
         )
 
 
@@ -171,6 +176,8 @@ def plot_results_grid_fixed_module_selector(results_dir: str, output_dir: str, m
             filename=f"plot_{module_selector}_{run_id}.png",
             title=title,
             use_mean_for_total_correct=True,
+            tick_fontsize=NUM_MODULES_TICK_FONTSIZE,
+            figsize=NUM_MODULES_FIGSIZE,
         )
 
 
