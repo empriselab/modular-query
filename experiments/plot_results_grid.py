@@ -21,6 +21,19 @@ from modular_query.plot_utils import (
     plot_results_across_graph_sizes,
 )
 
+# Constants:
+# Font size for tick labels in graph structure plots
+GRAPH_STRUCTURE_TICK_FONTSIZE = 14
+GRAPH_STRUCTURE_FIGSIZE = (36, 9)
+GRAPH_STRUCTURE_XTICK_OFFSET = 1.5
+# Font size for tick labels in confidence plots
+CONFIDENCE_TICK_FONTSIZE = 20
+CONFIDENCE_FIGSIZE = (36, 9)
+CONFIDENCE_XTICK_OFFSET = 1.5
+# Font size for tick labels in query cost plots
+QUERY_COST_TICK_FONTSIZE = 20
+QUERY_COST_FIGSIZE = (36, 9)
+QUERY_COST_XTICK_OFFSET = 1.5
 
 ## VARIABLE 01: number of modules.
 
@@ -140,9 +153,6 @@ def plot_results_grid_query_algorithms(results_dir: str, output_dir: str, module
 
 ## VARIABLE 02: graph structures.
 
-# Font size for tick labels in graph structure plots
-GRAPH_STRUCTURE_TICK_FONTSIZE = 12
-
 # Plot for graph structures.
 def plot_results_grid_graph_structures(
     results_dir: str, output_dir: str, variant: str, graph_size: int, pickle_name: str
@@ -185,7 +195,7 @@ def plot_results_grid_graph_structures(
     # that have that combination
     # (there should be num_graph_structures of these run IDs in total.)
     for _, combination in tqdm(unique_combinations.iterrows()):
-        _, axes = plt.subplots(ncols=len(metrics), figsize=(24, 8), sharex=True)
+        _, axes = plt.subplots(ncols=len(metrics), figsize=GRAPH_STRUCTURE_FIGSIZE, sharex=True)
         for i, metric in enumerate(metrics):
             # Create a boolean mask for rows that match this combination
             mask = True
@@ -236,9 +246,9 @@ def plot_results_grid_graph_structures(
             # Step 3. Add title. Put in all IV values too.
             # ax.set_title(f"{metric}")
             # Step 4. Add x-axis labels.
-            ax.set_xlabel("Algorithms")
+            # ax.set_xlabel("Algorithms")
             # Tick labels are the graph structures.
-            ax.set_xticks(np.arange(len(graph_structure_order)) * len(results.keys()))
+            ax.set_xticks(np.arange(len(graph_structure_order)) * len(results.keys())+GRAPH_STRUCTURE_XTICK_OFFSET)
             ax.set_xticklabels(graph_structure_order, fontsize=GRAPH_STRUCTURE_TICK_FONTSIZE)
             # Step 5. Add y-axis labels.
             ax.set_ylabel(metric)
@@ -302,7 +312,7 @@ def plot_results_grid_graph_structures_fixed_module_selector(
     # we need to collect the run IDs that have that combination
     # (there should be num_graph_structures of these run IDs in total.)
     for _, combination in tqdm(unique_combinations.iterrows()):
-        _, axes = plt.subplots(ncols=len(metrics), figsize=(24, 8), sharex=True)
+        _, axes = plt.subplots(ncols=len(metrics), figsize=GRAPH_STRUCTURE_FIGSIZE, sharex=True)
         for i, metric in enumerate(metrics):
             # Create a boolean mask for rows that match this combination
             mask = True
@@ -356,9 +366,9 @@ def plot_results_grid_graph_structures_fixed_module_selector(
             # Step 3. Add title. Put in all IV values too.
             # ax.set_title(f"{metric}")
             # Step 4. Add x-axis labels.
-            ax.set_xlabel("Variants")
+            # ax.set_xlabel("Variants")
             # Tick labels are the graph structures.
-            ax.set_xticks(np.arange(len(graph_structure_order)) * len(variant_order))
+            ax.set_xticks(np.arange(len(graph_structure_order)) * len(variant_order)+GRAPH_STRUCTURE_XTICK_OFFSET)
             ax.set_xticklabels(graph_structure_order, fontsize=GRAPH_STRUCTURE_TICK_FONTSIZE)
             # Step 5. Add y-axis labels.
             ax.set_ylabel(metric)
@@ -381,8 +391,6 @@ def plot_results_grid_graph_structures_fixed_module_selector(
 
 ## VARIABLE 03: confidence settings.
 
-# Font size for tick labels in confidence plots
-CONFIDENCE_TICK_FONTSIZE = 12
 
 
 def plot_results_grid_confidences(
@@ -430,7 +438,7 @@ def plot_results_grid_confidences(
     # we need to collect the run IDs that have that combination
     # (there should be num_confidences of these run IDs in total.)
     for _, combination in tqdm(unique_combinations.iterrows()):
-        _, axes = plt.subplots(ncols=len(metrics), figsize=(24, 8), sharex=True)
+        _, axes = plt.subplots(ncols=len(metrics), figsize=CONFIDENCE_FIGSIZE, sharex=True)
         for i, metric in enumerate(metrics):
             # Create a boolean mask for rows that match this combination
             mask = True
@@ -478,9 +486,9 @@ def plot_results_grid_confidences(
             # Step 3. Add title. Put in all IV values too.
             # ax.set_title(f"{metric}")
             # Step 4. Add x-axis labels.
-            ax.set_xlabel("Confidences")
+            # ax.set_xlabel("Confidences")
             # Tick labels are the (correct_confidence, incorrect_confidence) pairs.
-            ax.set_xticks(np.arange(len(confidence_order)) * len(results.keys()))
+            ax.set_xticks(np.arange(len(confidence_order)) * len(results.keys())+CONFIDENCE_XTICK_OFFSET)
             ax.set_xticklabels(confidence_order, fontsize=CONFIDENCE_TICK_FONTSIZE)
             # Step 5. Add y-axis labels.
             ax.set_ylabel(metric)
@@ -549,7 +557,7 @@ def plot_results_grid_confidences_fixed_module_selector(
     # we need to collect the run IDs that have that combination
     # (there should be num_confidences of these run IDs in total.)
     for _, combination in tqdm(unique_combinations.iterrows()):
-        _, axes = plt.subplots(ncols=len(metrics), figsize=(24, 8), sharex=True)
+        _, axes = plt.subplots(ncols=len(metrics), figsize=CONFIDENCE_FIGSIZE, sharex=True)
         for i, metric in enumerate(metrics):
             # Create a boolean mask for rows that match this combination
             mask = True
@@ -599,9 +607,9 @@ def plot_results_grid_confidences_fixed_module_selector(
             # Step 3. Add title. Put in all IV values too.
             # ax.set_title(f"{metric}")
             # Step 4. Add x-axis labels.
-            ax.set_xlabel("Confidences")
+            # ax.set_xlabel("Confidences")
             # Tick labels are the (correct_confidence, incorrect_confidence) pairs.
-            ax.set_xticks(np.arange(len(confidence_order)) * len(variant_order))
+            ax.set_xticks(np.arange(len(confidence_order)) * len(variant_order)+CONFIDENCE_XTICK_OFFSET)
             ax.set_xticklabels(confidence_order, fontsize=CONFIDENCE_TICK_FONTSIZE)
             # Step 5. Add y-axis labels.
             ax.set_ylabel(metric)
@@ -624,8 +632,6 @@ def plot_results_grid_confidences_fixed_module_selector(
 
 ## VARIABLE 04: query costs.
 
-# Font size for tick labels in query cost plots
-QUERY_COST_TICK_FONTSIZE = 12
 
 def plot_results_grid_cquery(
     results_dir: str, output_dir: str, variant: str, graph_size: int, pickle_name: str
@@ -669,7 +675,7 @@ def plot_results_grid_cquery(
     # that have that combination
     # (there should be num_graph_structures of these run IDs in total.)
     for _, combination in tqdm(unique_combinations.iterrows()):
-        _, axes = plt.subplots(ncols=len(metrics), figsize=(24, 8), sharex=True)
+        _, axes = plt.subplots(ncols=len(metrics), figsize=QUERY_COST_FIGSIZE, sharex=True)
         for i, metric in enumerate(metrics):
             # Create a boolean mask for rows that match this combination
             mask = True
@@ -713,9 +719,9 @@ def plot_results_grid_cquery(
             # Step 3. Add title. Put in all IV values too.
             # ax.set_title(f"{metric}")
             # Step 4. Add x-axis labels.
-            ax.set_xlabel("Query Costs")
+            # ax.set_xlabel("Query Costs")
             # Tick labels are the query costs.
-            ax.set_xticks(np.arange(len(query_cost_order)) * len(results.keys()))
+            ax.set_xticks(np.arange(len(query_cost_order)) * len(results.keys())+QUERY_COST_XTICK_OFFSET)
             ax.set_xticklabels(query_cost_order, fontsize=QUERY_COST_TICK_FONTSIZE)
             # Step 5. Add y-axis labels.
             ax.set_ylabel(metric)
@@ -775,7 +781,7 @@ def plot_results_grid_cquery_fixed_module_selector(
     # that have that combination
     # (there should be num_graph_structures of these run IDs in total.)
     for _, combination in tqdm(unique_combinations.iterrows()):
-        _, axes = plt.subplots(ncols=len(metrics), figsize=(24, 8), sharex=True)
+        _, axes = plt.subplots(ncols=len(metrics), figsize=QUERY_COST_FIGSIZE, sharex=True)
         for i, metric in enumerate(metrics):
             # Create a boolean mask for rows that match this combination
             mask = True
@@ -825,9 +831,9 @@ def plot_results_grid_cquery_fixed_module_selector(
             # Step 3. Add title. Put in all IV values too.
             # ax.set_title(f"{metric}")
             # Step 4. Add x-axis labels.
-            ax.set_xlabel("Query Costs")
+            # ax.set_xlabel("Query Costs")
             # Tick labels are the query costs.
-            ax.set_xticks(np.arange(len(query_cost_order)) * len(results.keys()))
+            ax.set_xticks(np.arange(len(query_cost_order)) * len(results.keys())+QUERY_COST_XTICK_OFFSET)
             ax.set_xticklabels(query_cost_order, fontsize=QUERY_COST_TICK_FONTSIZE)
             # Step 5. Add y-axis labels.
             ax.set_ylabel(metric)
