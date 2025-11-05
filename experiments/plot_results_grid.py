@@ -37,6 +37,8 @@ CONFIDENCE_XTICK_OFFSET = 1.5
 QUERY_COST_TICK_FONTSIZE = 20
 QUERY_COST_FIGSIZE = (36, 9)
 QUERY_COST_XTICK_OFFSET = 1.5
+# Legend font size
+LEGEND_FONT_SIZE = 20
 
 ## VARIABLE 01: number of modules.
 
@@ -287,7 +289,7 @@ def plot_results_grid_graph_structures(
             # ax.legend()
             handles, labels = ax.get_legend_handles_labels()
             
-        fig.legend(handles, labels, loc='lower center',bbox_to_anchor=(0.5, -0.1),ncol=len(labels))
+        fig.legend(handles, labels, loc='lower center',bbox_to_anchor=(0.5, -0.1),ncol=len(labels),fontsize=LEGEND_FONT_SIZE)
         # Add title before tight_layout to avoid overlap
         plt.suptitle(f"Graph Structure Comparison for Graph Size {graph_size}")
         plt.tight_layout()
@@ -410,7 +412,7 @@ def plot_results_grid_graph_structures_fixed_module_selector(
             # ax.legend()
             handles, labels = ax.get_legend_handles_labels()
 
-        fig.legend(handles, labels, loc='lower center',bbox_to_anchor=(0.5, -0.1),ncol=len(labels))
+        fig.legend(handles, labels, loc='lower center',bbox_to_anchor=(0.5, -0.1),ncol=len(labels),fontsize=LEGEND_FONT_SIZE)
         # Add title before tight_layout to avoid overlap
         plt.suptitle(f"Variant Comparison for Graph Size {graph_size}")
         plt.tight_layout()
@@ -532,8 +534,8 @@ def plot_results_grid_confidences(
             # but I don't want it to repeatedly display the same variant names.
             # ax.legend()
             handles, labels = ax.get_legend_handles_labels()
-        
-        fig.legend(handles, labels, loc='lower center',bbox_to_anchor=(0.5, -0.1),ncol=len(labels))
+
+        fig.legend(handles, labels, loc='lower center',bbox_to_anchor=(0.5, -0.1),ncol=len(labels),fontsize=LEGEND_FONT_SIZE)
         # Add title before tight_layout to avoid overlap
         plt.suptitle(f"Confidence Comparison for Graph Size {graph_size}")
         plt.tight_layout()
@@ -656,7 +658,7 @@ def plot_results_grid_confidences_fixed_module_selector(
             # but I don't want it to repeatedly display the same variant names.
             # ax.legend()
             handles, labels = ax.get_legend_handles_labels()
-        fig.legend(handles, labels, loc='lower center',bbox_to_anchor=(0.5, -0.1),ncol=len(labels))
+        fig.legend(handles, labels, loc='lower center',bbox_to_anchor=(0.5, -0.1),ncol=len(labels),fontsize=LEGEND_FONT_SIZE)
         # Add title before tight_layout to avoid overlap
         plt.suptitle(f"Confidence Comparison for Graph Size {graph_size}")
         plt.tight_layout()
@@ -771,7 +773,7 @@ def plot_results_grid_cquery(
             # ax.legend()
             handles, labels = ax.get_legend_handles_labels()
         
-        fig.legend(handles, labels, loc='lower center',bbox_to_anchor=(0.5, -0.1),ncol=len(labels))
+        fig.legend(handles, labels, loc='lower center',bbox_to_anchor=(0.5, -0.1),ncol=len(labels),fontsize=LEGEND_FONT_SIZE)
         # Add title before tight_layout to avoid overlap
         plt.suptitle(f"Query Cost Comparison for Graph Size {graph_size}")
         plt.tight_layout()
@@ -885,7 +887,7 @@ def plot_results_grid_cquery_fixed_module_selector(
             # but I don't want it to repeatedly display the same algorithm names.
             # ax.legend()
             handles, labels = ax.get_legend_handles_labels()
-        fig.legend(handles, labels, loc='lower center',bbox_to_anchor=(0.5, -0.1),ncol=len(labels))
+        fig.legend(handles, labels, loc='lower center',bbox_to_anchor=(0.5, -0.1),ncol=len(labels),fontsize=LEGEND_FONT_SIZE)
         # Add title before tight_layout to avoid overlap
         plt.suptitle(f"Query Cost Comparison for Graph Size {graph_size}")
         plt.tight_layout()
