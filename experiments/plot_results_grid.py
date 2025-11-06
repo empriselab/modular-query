@@ -994,7 +994,6 @@ def plot_results_grid_expert_query_confidence_fixed_module_selector(results_dir:
                 ]
                 # Extract the results (from the results_dictionary column)
                 if len(df_filtered_expert_query_confidence["results_dictionary"].values) == 0:
-                    # print(f"Warning: No results found for {row['variant'].values[0]} with expert_query_confidence={expert_query_confidence}")
                     print("No results found for this combination.")
                     continue
                 results = df_filtered_expert_query_confidence["results_dictionary"].values[0]
@@ -1079,7 +1078,7 @@ if __name__ == "__main__":
 
     # Expert query confidence.
     plot_results_grid_expert_query_confidence(args.results_dir, fixed_variant, fixed_graph_size, df_stem)
-    # plot_results_grid_expert_query_confidence_fixed_module_selector(args.results_dir, fixed_module_selector, fixed_graph_size, df_stem)
+    plot_results_grid_expert_query_confidence_fixed_module_selector(args.results_dir, fixed_module_selector, fixed_graph_size, df_stem)
 
     # plot_results_grid(args.results_dir)
     # plot_results_grid_query_algorithms(args.results_dir, fixed_module_selector)
