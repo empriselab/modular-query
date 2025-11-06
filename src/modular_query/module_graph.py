@@ -180,13 +180,13 @@ class ModuleGraph:
                 value = expert_values_cache[module.get_name()]
                 # Return true expert value with probability expert_query_confidence,
                 # opposite value with probability 1 - expert_query_confidence
+                # NOTE: assumes that value is a boolean or integer in {0,1}.
                 if random.random() >= self.expert_query_confidence:
                     # Return opposite value
                     if isinstance(value, bool):
                         value = not value
                     elif isinstance(value, (int, float)):
-                        value = 1 - value if value in [0, 1] else -value
-                    # For other types, we can't easily define "opposite", so keep the true value
+                        value = 1 - value
                 computed_values[module] = value
                 computed_confidences[module] = self.expert_query_confidence
             elif module.get_name() in expert_query_module_names:
@@ -194,13 +194,13 @@ class ModuleGraph:
                 value = module.call_expert(parent_outputs)
                 # Return true expert value with probability expert_query_confidence,
                 # opposite value with probability 1 - expert_query_confidence
+                # NOTE: assumes that value is a boolean or integer in {0,1}.
                 if random.random() >= self.expert_query_confidence:
                     # Return opposite value
                     if isinstance(value, bool):
                         value = not value
                     elif isinstance(value, (int, float)):
-                        value = 1 - value if value in [0, 1] else -value
-                    # For other types, we can't easily define "opposite", so keep the true value
+                        value = 1 - value
                 # Use the expert's value, and set confidence to self.expert_query_confidence.
                 computed_values[module] = value
                 computed_confidences[module] = self.expert_query_confidence

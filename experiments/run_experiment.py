@@ -454,10 +454,9 @@ def run_experiment(
                     acc_get_action_calls += 1
                     acc_execution_time += computation_time
                     if queried:
-                        # assert (
-                        #     current_query_cost > 0
-                        # ), "Query cost should be positive if we query!"
-                        pass
+                        assert (
+                            current_query_cost > 0
+                        ), "Query cost should be positive if we query!"
                     # Increment accumulators.
                     acc_query_cost += current_query_cost
                     acc_proxy_obj_1 += 1 - product_of_confidences(
@@ -500,10 +499,9 @@ def run_experiment(
                             ) = policy.get_action(state=state)
                             acc_get_action_calls += 1
                             if queried:
-                                # assert (
-                                #     current_query_cost > 0
-                                # ), "Query cost should be positive if we query!"
-                                pass
+                                assert (
+                                    current_query_cost > 0
+                                ), "Query cost should be positive if we query!"
                             # Balanced-2 actually has to intervene *here*
                             # i.e. - after we decide what to query,
                             # but before we actually make the query

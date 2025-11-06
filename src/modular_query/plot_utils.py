@@ -442,8 +442,6 @@ def plot_results_across_graph_sizes(
             variant = pkl_file.split("_")[2]
         results[variant] = pkl.load(open(Path(data_dir) / pkl_file, "rb"))
 
-    import pdb; pdb.set_trace()
-
     # Extract the graph sizes from the results.
     graph_sizes = list(results["greedy"][algorithm]["total_timesteps"].keys())
 

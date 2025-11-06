@@ -5,7 +5,6 @@ each of them.
 """
 
 import argparse
-from hashlib import algorithms_available
 import json
 import os
 import pickle as pkl

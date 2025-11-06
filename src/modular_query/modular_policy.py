@@ -147,9 +147,9 @@ class ModularPolicy:
         action_value = computed_values[self.module_graph.leaf]
 
         if queried:
-            # assert (
-            #     total_query_cost > 0
-            # ), "Raw total query cost should be positive if we query."
+            assert (
+                total_query_cost > 0
+            ), "Raw total query cost should be positive if we query."
             assert (
                 expert_query_module_name is not None
             ), "Expert query module name should not be None if we query."
