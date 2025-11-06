@@ -184,7 +184,9 @@ def run_experiment(
         pre_make_query_termination_condition = DummyTerminationCondition()
     elif variant == "balanced-2":
         loop_termination_condition = DummyTerminationCondition()
-        pre_make_query_termination_condition = DummyTerminationCondition()  # No longer needed, because checking is done in get_action()
+        pre_make_query_termination_condition = (
+            DummyTerminationCondition()
+        )  # No longer needed, because checking is done in get_action()
     elif variant in ("greedy", "balanced"):
         # Default case - these won't be used for other variants
         loop_termination_condition = DummyTerminationCondition()
@@ -373,10 +375,10 @@ def run_experiment(
                     strategy.or_modules = all_queryable_module_names
 
                 policy = ModularPolicy(
-                    module_graph=module_graph, 
-                    query_strategy=strategy, 
+                    module_graph=module_graph,
+                    query_strategy=strategy,
                     verbose=False,
-                    variant=variant
+                    variant=variant,
                 )
 
                 # NOTE: skip graphquery for large graphs (>= 50)
@@ -1099,7 +1101,9 @@ def main(variant: str) -> None:
     # }
     # exp_mixed_failure_population(variant)
 
-    # Run the grid-search experiment.
+    # Run the FULL grid-search experiment
+    # (4 variant x 4 failure counts x 4 confidence counts x
+    #  4 redundancy counts x 4 query costs = 1024 runs)
     # config = {
     #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
     #     "num_trials": 100,
@@ -1108,16 +1112,46 @@ def main(variant: str) -> None:
     #     "redundancy_list": ["all_AND", "all_OR", "AND_then_OR", "OR_then_AND"],
     #     "c_query_list": [0.08, 0.16, 0.32, 0.64],
     # }
-    # 9/14/2025: much smaller test, 'canonical' setting for feeding.
+    # 9/29/2025: test with a smaller grid size. Only vary # of modules,
+    # redundancies, and query costs.
+    # (4 variant x 1 failure count x 1 confidence count x
+    # 4 redundancy counts x 4 query costs = 64 runs)
+    # config = {
+    #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
+    #     "num_trials": 100,
+    #     "num_failures_list": [3],
+    #     "confidences_list": [(1.0, 0.1)],
+    #     "redundancy_list": ["all_AND", "all_OR", "AND_then_OR", "OR_then_AND"],
+    #     "c_query_list": [0.08, 0.16, 0.32, 0.64],
+    # }
+    # 9/30/2025: only vary confidences, fix everything else.
     config = {
         "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
         "num_trials": 100,
         "num_failures_list": [3],
-        "confidences_list": [(1,0.1)],
+        "confidences_list": [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)],
         "redundancy_list": ["all_AND"],
         "c_query_list": [0.32],
-        "expert_query_confidence_list": [1.0, 0.9, 0.8, 0.7],
     }
+    # 9/29/2025: testing varying redundancies.
+    # config = {
+    #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
+    #     "num_trials": 100,
+    #     "num_failures_list": [3],
+    #     "confidences_list": [(1.0, 0.1)],
+    #     "redundancy_list": ["all_AND", "all_OR", "AND_then_OR", "OR_then_AND"],
+    #     "c_query_list": [0.32],
+    # }
+
+    # 9/14/2025: much smaller test, 'canonical' setting for feeding.
+    # config = {
+    #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
+    #     "num_trials": 100,
+    #     "num_failures_list": [3],
+    #     "confidences_list": [(0.7, 0.4)],
+    #     "redundancy_list": ["all_AND"],
+    #     "c_query_list": [0.64],
+    # }
     # simple test with different redundancies, but everything else fixed.
     # config = {
     #     "graph_sizes": [5, 10, 15, 18, 25, 50, 75, 100],

@@ -228,7 +228,8 @@ def plot_results(
                     )
                     if len(result_array) == 0:
                         continue
-                    # Use mean for total_correct metric if requested, otherwise use median
+                    # Use mean for total_correct metric if requested,
+                    # otherwise use median
                     if use_mean_for_total_correct and metric == "total_correct":
                         median = np.mean(result_array)
                         std = np.std(result_array)
@@ -476,7 +477,12 @@ def plot_results_across_graph_sizes(
                     result_array = np.array(
                         results[variant][algorithm][metric][size], dtype=np.float64
                     )
-                    # Use mean for total_correct metric if requested, otherwise use median
+                    # Skip if result_array is empty
+                    if len(result_array) == 0:
+                        continue
+
+                    # Use mean for total_correct metric if requested,
+                    # otherwise use median
                     if use_mean_for_total_correct and metric == "total_correct":
                         median = np.mean(result_array)
                         std = np.std(result_array)
@@ -507,7 +513,9 @@ def plot_results_across_graph_sizes(
                 lines.append(line[0])
                 labels.append(VARIANT_NAMES[variant])
             # Only fill between if we have data for all sizes
-            if len(lower_quartiles) == len(graph_sizes) and len(upper_quartiles) == len(graph_sizes):
+            if len(lower_quartiles) == len(graph_sizes) and len(upper_quartiles) == len(
+                graph_sizes
+            ):
                 ax.fill_between(
                     np.arange(len(graph_sizes)),
                     lower_quartiles,
