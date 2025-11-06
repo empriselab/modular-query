@@ -839,18 +839,24 @@ def plot_results_grid_expert_query_confidence(results_dir: str, variant: str, gr
     df = pd.read_pickle(os.path.join(results_dir, f"{pickle_name}.pkl"))
     # The general structure is as follows:
     # we want to produce a grouped bar chart with the following structure:
-    # x-axis: expert query confidence, secondary x-axis: iterate over variants.
+    # x-axis: query costs, secondary x-axis: iterate over algorithms/module selectors.
     # y-axis: metric.
-    # so each group of bars corresponds to a different expert query confidence,
-    # and each bar corresponds to a different variant.
+    # so each group of bars corresponds to a different query cost,
+    # and each bar corresponds to a different algorithm/module selector.
+
+    # First, we only want to look at run IDs for the given variant.
+    # Then, we need to collect the run IDs
+    # that have fixed values of the IVs except for the query cost.
+    df = df[df["variant"] == variant]
     # Get the unique values of the IVs.
     ivs = df.columns.tolist()
-    ivs.remove("run_id")
     ivs.remove("variant")
+    ivs.remove("run_id")
     ivs.remove("results_dictionary")
     ivs.remove("expert_query_confidence")
     # Get the unique combinations of values for the IVs.
     unique_combinations = df[ivs].drop_duplicates()
+
     metrics = [
         "query_cost_total",
         "total_failed_attempts",
@@ -858,6 +864,7 @@ def plot_results_grid_expert_query_confidence(results_dir: str, variant: str, gr
         "total_correct",
         "total_timesteps",
     ]
+
     # For each unique combination of IVs, we need to collect the run IDs
     # that have that combination
     # (there should be num_graph_structures of these run IDs in total.)
@@ -875,33 +882,27 @@ def plot_results_grid_expert_query_confidence(results_dir: str, variant: str, gr
             # (need to write custom code for this).
             # Step 1. Create a figure and axis.
             ax = axes[i]
-            # Step 2. Iterate over the expert query confidence, in a particular order
-            expert_query_confidence_order = [0.7, 0.8, 0.9, 1.0]
+            # Step 2. Iterate over the query costs, in a particular order
+            expert_query_confidence_order = [1.0, 0.8, 0.6, 0.4]
             # need to handle x offsets carefully here.
             # Track which algorithms we've already added to legend
             legend_added = set()
             for i, expert_query_confidence in enumerate(expert_query_confidence_order):
                 # Filter the df for only those run IDs.
-                df_filtered_expert_query_confidence = df_filtered[
+                df_filtered_query_cost = df_filtered[
                     df_filtered["expert_query_confidence"] == expert_query_confidence
                 ]
                 # Extract the results (from the results_dictionary column)
-                results = df_filtered_expert_query_confidence["results_dictionary"].values[0]
+                results = df_filtered_query_cost["results_dictionary"].values[0]
                 for j, algorithm in enumerate(results.keys()):
                     # Only add label to legend if we haven't seen this algorithm before
                     label = algorithm if algorithm not in legend_added else ""
-                    # Extract the row for this variant.
-                    row = df_filtered_expert_query_confidence[
-                        df_filtered_expert_query_confidence["variant"] == algorithm
-                    ]
-                    # Extract the results (from the results_dictionary column)
-                    if len(row["results_dictionary"].values) == 0:
-                        # print(f"Warning: No results found for {row['variant'].values[0]} with expert_query_confidence={expert_query_confidence}")
-                        print("No results found for this combination.")
-                        continue
-                    results = row["results_dictionary"].values[0]
                     # Use mean for total_correct metric, median for others
-                    value = np.mean(results[algorithm][metric][graph_size]) if metric == "total_correct" else np.median(results[algorithm][metric][graph_size])
+                    value = (
+                        np.mean(results[algorithm][metric][graph_size])
+                        if metric == "total_correct"
+                        else np.median(results[algorithm][metric][graph_size])
+                    )
                     ax.bar(
                         i * len(expert_query_confidence_order) + j,
                         value,
@@ -913,7 +914,7 @@ def plot_results_grid_expert_query_confidence(results_dir: str, variant: str, gr
             # ax.set_title(f"{metric}")
             # Step 4. Add x-axis labels.
             ax.set_xlabel("Expert Query Confidence")
-            # Tick labels are the expert query confidence.
+            # Tick labels are the query costs.
             ax.set_xticks(np.arange(len(expert_query_confidence_order)) * len(results.keys()))
             ax.set_xticklabels(expert_query_confidence_order)
             # Step 5. Add y-axis labels.
@@ -928,7 +929,7 @@ def plot_results_grid_expert_query_confidence(results_dir: str, variant: str, gr
         plt.subplots_adjust(top=0.9)
         # Step 3. Save the figure.
         plt.savefig(
-            f"{results_dir}/plot_{combination.to_dict()}_expert_query_confidence.png",
+            f"{results_dir}/plot_{combination.to_dict()}_expert_query_confidence_{variant}.png",
             dpi=300,
             bbox_inches="tight",
         )
@@ -982,7 +983,7 @@ def plot_results_grid_expert_query_confidence_fixed_module_selector(results_dir:
             # Step 1. Create a figure and axis.
             ax = axes[i]
             # Step 2. Iterate over the expert query confidence, in a particular order
-            expert_query_confidence_order = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+            expert_query_confidence_order = [1.0, 0.8, 0.6, 0.4]
             # need to handle x offsets carefully here.
             # Track which algorithms we've already added to legend
             legend_added = set()
@@ -1078,7 +1079,7 @@ if __name__ == "__main__":
 
     # Expert query confidence.
     plot_results_grid_expert_query_confidence(args.results_dir, fixed_variant, fixed_graph_size, df_stem)
-    plot_results_grid_expert_query_confidence_fixed_module_selector(args.results_dir, fixed_module_selector, fixed_graph_size, df_stem)
+    # plot_results_grid_expert_query_confidence_fixed_module_selector(args.results_dir, fixed_module_selector, fixed_graph_size, df_stem)
 
     # plot_results_grid(args.results_dir)
     # plot_results_grid_query_algorithms(args.results_dir, fixed_module_selector)
