@@ -1099,6 +1099,17 @@ def main(variant: str) -> None:
     # }
     # exp_mixed_failure_population(variant)
 
+    # Noisy-experts test: we want to try c_expert = {1, 0.8, 0.6, 0.4}.
+    config = {
+        "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
+        "num_trials": 100,
+        "num_failures_list": [3],
+        "confidences_list": [(1.0, 0.1)],
+        "redundancy_list": ["all_AND"],
+        "c_query_list": [0.32],
+        "expert_query_confidence_list": [1.0, 0.8, 0.6, 0.4],
+    }
+
     # Run the FULL grid-search experiment
     # (4 variant x 4 failure counts x 4 confidence counts x
     #  4 redundancy counts x 4 query costs = 1024 runs)
@@ -1123,14 +1134,14 @@ def main(variant: str) -> None:
     #     "c_query_list": [0.08, 0.16, 0.32, 0.64],
     # }
     # 9/30/2025: only vary confidences, fix everything else.
-    config = {
-        "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
-        "num_trials": 100,
-        "num_failures_list": [3],
-        "confidences_list": [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)],
-        "redundancy_list": ["all_AND"],
-        "c_query_list": [0.32],
-    }
+    # config = {
+    #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
+    #     "num_trials": 100,
+    #     "num_failures_list": [3],
+    #     "confidences_list": [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)],
+    #     "redundancy_list": ["all_AND"],
+    #     "c_query_list": [0.32],
+    # }
     # 9/29/2025: testing varying redundancies.
     # config = {
     #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
