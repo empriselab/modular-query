@@ -60,6 +60,7 @@ VARIANT_NAMES = {
 }
 
 # Define distinct line styles, markers, and colors for each strategy
+# Strategies (module selectors) are different shades of green.
 STRATEGY_COLORS = {
     "Never Query": {
         "color": "#b2e2e2",
@@ -83,6 +84,12 @@ STRATEGY_COLORS = {
         "color": "#66c2a4",
         "linestyle": "-",
         "marker": "v",
+        "linewidth": 2,
+    },
+    "Confidence Query": {
+        "color": "#984ea3",
+        "linestyle": "-",
+        "marker": "s",
         "linewidth": 2,
     },
         "MIP": {
