@@ -53,6 +53,7 @@ def construct_graph(
     edge_probability: float,
     rng: np.random.Generator,
     expert_query_confidence: float,
+    expert_value_rng: np.random.Generator,
 ) -> ModuleGraph:
     """Construct a random directed acyclic graph (DAG) for the module
     dependencies."""
@@ -78,7 +79,7 @@ def construct_graph(
         leaves.add(module)
 
     # Create the module graph.
-    module_graph = ModuleGraph(module_to_parents, expert_query_confidence=expert_query_confidence)
+    module_graph = ModuleGraph(module_to_parents, expert_query_confidence=expert_query_confidence, expert_value_rng=expert_value_rng)
 
     return module_graph
 
@@ -91,6 +92,7 @@ def construct_graph_top_bottom(
     edge_probability: float,
     rng: np.random.Generator,
     expert_query_confidence: float,
+    expert_value_rng: np.random.Generator,
 ) -> ModuleGraph:
     """Construct a module graph with a single top gate type and a single bottom
     gate type.
@@ -179,7 +181,7 @@ def construct_graph_top_bottom(
         leaves.add(module)
 
     # Create the module graph.
-    module_graph = ModuleGraph(module_to_parents, expert_query_confidence=expert_query_confidence)
+    module_graph = ModuleGraph(module_to_parents, expert_query_confidence=expert_query_confidence, expert_value_rng=expert_value_rng)
     return module_graph
 
 
@@ -296,6 +298,7 @@ def generate_random_module_graph(
         edge_probability=edge_probability,
         rng=rng,
         expert_query_confidence=expert_query_confidence,
+        expert_value_rng=rng.spawn(1)[0],   # create a new RNG to avoid affecting main one
     )
 
     return module_graph
@@ -444,6 +447,7 @@ def generate_random_top_bottom_module_graph(
         edge_probability=edge_probability,
         rng=rng,
         expert_query_confidence=expert_query_confidence,
+        expert_value_rng=rng.spawn(1)[0],   # create a new RNG to avoid affecting main one
     )
     return module_graph
 

@@ -1078,7 +1078,7 @@ if __name__ == "__main__":
 
     # Expert query confidence.
     plot_results_grid_expert_query_confidence(args.results_dir, fixed_variant, fixed_graph_size, df_stem)
-    plot_results_grid_expert_query_confidence_fixed_module_selector(args.results_dir, fixed_module_selector, fixed_graph_size, df_stem)
+    # plot_results_grid_expert_query_confidence_fixed_module_selector(args.results_dir, fixed_module_selector, fixed_graph_size, df_stem)
 
     # plot_results_grid(args.results_dir)
     # plot_results_grid_query_algorithms(args.results_dir, fixed_module_selector)

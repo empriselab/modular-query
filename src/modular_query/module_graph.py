@@ -1,12 +1,12 @@
 """Module graph."""
 
 from collections import deque
-import random
 from typing import Any
 
 from modular_query.modules import Module
 from modular_query.utils import print_and_log
 
+import numpy as np
 
 class ModuleGraph:
     """A graph of modules."""
@@ -17,6 +17,7 @@ class ModuleGraph:
         root_leaf_check: bool = True,
         verbose: bool = False,
         expert_query_confidence: float = 1.0,
+        expert_value_rng: np.random.Generator | None = None,
     ) -> None:
         """
         root_leaf_check: if True,
@@ -68,6 +69,10 @@ class ModuleGraph:
 
         # Set the expert query confidence.
         self.expert_query_confidence = expert_query_confidence
+
+        # RNG for sampling expert values.
+        self.expert_value_rng = expert_value_rng \
+            if expert_value_rng is not None else np.random.default_rng()
 
     def get_modules(self) -> set[Module]:
         """Get all modules in the graph."""
@@ -178,7 +183,7 @@ class ModuleGraph:
                 # Return true expert value with probability expert_query_confidence,
                 # opposite value with probability 1 - expert_query_confidence
                 # NOTE: assumes that value is a boolean or integer in {0,1}.
-                if random.random() >= self.expert_query_confidence:
+                if self.expert_value_rng.random() >= self.expert_query_confidence:
                     # Return opposite value
                     if isinstance(value, bool):
                         value = not value
