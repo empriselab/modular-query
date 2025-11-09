@@ -27,6 +27,7 @@ from modular_query.modules import Module, StateModule
 from modular_query.plot_utils import plot_results
 from modular_query.query_strategies.binary_tree_query import BinaryTreeQueryStrategy
 from modular_query.query_strategies.brute_force import BruteForceQueryStrategy
+from modular_query.query_strategies.confidence_query import ConfidenceQueryStrategy
 from modular_query.query_strategies.graph_query import GraphQueryStrategy
 from modular_query.query_strategies.mip import MIPQueryStrategy
 from modular_query.query_strategies.never_query import NeverQueryStrategy
@@ -207,6 +208,10 @@ def run_experiment(
             workload_eps=workload_eps,
         ),
         "Binary Tree Query": BinaryTreeQueryStrategy(
+            correct_answer_cost,
+            incorrect_answer_cost,
+        ),
+        "Confidence Query": ConfidenceQueryStrategy(
             correct_answer_cost,
             incorrect_answer_cost,
         ),
@@ -1113,12 +1118,21 @@ def main(variant: str) -> None:
     #     "c_query_list": [0.08, 0.16, 0.32, 0.64],
     # }
     # 9/30/2025: only vary confidences, fix everything else.
+    # config = {
+    #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
+    #     "num_trials": 100,
+    #     "num_failures_list": [3],
+    #     "confidences_list": [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)],
+    #     "redundancy_list": ["all_AND"],
+    #     "c_query_list": [0.32],
+    # }
+    # 11/9/2025: above configuration, but with varying redundancies.
     config = {
         "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
         "num_trials": 100,
         "num_failures_list": [3],
         "confidences_list": [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)],
-        "redundancy_list": ["all_AND"],
+        "redundancy_list": ["all_AND", "all_OR", "AND_then_OR", "OR_then_AND"],
         "c_query_list": [0.32],
     }
     # 9/29/2025: testing varying redundancies.
