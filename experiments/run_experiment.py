@@ -148,6 +148,7 @@ def run_experiment(
     variant: str = "balanced",
     dependency_structure: str = "all_AND",
     disable_mip: bool = False,
+    query_cost_noise_width_fraction: float = 0.1,
 ) -> dict[str, dict[str, dict[int, list[float]]]]:
     """Run experiments with different graph sizes and querying strategies.
 
@@ -295,6 +296,7 @@ def run_experiment(
                     correct_module_confidence=correct_module_confidence,
                     incorrect_module_confidence=incorrect_module_confidence,
                     redundancy="AND",
+                    query_cost_noise_width_fraction=query_cost_noise_width_fraction,
                 )
             elif dependency_structure == "all_OR":
                 module_graph = generate_random_module_graph(
@@ -306,6 +308,7 @@ def run_experiment(
                     correct_module_confidence=correct_module_confidence,
                     incorrect_module_confidence=incorrect_module_confidence,
                     redundancy="OR",
+                    query_cost_noise_width_fraction=query_cost_noise_width_fraction,
                 )
             elif dependency_structure == "AND_then_OR":
                 module_graph = generate_random_top_bottom_module_graph(
@@ -318,6 +321,7 @@ def run_experiment(
                     incorrect_module_confidence=incorrect_module_confidence,
                     gate_top="AND",
                     gate_bottom="OR",
+                    query_cost_noise_width_fraction=query_cost_noise_width_fraction,
                 )
             elif dependency_structure == "OR_then_AND":
                 module_graph = generate_random_top_bottom_module_graph(
@@ -330,6 +334,7 @@ def run_experiment(
                     incorrect_module_confidence=incorrect_module_confidence,
                     gate_top="OR",
                     gate_bottom="AND",
+                    query_cost_noise_width_fraction=query_cost_noise_width_fraction,
                 )
             else:
                 raise ValueError(
@@ -748,6 +753,11 @@ def run_single_grid_search_experiment(
     # Use only the graph sizes that are larger than the number of failures.
     graph_sizes_to_use = [size for size in config["graph_sizes"] if size > num_failures]
 
+    # Assume a constant query cost noise width fraction.
+    query_cost_noise_width_fraction = config["query_cost_noise_width_fraction"]
+
+    print_and_log(f"Query cost noise width fraction: {query_cost_noise_width_fraction}")
+
     results = run_experiment(
         graph_sizes=graph_sizes_to_use,
         num_trials=config["num_trials"],
@@ -761,6 +771,7 @@ def run_single_grid_search_experiment(
         correct_module_confidence=correct_confidence,
         incorrect_module_confidence=incorrect_confidence,
         disable_mip=True,
+        query_cost_noise_width_fraction=query_cost_noise_width_fraction,
     )
 
     # Run ID is the index of the configuration in the grid.
@@ -775,6 +786,7 @@ def run_single_grid_search_experiment(
         "incorrect_confidence": incorrect_confidence,
         "dependency_structure": redundancy,
         "c_query": c_query,
+        "query_cost_noise_width_fraction": query_cost_noise_width_fraction,
     }
 
     return run_id, results, config_to_save

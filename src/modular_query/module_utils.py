@@ -194,6 +194,7 @@ def generate_random_module_graph(
     correct_module_confidence: float = 1.0,
     incorrect_module_confidence: float = 0.1,
     redundancy: str = "AND",
+    query_cost_noise_width_fraction: float = 0.1,
 ) -> ModuleGraph:
     """Generate a random module graph where all modules are a single type of
     gate. (either AND or OR gates).
@@ -241,7 +242,6 @@ def generate_random_module_graph(
     # And another independent rng for seeding modules with random uniform query costs.
     rng_for_query_costs = rng.spawn(1)[0]
     # query cost will be sampled from [(1-frac)*query_cost, (1+frac)*query_cost]
-    query_cost_noise_width_fraction = 0.1
 
     # Create the modules.
     modules: list[Module] = []
@@ -318,6 +318,7 @@ def generate_random_top_bottom_module_graph(
     incorrect_module_confidence: float = 0.1,
     gate_top: str = "AND",
     gate_bottom: str = "OR",
+    query_cost_noise_width_fraction: float = 0.1,
 ) -> ModuleGraph:
     """Generate a random module graph where the first group of modules are a
     single gate type ("top"), and the last set of modules are a different gate
@@ -362,7 +363,6 @@ def generate_random_top_bottom_module_graph(
     # And another independent rng for seeding modules with random uniform query costs.
     rng_for_query_costs = rng.spawn(1)[0]
     # query cost will be sampled from [(1-frac)*query_cost, (1+frac)*query_cost]
-    query_cost_noise_width_fraction = 0.1
 
 
     # Create the state module.
