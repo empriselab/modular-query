@@ -25,6 +25,10 @@ class ConfidenceQueryStrategy(QueryStrategy):
             and module.get_name() not in self.queried_modules
         ]
         # Find the module with the lowest confidence.
-        lowest_confidence_module = min(all_modules,\
-             key=lambda x: computed_confidences[module_graph.get_module_by_name(x)])
+        if len(all_modules) == 0:
+            return None, {}, {}
+        lowest_confidence_module = min(
+            all_modules,
+            key=lambda x: computed_confidences[module_graph.get_module_by_name(x)],
+        )
         return lowest_confidence_module, {}, {}
