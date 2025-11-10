@@ -238,6 +238,11 @@ def generate_random_module_graph(
     # Spawn an independent rng for seeding the modules with their actual states.
     rng_for_states = rng.spawn(1)[0]
 
+    # And another independent rng for seeding modules with random uniform query costs.
+    rng_for_query_costs = rng.spawn(1)[0]
+    # query cost will be sampled from [(1-frac)*query_cost, (1+frac)*query_cost]
+    query_cost_noise_width_fraction = 0.1
+
     # Create the modules.
     modules: list[Module] = []
     for num in range(num_modules):
@@ -270,10 +275,16 @@ def generate_random_module_graph(
             else:
                 fn = partial(incorrect_fn, correct_module_confidence)
 
+        # sample query cost from [(1-frac)*query_cost, (1+frac)*query_cost]
+        query_cost_rand = rng_for_query_costs.uniform(
+            (1 - query_cost_noise_width_fraction) * query_cost,
+            (1 + query_cost_noise_width_fraction) * query_cost,
+        )
+
         module = create_module(
             name=module_name,
             fn=fn,
-            query_cost=query_cost,
+            query_cost=query_cost_rand,
             expert_fn=expert,
             ParentModuleClass=ParentModuleClass,
         )
@@ -284,7 +295,7 @@ def generate_random_module_graph(
         assert module.get_expert_query_cost() > 0, (
             f"Module {module.get_name()}: "
             "Expert query cost must be positive"
-            f"and equal to fn-provided cost of {query_cost}"
+            f"and equal to fn-provided cost of {query_cost_rand}"
         )
 
     module_graph = construct_graph(
@@ -348,6 +359,12 @@ def generate_random_top_bottom_module_graph(
     # Spawn an independent rng for seeding the modules with their actual states.
     rng_for_states = rng.spawn(1)[0]
 
+    # And another independent rng for seeding modules with random uniform query costs.
+    rng_for_query_costs = rng.spawn(1)[0]
+    # query cost will be sampled from [(1-frac)*query_cost, (1+frac)*query_cost]
+    query_cost_noise_width_fraction = 0.1
+
+
     # Create the state module.
     state_module = StateModule()
     # Create the "top" gate type.
@@ -370,10 +387,16 @@ def generate_random_top_bottom_module_graph(
             else:
                 fn = partial(incorrect_fn, correct_module_confidence, gate_top)
 
+        # sample query cost from [(1-frac)*query_cost, (1+frac)*query_cost]
+        query_cost_rand = rng_for_query_costs.uniform(
+            (1 - query_cost_noise_width_fraction) * query_cost,
+            (1 + query_cost_noise_width_fraction) * query_cost,
+        )
+
         module = create_module(
             name=module_name,
             fn=fn,
-            query_cost=query_cost,
+            query_cost=query_cost_rand,
             expert_fn=partial(expert, gate_top),
             ParentModuleClass=parent_module_class,  # type: ignore
         )
@@ -398,10 +421,17 @@ def generate_random_top_bottom_module_graph(
                 fn = partial(correct_fn, correct_module_confidence, gate_bottom)
             else:
                 fn = partial(incorrect_fn, correct_module_confidence, gate_bottom)
+
+        # sample query cost from [(1-frac)*query_cost, (1+frac)*query_cost]
+        query_cost_rand = rng_for_query_costs.uniform(
+            (1 - query_cost_noise_width_fraction) * query_cost,
+            (1 + query_cost_noise_width_fraction) * query_cost,
+        )
+
         module = create_module(
             name=module_name,
             fn=fn,
-            query_cost=query_cost,
+            query_cost=query_cost_rand,
             expert_fn=partial(expert, gate_bottom),
             ParentModuleClass=parent_module_class,  # type: ignore
         )
@@ -422,10 +452,17 @@ def generate_random_top_bottom_module_graph(
             fn = partial(correct_fn, correct_module_confidence, gate_bottom)
         else:
             fn = partial(incorrect_fn, correct_module_confidence, gate_bottom)
+
+    # sample query cost from [(1-frac)*query_cost, (1+frac)*query_cost]
+    query_cost_rand = rng_for_query_costs.uniform(
+        (1 - query_cost_noise_width_fraction) * query_cost,
+        (1 + query_cost_noise_width_fraction) * query_cost,
+    )
+
     action_module = create_module(
         name="action",
         fn=fn,
-        query_cost=query_cost,
+        query_cost=query_cost_rand,
         expert_fn=partial(expert, gate_bottom),
         ParentModuleClass=ActionModule,  # type: ignore
     )
