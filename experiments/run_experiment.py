@@ -198,20 +198,21 @@ def run_experiment(
     # Initialize strategies.
     # (initially with null and_modules and or_modules,
     # which will be set after the module graph is generated.)
+    # NOTE: disabling other strategies for the rebuttal for now.
     strategies = {
-        "Never Query": NeverQueryStrategy(correct_answer_cost, incorrect_answer_cost),
-        "Brute Force": BruteForceQueryStrategy(
-            correct_answer_cost, incorrect_answer_cost
-        ),
+        # "Never Query": NeverQueryStrategy(correct_answer_cost, incorrect_answer_cost),
+        # "Brute Force": BruteForceQueryStrategy(
+        #     correct_answer_cost, incorrect_answer_cost
+        # ),
         "Graph Query": GraphQueryStrategy(
             correct_answer_cost,
             incorrect_answer_cost,
             workload_eps=workload_eps,
         ),
-        "Binary Tree Query": BinaryTreeQueryStrategy(
-            correct_answer_cost,
-            incorrect_answer_cost,
-        ),
+        # "Binary Tree Query": BinaryTreeQueryStrategy(
+        #     correct_answer_cost,
+        #     incorrect_answer_cost,
+        # ),
         "Confidence Query": ConfidenceQueryStrategy(
             correct_answer_cost,
             incorrect_answer_cost,
@@ -644,10 +645,10 @@ def run_experiment(
                     )
 
     # Print and log the total number of get_action calls.
-    print_and_log(
-        f"Total number of get_action calls: Brute Force, graph size 100:"
-        f"{results['Brute Force']['total_get_action_calls'][100]}"
-    )
+    # print_and_log(
+    #     f"Total number of get_action calls: Brute Force, graph size 100:"
+    #     f"{results['Brute Force']['total_get_action_calls'][100]}"
+    # )
 
     # Print and log the timing info for binary tree query.
     print_and_log("Timing info for binary tree query:")
@@ -1074,6 +1075,28 @@ def exp_grid_search(variant: str, config: dict[str, Any]) -> None:
 
 def main(variant: str) -> None:
     """Run the experiment and generate plots."""
+    # 11/10/2025: increasing query cost noise width fraction to 0.2, then 0.4, 0.6.
+    # config = {
+    #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
+    #     "num_trials": 100,
+    #     "num_failures_list": [3],
+    #     "confidences_list": [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)],
+    #     "redundancy_list": ["all_AND", "all_OR", "AND_then_OR", "OR_then_AND"],
+    #     "c_query_list": [0.32],
+    #     "query_cost_noise_width_fraction": 0.6,
+    # }
+    # 11/10/2025: looking at tigher confidences (close to (0.8, 0.3) and (0.7, 0.4) )
+    config = {
+        "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
+        "num_trials": 100,
+        "num_failures_list": [3],
+        "confidences_list": [(0.8, 0.3), (0.75, 0.35), (0.7, 0.4), (0.65, 0.45), (0.6, 0.5)],
+        "redundancy_list": ["all_AND", "all_OR", "AND_then_OR", "OR_then_AND"],
+        "c_query_list": [0.32],
+        "query_cost_noise_width_fraction": 0.6,
+    }
+
+    ### OLD CONFIGURATIONS:
     # Run the experiment with varying query cost.
     # config = {
     #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
@@ -1138,15 +1161,6 @@ def main(variant: str) -> None:
     #     "redundancy_list": ["all_AND"],
     #     "c_query_list": [0.32],
     # }
-    # 11/9/2025: above configuration, but with varying redundancies.
-    config = {
-        "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
-        "num_trials": 100,
-        "num_failures_list": [3],
-        "confidences_list": [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)],
-        "redundancy_list": ["all_AND", "all_OR", "AND_then_OR", "OR_then_AND"],
-        "c_query_list": [0.32],
-    }
     # 9/29/2025: testing varying redundancies.
     # config = {
     #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],

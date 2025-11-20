@@ -30,9 +30,11 @@ GRAPH_STRUCTURE_TICK_FONTSIZE = 14
 GRAPH_STRUCTURE_FIGSIZE = (36, 9)
 GRAPH_STRUCTURE_XTICK_OFFSET = 1.5
 # Font size for tick labels in confidence plots
-CONFIDENCE_TICK_FONTSIZE = 20
+CONFIDENCE_TICK_FONTSIZE = 16
 CONFIDENCE_FIGSIZE = (36, 9)
-CONFIDENCE_XTICK_OFFSET = 1.5
+CONFIDENCE_XTICK_OFFSET = 0.5 # 0.5: good for rebuttal.
+# CONFIDENCE_ORDER = [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)]
+CONFIDENCE_ORDER = [(0.8, 0.3), (0.75, 0.35), (0.7, 0.4), (0.65, 0.45), (0.6, 0.5)]
 # Font size for tick labels in query cost plots
 QUERY_COST_TICK_FONTSIZE = 20
 QUERY_COST_FIGSIZE = (36, 9)
@@ -492,7 +494,7 @@ def plot_results_grid_confidences(
             ax = axes[i]
             # Step 2. Iterate over the confidences, in a particular order
 
-            confidence_order = [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)]
+            confidence_order = CONFIDENCE_ORDER
             # need to handle x offsets carefully here.
             # Track which algorithms we've already added to legend
             legend_added = set()
@@ -612,7 +614,8 @@ def plot_results_grid_confidences_fixed_module_selector(
             # Step 1. Create a figure and axis.
             ax = axes[i]
             # Step 2. Iterate over the confidences, in a particular order
-            confidence_order = [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)]
+            confidence_order = CONFIDENCE_ORDER
+            # confidence_order = [(0.8, 0.3), (0.75, 0.35), (0.7, 0.4), (0.65, 0.45), (0.6, 0.5)]
             # need to handle x offsets carefully here.
             # Track which algorithms we've already added to legend
             legend_added = set()
