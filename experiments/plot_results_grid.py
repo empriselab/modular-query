@@ -33,12 +33,12 @@ GRAPH_STRUCTURE_XTICK_OFFSET = 1.5
 CONFIDENCE_TICK_FONTSIZE = 16
 CONFIDENCE_FIGSIZE = (36, 9)
 CONFIDENCE_XTICK_OFFSET = 0.5 # 0.5: good for rebuttal.
-# CONFIDENCE_ORDER = [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)]
-CONFIDENCE_ORDER = [(0.8, 0.3), (0.75, 0.35), (0.7, 0.4), (0.65, 0.45), (0.6, 0.5)]
+CONFIDENCE_ORDER = [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)]
+# CONFIDENCE_ORDER = [(0.8, 0.3), (0.75, 0.35), (0.7, 0.4), (0.65, 0.45), (0.6, 0.5)]
 # Font size for tick labels in query cost plots
 QUERY_COST_TICK_FONTSIZE = 20
 QUERY_COST_FIGSIZE = (36, 9)
-QUERY_COST_XTICK_OFFSET = 1.5
+QUERY_COST_XTICK_OFFSET = 0.5
 # Legend font size
 LEGEND_FONT_SIZE = 20
 
@@ -739,7 +739,7 @@ def plot_results_grid_cquery(
             # need to handle x offsets carefully here.
             # Track which algorithms we've already added to legend
             legend_added = set()
-            for i, query_cost in enumerate(query_cost_order):
+            for k, query_cost in enumerate(query_cost_order):
                 # Filter the df for only those run IDs.
                 df_filtered_query_cost = df_filtered[
                     df_filtered["c_query"] == query_cost
@@ -756,7 +756,7 @@ def plot_results_grid_cquery(
                         else np.median(results[algorithm][metric][graph_size])
                     )
                     ax.bar(
-                        i * len(query_cost_order) + j,
+                        k * len(results.keys()) + j,
                         value,
                         label=label,
                         color=STRATEGY_COLORS[algorithm]["color"],
