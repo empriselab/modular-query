@@ -265,7 +265,7 @@ def plot_results(
                 lines.append(line[0])
                 labels.append(strategy_name)
 
-        ax.set_title(TITLES[metric])
+        # ax.set_title(TITLES[metric])
         # ax.set_xlabel("Number of Graph Nodes")
         # Explicitly enable x-axis tick labels for all subplots (not just bottom)
         ax.tick_params(labelbottom=True)
@@ -519,13 +519,17 @@ def plot_results_across_graph_sizes(
                     color=VARIANT_STYLES[variant]["color"],
                 )
             print(variant, medians)
-            ax.set_title(TITLES[metric])
+            # ax.set_title(TITLES[metric])
             # ax.set_xlabel("Number of Graph Nodes")
             ax.set_ylabel(YLABELS[metric])
             ax.grid(True, linestyle="--", alpha=0.7)
             # Show x-axis values as integers.
-            ax.set_xticks(np.arange(len(graph_sizes)))
-            ax.set_xticklabels(graph_sizes, size=tick_fontsize)
+            # NOTE: totally hardcoded to only show the first 5 graph sizes (the rest don't have data)
+            max_graph_sizes = 5
+            ax.set_xticks(np.arange(max_graph_sizes))
+            ax.set_xticklabels(graph_sizes[:max_graph_sizes], size=tick_fontsize)
+            # Hardcoding the y-max to be 0.06.
+            ax.set_ylim(0, 0.06)
             # Explicitly enable x-axis tick labels for all subplots (not just bottom)
             ax.tick_params(labelbottom=True)
 
