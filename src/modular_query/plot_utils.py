@@ -271,8 +271,7 @@ def plot_results(
         ax.tick_params(labelbottom=True)
         # Set x-tick label size (not y-tick label size)
         ax.tick_params(labelsize=tick_fontsize, axis='x')
-        ax.set_ylabel(YLABELS[metric])
-        # ax.grid(True, linestyle="--", alpha=0.7)
+        ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily='serif')        # ax.grid(True, linestyle="--", alpha=0.7)
 
         common_add_arrows(ax, xaxis_position=-0.005)
 
@@ -521,7 +520,7 @@ def plot_results_across_graph_sizes(
             print(variant, medians)
             # ax.set_title(TITLES[metric])
             # ax.set_xlabel("Number of Graph Nodes")
-            ax.set_ylabel(YLABELS[metric])
+            ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily='serif')        # ax.grid(True, linestyle="--", alpha=0.7)
             ax.grid(True, linestyle="--", alpha=0.7)
             # Show x-axis values as integers.
             # NOTE: totally hardcoded to only show the first 5 graph sizes (the rest don't have data)

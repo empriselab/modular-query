@@ -17,6 +17,7 @@ from tqdm import tqdm
 from modular_query.plot_utils import (
     STRATEGY_COLORS,
     VARIANT_STYLES,
+    YLABELS,
     plot_results,
     plot_results_across_graph_sizes,
     common_add_arrows,
@@ -287,7 +288,7 @@ def plot_results_grid_graph_structures(
             ax.set_xticks(np.arange(len(graph_structure_order)) * len(results.keys())+GRAPH_STRUCTURE_XTICK_OFFSET)
             ax.set_xticklabels(graph_structure_order, fontsize=GRAPH_STRUCTURE_TICK_FONTSIZE)
             # Step 5. Add y-axis labels.
-            ax.set_ylabel(metric)
+            ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily='serif')
         
             common_add_arrows(ax)
 
@@ -413,7 +414,7 @@ def plot_results_grid_graph_structures_fixed_module_selector(
             ax.set_xticks(np.arange(len(graph_structure_order)) * len(variant_order)+GRAPH_STRUCTURE_XTICK_OFFSET)
             ax.set_xticklabels(graph_structure_order, fontsize=GRAPH_STRUCTURE_TICK_FONTSIZE)
             # Step 5. Add y-axis labels.
-            ax.set_ylabel(metric)
+            ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily='serif')
             common_add_arrows(ax)
             # Step 6. Add legend.
             # but I don't want it to repeatedly display the same algorithm names.
@@ -537,7 +538,7 @@ def plot_results_grid_confidences(
             ax.set_xticks(np.arange(len(confidence_order)) * len(results.keys())+CONFIDENCE_XTICK_OFFSET)
             ax.set_xticklabels(confidence_order, fontsize=CONFIDENCE_TICK_FONTSIZE)
             # Step 5. Add y-axis labels.
-            ax.set_ylabel(metric)
+            ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily='serif')
             common_add_arrows(ax)
             # Step 6. Add legend.
             # but I don't want it to repeatedly display the same variant names.
@@ -663,7 +664,7 @@ def plot_results_grid_confidences_fixed_module_selector(
             ax.set_xticks(np.arange(len(confidence_order)) * len(variant_order)+CONFIDENCE_XTICK_OFFSET)
             ax.set_xticklabels(confidence_order, fontsize=CONFIDENCE_TICK_FONTSIZE)
             # Step 5. Add y-axis labels.
-            ax.set_ylabel(metric)
+            ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily='serif')
             common_add_arrows(ax)
             # Step 6. Add legend.
             # but I don't want it to repeatedly display the same variant names.
@@ -778,7 +779,7 @@ def plot_results_grid_cquery(
             ax.set_xticks(np.arange(len(query_cost_order)) * len(results.keys())+QUERY_COST_XTICK_OFFSET)
             ax.set_xticklabels(query_cost_order, fontsize=QUERY_COST_TICK_FONTSIZE)
             # Step 5. Add y-axis labels.
-            ax.set_ylabel(metric)
+            ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily='serif')
             common_add_arrows(ax)
             # Step 6. Add legend.
             # but I don't want it to repeatedly display the same algorithm names.
@@ -894,7 +895,7 @@ def plot_results_grid_cquery_fixed_module_selector(
             ax.set_xticks(np.arange(len(query_cost_order)) * len(results.keys())+QUERY_COST_XTICK_OFFSET)
             ax.set_xticklabels(query_cost_order, fontsize=QUERY_COST_TICK_FONTSIZE)
             # Step 5. Add y-axis labels.
-            ax.set_ylabel(metric)
+            ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily='serif')
             common_add_arrows(ax)
             # Step 6. Add legend.
             # but I don't want it to repeatedly display the same algorithm names.
