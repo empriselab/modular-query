@@ -19,6 +19,7 @@ from modular_query.plot_utils import (
     VARIANT_STYLES,
     plot_results,
     plot_results_across_graph_sizes,
+    common_add_arrows,
 )
 
 # Constants:
@@ -187,17 +188,6 @@ def plot_results_grid_fixed_module_selector(results_dir: str, output_dir: str, m
 
 ## VARIABLE 02: graph structures.
 
-def common_add_arrows(ax: plt.Axes) -> None:
-    """Remove top and right spines, and add arrows at the end of the axes."""
-    # Hide top and right spines
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    # Draw arrows at the end of the axes. Sadly, you have to manually set this x-lim,
-    # as automatically extracting it doesn't seem to work.
-    yaxis_position=-0.6
-    ax.set_xlim(left=yaxis_position)
-    ax.plot(1, 0, ">k", transform=ax.get_yaxis_transform(), clip_on=False)
-    ax.plot(yaxis_position, 1, "^k", transform=ax.get_xaxis_transform(), clip_on=False)
 
 # Plot for graph structures.
 def plot_results_grid_graph_structures(

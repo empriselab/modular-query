@@ -138,6 +138,20 @@ VARIANT_STYLES = {
     },
 }
 
+def common_add_arrows(ax: plt.Axes, xaxis_position: float = 0.0) -> None:
+    """Remove top and right spines, and add arrows at the end of the axes."""
+    # Hide top and right spines
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    # Draw arrows at the end of the axes. Sadly, you have to manually set this x-lim,
+    # as automatically extracting it doesn't seem to work.
+    yaxis_position=-0.6
+    ax.set_xlim(left=yaxis_position)
+    ax.set_ylim(bottom=xaxis_position)
+    # If xaxis_position is provided, use it instead of the default.
+    ax.plot(1, xaxis_position, ">k", transform=ax.get_yaxis_transform(), clip_on=False)
+    ax.plot(yaxis_position, 1, "^k", transform=ax.get_xaxis_transform(), clip_on=False)
+
 
 def plot_results(
     results: dict[str, dict[str, dict[int, list[float]]]],
@@ -258,7 +272,9 @@ def plot_results(
         # Set x-tick label size (not y-tick label size)
         ax.tick_params(labelsize=tick_fontsize, axis='x')
         ax.set_ylabel(YLABELS[metric])
-        ax.grid(True, linestyle="--", alpha=0.7)
+        # ax.grid(True, linestyle="--", alpha=0.7)
+
+        common_add_arrows(ax, xaxis_position=-0.005)
 
     # Turn off unused subplots.
     for j in range(i + 1, num_rows * num_cols):
