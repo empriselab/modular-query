@@ -187,6 +187,18 @@ def plot_results_grid_fixed_module_selector(results_dir: str, output_dir: str, m
 
 ## VARIABLE 02: graph structures.
 
+def common_add_arrows(ax: plt.Axes) -> None:
+    """Remove top and right spines, and add arrows at the end of the axes."""
+    # Hide top and right spines
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    # Draw arrows at the end of the axes. Sadly, you have to manually set this x-lim,
+    # as automatically extracting it doesn't seem to work.
+    yaxis_position=-0.6
+    ax.set_xlim(left=yaxis_position)
+    ax.plot(1, 0, ">k", transform=ax.get_yaxis_transform(), clip_on=False)
+    ax.plot(yaxis_position, 1, "^k", transform=ax.get_xaxis_transform(), clip_on=False)
+
 # Plot for graph structures.
 def plot_results_grid_graph_structures(
     results_dir: str, output_dir: str, variant: str, graph_size: int, pickle_name: str
@@ -286,6 +298,9 @@ def plot_results_grid_graph_structures(
             ax.set_xticklabels(graph_structure_order, fontsize=GRAPH_STRUCTURE_TICK_FONTSIZE)
             # Step 5. Add y-axis labels.
             ax.set_ylabel(metric)
+        
+            common_add_arrows(ax)
+
             # Step 6. Add legend.
             # but I don't want it to repeatedly display the same algorithm names.
             # ax.legend()
@@ -532,6 +547,7 @@ def plot_results_grid_confidences(
             ax.set_xticklabels(confidence_order, fontsize=CONFIDENCE_TICK_FONTSIZE)
             # Step 5. Add y-axis labels.
             ax.set_ylabel(metric)
+            common_add_arrows(ax)
             # Step 6. Add legend.
             # but I don't want it to repeatedly display the same variant names.
             # ax.legend()
@@ -771,6 +787,7 @@ def plot_results_grid_cquery(
             ax.set_xticklabels(query_cost_order, fontsize=QUERY_COST_TICK_FONTSIZE)
             # Step 5. Add y-axis labels.
             ax.set_ylabel(metric)
+            common_add_arrows(ax)
             # Step 6. Add legend.
             # but I don't want it to repeatedly display the same algorithm names.
             # ax.legend()
