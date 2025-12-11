@@ -528,6 +528,8 @@ def plot_results_across_graph_sizes(
             ax.set_xticklabels(graph_sizes, size=tick_fontsize)
             # Explicitly enable x-axis tick labels for all subplots (not just bottom)
             ax.tick_params(labelbottom=True)
+
+            common_add_arrows(ax)
     # Turn off unused subplots.
     for j in range(i + 1, num_rows * num_cols):
         axes[j // num_cols][j % num_cols].axis("off")
