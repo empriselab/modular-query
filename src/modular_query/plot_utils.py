@@ -46,7 +46,7 @@ YLABELS = {
     "execution_time_total": "Computation Time (s)",
     "mean_queries": "Mean Queries",
     "total_queries": "Total Queries",
-    "total_correct": "Total Successful Trials",
+    "total_correct": "Total Correct",
     "total_timesteps": "Total Timesteps",
     "total_executions": "Total Executions",
     "total_failed_attempts": "Total Failed Attempts",
@@ -521,7 +521,7 @@ def plot_results_across_graph_sizes(
             # ax.set_title(TITLES[metric])
             # ax.set_xlabel("Number of Graph Nodes")
             ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily='serif')        # ax.grid(True, linestyle="--", alpha=0.7)
-            ax.grid(True, linestyle="--", alpha=0.7)
+            # ax.grid(True, linestyle="--", alpha=0.7)
             # Show x-axis values as integers.
             # NOTE: totally hardcoded to only show the first 5 graph sizes (the rest don't have data)
             max_graph_sizes = 5
