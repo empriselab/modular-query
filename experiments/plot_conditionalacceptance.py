@@ -205,7 +205,6 @@ def individual_plot_num_modules(df: pd.DataFrame, fixed_variables: dict, metric:
             np.array(lower_quartiles),
             np.array(upper_quartiles),
             alpha=0.3,
-            label="quartiles",
             color=style["color"],
         )
 
@@ -284,7 +283,6 @@ def individual_plot_num_modules_fixed_moduleselector(df: pd.DataFrame, fixed_var
                 alpha=0.3,
                 color=VARIANT_STYLES[variant]["color"],
             )
-        print(variant, medians)
         # ax.set_title(TITLES[metric])
         # ax.set_xlabel("Number of Graph Nodes")
         ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily='serif')        # ax.grid(True, linestyle="--", alpha=0.7)
@@ -382,11 +380,59 @@ def unified_plot_conditionalacceptance(output_dir: str) -> None:
                     individual_plot_fixed_moduleselector(df, fixed_variables, metric, column, order_dict, ax, graph_size, fixed_module_selector)
 
 
-    # Step 6. Add legend.
-    handles, labels = ax.get_legend_handles_labels()
-    fig.legend(handles, labels, loc='lower center',bbox_to_anchor=(0.5, -0.1),ncol=len(labels),fontsize=LEGEND_FONT_SIZE)
+    # Step 6. Add legend - split into two groups
+    # Collect handles and labels separately for each row
+    module_selector_handles = []
+    module_selector_labels = []
+    querying_algorithm_handles = []
+    querying_algorithm_labels = []
+    
+    seen_module_selector_labels = set()
+    seen_querying_algorithm_labels = set()
+    
+    # Top row (module_selectors) - these show querying algorithms
+    for ax in axes[0]:
+        handles, labels = ax.get_legend_handles_labels()
+        for handle, label in zip(handles, labels):
+            if label and label not in seen_module_selector_labels:
+                module_selector_handles.append(handle)
+                module_selector_labels.append(label)
+                seen_module_selector_labels.add(label)
+    
+    # Bottom row (querying_algorithms) - these show module selectors
+    for ax in axes[1]:
+        handles, labels = ax.get_legend_handles_labels()
+        for handle, label in zip(handles, labels):
+            if label and label not in seen_querying_algorithm_labels:
+                querying_algorithm_handles.append(handle)
+                querying_algorithm_labels.append(label)
+                seen_querying_algorithm_labels.add(label)
+    
+    # Create two legends side by side
+    # First legend: Module Selectors (from bottom row)
+    legend1 = fig.legend(
+        module_selector_handles, 
+        module_selector_labels, 
+        loc='upper center',
+        bbox_to_anchor=(0.5, 0.98),
+        ncol=len(module_selector_labels),
+        fontsize=LEGEND_FONT_SIZE,
+        title_fontsize=LEGEND_FONT_SIZE
+    )
+    
+    # Second legend: Querying Algorithms (from top row)
+    legend2 = fig.legend(
+        querying_algorithm_handles, 
+        querying_algorithm_labels, 
+        loc='upper center',
+        bbox_to_anchor=(0.5, 0.50),
+        ncol=len(querying_algorithm_labels),
+        fontsize=LEGEND_FONT_SIZE,
+        title_fontsize=LEGEND_FONT_SIZE
+    )
+    
     plt.tight_layout()
-    plt.subplots_adjust(top=0.9)
+    plt.subplots_adjust(top=0.92, hspace=0.3)
 
     # Step 3. Save the figure.
     plt.savefig(
