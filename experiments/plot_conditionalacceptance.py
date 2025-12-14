@@ -59,48 +59,13 @@ def individual_plot(df: pd.DataFrame, fixed_variables: dict, metric: str, \
 
     legend_added = set()
 
-    # ## trial 1: line plot code.
-    # # Collect data for each algorithm across all order values
-    # algorithm_data = {}
-    # results_sample = df_filtered["results_dictionary"].values[0]
-    # for algorithm in results_sample.keys():
-    #     algorithm_data[algorithm] = []
+    ## trial 1: line plot code.
+    # Collect data for each algorithm across all order values
+    algorithm_data = {}
+    results_sample = df_filtered["results_dictionary"].values[0]
+    for algorithm in results_sample.keys():
+        algorithm_data[algorithm] = []
     
-    # for i, value in enumerate(order):
-    #     # Filter the df for only those run IDs.
-    #     df_filtered_value = df_filtered[
-    #         df_filtered[column] == value
-    #     ]
-    #     # Extract the results (from the results_dictionary column)
-    #     results = df_filtered_value["results_dictionary"].values[0]
-    #     for algorithm in results.keys():
-    #         # Use mean for total_correct metric, median for others
-    #         y_value = (
-    #             1-np.mean(results[algorithm][metric][graph_size])
-    #             if metric == "total_correct"
-    #             else np.median(results[algorithm][metric][graph_size])
-    #         )
-    #         algorithm_data[algorithm].append(y_value)
-    
-    # # Plot a line for each algorithm
-    # x_positions = np.arange(len(order)) * len(results.keys())+XTICK_OFFSET
-    # for algorithm in algorithm_data.keys():
-    #     # Only add label to legend if we haven't seen this algorithm before
-    #     label = algorithm if algorithm not in legend_added else ""
-    #     style = STRATEGY_COLORS[algorithm]
-    #     ax.plot(
-    #         x_positions,
-    #         algorithm_data[algorithm],
-    #         label=label,
-    #         color=style["color"],
-    #         linestyle=style["linestyle"],
-    #         marker=style["marker"],
-    #         linewidth=style["linewidth"],
-    #         markersize=8,
-    #     )
-    #     legend_added.add(algorithm)
-
-    # OLD BAR PLOT CODE.
     for i, value in enumerate(order):
         # Filter the df for only those run IDs.
         df_filtered_value = df_filtered[
@@ -108,22 +73,57 @@ def individual_plot(df: pd.DataFrame, fixed_variables: dict, metric: str, \
         ]
         # Extract the results (from the results_dictionary column)
         results = df_filtered_value["results_dictionary"].values[0]
-        for k, algorithm in enumerate(results.keys()):
-            # Only add label to legend if we haven't seen this algorithm before
-            label = algorithm if algorithm not in legend_added else ""
+        for algorithm in results.keys():
             # Use mean for total_correct metric, median for others
-            value = (
+            y_value = (
                 1-np.mean(results[algorithm][metric][graph_size])
                 if metric == "total_correct"
                 else np.median(results[algorithm][metric][graph_size])
             )
-            ax.bar(
-                i * len(results.keys()) + k,
-                value,
-                label=label,
-                color=STRATEGY_COLORS[algorithm]["color"],
-            )
-            legend_added.add(algorithm)
+            algorithm_data[algorithm].append(y_value)
+    
+    # Plot a line for each algorithm
+    x_positions = np.arange(len(order)) * len(results.keys())+XTICK_OFFSET
+    for algorithm in algorithm_data.keys():
+        # Only add label to legend if we haven't seen this algorithm before
+        label = algorithm if algorithm not in legend_added else ""
+        style = STRATEGY_COLORS[algorithm]
+        ax.plot(
+            x_positions,
+            algorithm_data[algorithm],
+            label=label,
+            color=style["color"],
+            linestyle=style["linestyle"],
+            marker=style["marker"],
+            linewidth=style["linewidth"],
+            markersize=8,
+        )
+        legend_added.add(algorithm)
+
+    # # OLD BAR PLOT CODE.
+    # for i, value in enumerate(order):
+    #     # Filter the df for only those run IDs.
+    #     df_filtered_value = df_filtered[
+    #         df_filtered[column] == value
+    #     ]
+    #     # Extract the results (from the results_dictionary column)
+    #     results = df_filtered_value["results_dictionary"].values[0]
+    #     for k, algorithm in enumerate(results.keys()):
+    #         # Only add label to legend if we haven't seen this algorithm before
+    #         label = algorithm if algorithm not in legend_added else ""
+    #         # Use mean for total_correct metric, median for others
+    #         value = (
+    #             1-np.mean(results[algorithm][metric][graph_size])
+    #             if metric == "total_correct"
+    #             else np.median(results[algorithm][metric][graph_size])
+    #         )
+    #         ax.bar(
+    #             i * len(results.keys()) + k,
+    #             value,
+    #             label=label,
+    #             color=STRATEGY_COLORS[algorithm]["color"],
+    #         )
+    #         legend_added.add(algorithm)
 
     ax.set_xticks(np.arange(len(order)) * len(results.keys())+XTICK_OFFSET)
     ax.set_xticklabels(order, fontsize=TICK_FONTSIZE[column])
@@ -145,59 +145,18 @@ def individual_plot_fixed_moduleselector(df: pd.DataFrame, fixed_variables: dict
     
     legend_added = set()
 
-    # ## TRIAL 1: LINE PLOT CODE.
-    # # Collect data for each variant across all order values
-    # variant_data = {}
-    # for variant in order_dict["variant"]:
-    #     variant_data[variant] = []
+    ## TRIAL 1: LINE PLOT CODE.
+    # Collect data for each variant across all order values
+    variant_data = {}
+    for variant in order_dict["variant"]:
+        variant_data[variant] = []
     
-    # for i, value in enumerate(order_dict[column]):
-    #     # Filter the df for only those run IDs.
-    #     df_filtered_value = df_filtered[
-    #         df_filtered[column] == value
-    #     ]
-    #     for variant in order_dict["variant"]:
-    #         # Extract the row for this variant.
-    #         row = df_filtered_value[
-    #             df_filtered_value["variant"] == variant
-    #         ]
-    #         # Extract the results (from the results_dictionary column)
-    #         results = row["results_dictionary"].values[0]
-    #         # Use mean for total_correct metric, median for others
-    #         y_value = (
-    #             1-np.mean(results[module_selector][metric][graph_size])
-    #             if metric == "total_correct"
-    #             else np.median(results[module_selector][metric][graph_size])
-    #         )
-    #         variant_data[variant].append(y_value)
-    
-    # # Plot a line for each variant
-    # x_positions = np.arange(len(order_dict[column])) * len(order_dict["variant"])+XTICK_OFFSET
-    # for variant in variant_data.keys():
-    #     # Only add label to legend if we haven't seen this variant before
-    #     label = VARIANT_STYLES[variant]["name"] if variant not in legend_added else ""
-    #     style = VARIANT_STYLES[variant]
-    #     ax.plot(
-    #         x_positions,
-    #         variant_data[variant],
-    #         label=label,
-    #         color=style["color"],
-    #         linestyle=style["linestyle"],
-    #         marker=style["marker"],
-    #         linewidth=style["linewidth"],
-    #         markersize=8,
-    #     )
-    #     legend_added.add(variant)
-
-    ## ORIGINAL BAR PLOT CODE.
     for i, value in enumerate(order_dict[column]):
         # Filter the df for only those run IDs.
         df_filtered_value = df_filtered[
             df_filtered[column] == value
         ]
-        for j, variant in enumerate(order_dict["variant"]):
-            # Only add label to legend if we haven't seen this algorithm before
-            label = VARIANT_STYLES[variant]["name"] if variant not in legend_added else ""
+        for variant in order_dict["variant"]:
             # Extract the row for this variant.
             row = df_filtered_value[
                 df_filtered_value["variant"] == variant
@@ -205,18 +164,59 @@ def individual_plot_fixed_moduleselector(df: pd.DataFrame, fixed_variables: dict
             # Extract the results (from the results_dictionary column)
             results = row["results_dictionary"].values[0]
             # Use mean for total_correct metric, median for others
-            value = (
+            y_value = (
                 1-np.mean(results[module_selector][metric][graph_size])
                 if metric == "total_correct"
                 else np.median(results[module_selector][metric][graph_size])
             )
-            ax.bar(
-                i * len(order_dict["variant"]) + j,
-                value,
-                label=label,
-                color=VARIANT_STYLES[variant]["color"],
-            )
-            legend_added.add(variant)
+            variant_data[variant].append(y_value)
+    
+    # Plot a line for each variant
+    x_positions = np.arange(len(order_dict[column])) * len(order_dict["variant"])+XTICK_OFFSET
+    for variant in variant_data.keys():
+        # Only add label to legend if we haven't seen this variant before
+        label = VARIANT_STYLES[variant]["name"] if variant not in legend_added else ""
+        style = VARIANT_STYLES[variant]
+        ax.plot(
+            x_positions,
+            variant_data[variant],
+            label=label,
+            color=style["color"],
+            linestyle=style["linestyle"],
+            marker=style["marker"],
+            linewidth=style["linewidth"],
+            markersize=8,
+        )
+        legend_added.add(variant)
+
+    ## ORIGINAL BAR PLOT CODE.
+    # for i, value in enumerate(order_dict[column]):
+    #     # Filter the df for only those run IDs.
+    #     df_filtered_value = df_filtered[
+    #         df_filtered[column] == value
+    #     ]
+    #     for j, variant in enumerate(order_dict["variant"]):
+    #         # Only add label to legend if we haven't seen this algorithm before
+    #         label = VARIANT_STYLES[variant]["name"] if variant not in legend_added else ""
+    #         # Extract the row for this variant.
+    #         row = df_filtered_value[
+    #             df_filtered_value["variant"] == variant
+    #         ]
+    #         # Extract the results (from the results_dictionary column)
+    #         results = row["results_dictionary"].values[0]
+    #         # Use mean for total_correct metric, median for others
+    #         value = (
+    #             1-np.mean(results[module_selector][metric][graph_size])
+    #             if metric == "total_correct"
+    #             else np.median(results[module_selector][metric][graph_size])
+    #         )
+    #         ax.bar(
+    #             i * len(order_dict["variant"]) + j,
+    #             value,
+    #             label=label,
+    #             color=VARIANT_STYLES[variant]["color"],
+    #         )
+    #         legend_added.add(variant)
 
     ax.set_xticks(np.arange(len(order_dict[column])) * len(order_dict["variant"])+XTICK_OFFSET)
     ax.set_xticklabels(order_dict[column], fontsize=TICK_FONTSIZE[column])
