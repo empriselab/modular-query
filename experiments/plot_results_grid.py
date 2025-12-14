@@ -35,8 +35,8 @@ GRAPH_STRUCTURE_XTICK_OFFSET = 1.5
 CONFIDENCE_TICK_FONTSIZE = 16
 CONFIDENCE_FIGSIZE = (36, 9)
 CONFIDENCE_XTICK_OFFSET = 0.5 # 0.5: good for rebuttal.
-CONFIDENCE_ORDER = [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)]
-# CONFIDENCE_ORDER = [(0.8, 0.3), (0.75, 0.35), (0.7, 0.4), (0.65, 0.45), (0.6, 0.5)]
+# CONFIDENCE_ORDER = [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)]
+CONFIDENCE_ORDER = [(0.8, 0.3), (0.75, 0.35), (0.7, 0.4), (0.65, 0.45), (0.6, 0.5)]
 # Font size for tick labels in query cost plots
 QUERY_COST_TICK_FONTSIZE = 20
 QUERY_COST_FIGSIZE = (36, 9)

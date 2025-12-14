@@ -59,11 +59,11 @@ def individual_plot(df: pd.DataFrame, fixed_variables: dict, metric: str, \
     legend_added = set()
     for i, value in enumerate(order):
         # Filter the df for only those run IDs.
-        df_filtered_graph_structure = df_filtered[
+        df_filtered_value = df_filtered[
             df_filtered[column] == value
         ]
         # Extract the results (from the results_dictionary column)
-        results = df_filtered_graph_structure["results_dictionary"].values[0]
+        results = df_filtered_value["results_dictionary"].values[0]
         for k, algorithm in enumerate(results.keys()):
             # Only add label to legend if we haven't seen this algorithm before
             label = algorithm if algorithm not in legend_added else ""
@@ -86,6 +86,54 @@ def individual_plot(df: pd.DataFrame, fixed_variables: dict, metric: str, \
     ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily='serif')
 
     common_add_arrows(ax)
+
+def individual_plot_fixed_moduleselector(df: pd.DataFrame, fixed_variables: dict, metric: str, \
+    column: str, order_dict: dict, ax: plt.Axes, graph_size: int, module_selector: str) -> None:
+    """
+    Makes an individual plot for a fixed module selector.
+    """
+    # Create a boolean mask for rows that match this combination
+    mask = True
+    for col, value in fixed_variables.items():
+        if col != column and col != "variant":
+            mask = mask & (df[col] == value)
+    df_filtered = df[mask]
+    import pdb; pdb.set_trace()
+    
+    legend_added = set()
+    for i, value in enumerate(order_dict[column]):
+        # Filter the df for only those run IDs.
+        df_filtered_value = df_filtered[
+            df_filtered[column] == value
+        ]
+        for j, variant in enumerate(order_dict["variant"]):
+            # Only add label to legend if we haven't seen this algorithm before
+            label = VARIANT_STYLES[variant]["name"] if variant not in legend_added else ""
+            # Extract the row for this variant.
+            row = df_filtered_value[
+                df_filtered_value["variant"] == variant
+            ]
+            # Extract the results (from the results_dictionary column)
+            results = row["results_dictionary"].values[0]
+            # Use mean for total_correct metric, median for others
+            value = (
+                np.mean(results[module_selector][metric][graph_size])
+                if metric == "total_correct"
+                else np.median(results[module_selector][metric][graph_size])
+            )
+            ax.bar(
+                i * len(order_dict["variant"]) + j,
+                value,
+                label=label,
+                color=VARIANT_STYLES[variant]["color"],
+            )
+            legend_added.add(variant)
+
+    ax.set_xticks(np.arange(len(order_dict[column])) * len(order_dict["variant"])+XTICK_OFFSET)
+    ax.set_xticklabels(order_dict[column], fontsize=TICK_FONTSIZE[column])
+    ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily='serif')
+    common_add_arrows(ax)
+
 
 def individual_plot_num_modules(df: pd.DataFrame, fixed_variables: dict, metric: str, \
     column: str, order: list, ax: plt.Axes, graph_size: int) -> None:
@@ -178,22 +226,10 @@ def unified_plot_conditionalacceptance(output_dir: str) -> None:
     Workloads (metric: Total Timesteps) 
     Structured as a 2 x 4 matplotlib grid (this way we can enforce equal sizes for plots.)
     """
-    # Load the dataframe.
-    results_dir = Path("experiments/results/20251208_hricondaccept/")
+    # Set the fixed variables.
     fixed_variant = "balanced-2"
     fixed_module_selector = "Graph Query"
     graph_size = 10
-    df_original = pd.read_pickle(results_dir / "combined_df.pkl")
-
-    # Add a new column confidence which has the correct and incorrect confidence paired into a tuple.
-    # Drop the original correct and incorrect confidence columns.
-    df_original["confidence"] = df_original.apply(lambda row: (row["correct_confidence"], row["incorrect_confidence"]), axis=1)
-    df_original = df_original.drop(columns=["correct_confidence", "incorrect_confidence"])
-
-
-    # Get a variant-specific df (variant = querying algorithm)
-    df_fixed_variant = df_original[df_original["variant"] == fixed_variant]
-
 
     # Fixed variables.
     fixed_variables = {
@@ -214,29 +250,52 @@ def unified_plot_conditionalacceptance(output_dir: str) -> None:
     rows = ["module_selectors", "querying_algorithms"]
     columns = ["num_modules","dependency_structure", "confidence", "c_query"]
     fig, axes = plt.subplots(nrows=len(rows), ncols=len(columns), figsize=UNIFIED_PLOT_FIGSIZE)
+    data_locations = {"module_selectors": {col: "experiments/results/20251208_hricondaccept/" for col in columns}, \
+        "querying_algorithms": {col: "experiments/results/20250929_fixbruteforce/" for col in columns}}
+    data_locations["querying_algorithms"]["confidence"] = "experiments/results/20250929_fixbruteforce_varyconfidences/"
 
     # orders for IVs
     graph_structure_order = ["all_AND", "all_OR", "AND_then_OR", "OR_then_AND"]
     confidence_order = [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)]
     query_cost_order = [0.08, 0.16, 0.32, 0.64]
+    variant_order = ["greedy", "balanced", "conservative", "balanced-2"]
 
     order_dict = {}
     order_dict["dependency_structure"] = graph_structure_order
     order_dict["confidence"] = confidence_order
     order_dict["c_query"] = query_cost_order
     order_dict["num_modules"] = None
+    order_dict["variant"] = variant_order
+
 
     for i, row in enumerate(rows):
-        for j, column in enumerate(columns):
-            df = df_fixed_variant
-            
+        for j, column in enumerate(columns):            
             ax = axes[i, j]
             metric = metrics[j]
 
-            if column == "num_modules":
-                individual_plot_num_modules(df, fixed_variables, metric, column, order_dict[column], ax, graph_size)
-            else:   
-                individual_plot(df, fixed_variables, metric, column, order_dict[column], ax, graph_size)
+            # Data loading.
+            results_dir = Path(data_locations[row][column])
+            df_original = pd.read_pickle(results_dir / "combined_df.pkl")
+
+            # Add a new column confidence which has the correct and incorrect confidence paired into a tuple.
+            # Drop the original correct and incorrect confidence columns.
+            df_original["confidence"] = df_original.apply(lambda row: (row["correct_confidence"], row["incorrect_confidence"]), axis=1)
+            df_original = df_original.drop(columns=["correct_confidence", "incorrect_confidence"])
+
+            if row == "module_selectors":
+                df = df_original[df_original["variant"] == fixed_variant]
+                if column == "num_modules":
+                    individual_plot_num_modules(df, fixed_variables, metric, column, order_dict[column], ax, graph_size)
+                else:   
+                    individual_plot(df, fixed_variables, metric, column, order_dict[column], ax, graph_size)
+
+            elif row == "querying_algorithms":
+                df = df_original
+                if column == "num_modules":
+                    pass
+                else:   
+                    individual_plot_fixed_moduleselector(df, fixed_variables, metric, column, order_dict, ax, graph_size, fixed_module_selector)
+
 
     # Step 6. Add legend.
     handles, labels = ax.get_legend_handles_labels()
