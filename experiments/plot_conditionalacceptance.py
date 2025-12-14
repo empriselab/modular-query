@@ -29,6 +29,7 @@ from tqdm import tqdm
 from modular_query.plot_utils import (
     STRATEGY_COLORS,
     VARIANT_STYLES,
+    VARIANT_NAMES,
     YLABELS,
     plot_results,
     plot_results_across_graph_sizes,
@@ -98,7 +99,6 @@ def individual_plot_fixed_moduleselector(df: pd.DataFrame, fixed_variables: dict
         if col != column and col != "variant":
             mask = mask & (df[col] == value)
     df_filtered = df[mask]
-    import pdb; pdb.set_trace()
     
     legend_added = set()
     for i, value in enumerate(order_dict[column]):
@@ -216,6 +216,91 @@ def individual_plot_num_modules(df: pd.DataFrame, fixed_variables: dict, metric:
 
     common_add_arrows(ax, xaxis_position=-0.005)
 
+def individual_plot_num_modules_fixed_moduleselector(df: pd.DataFrame, fixed_variables: dict, metric: str, \
+    column: str, order_dict: dict, ax: plt.Axes, graph_size: int, module_selector: str) -> None:
+    """
+    Makes an individual plot for the number of modules, for a fixed module selector.
+    """
+    use_mean_for_total_correct = True
+    # Extract the appropriate result from the dataframe.
+    mask = True
+    for col, value in fixed_variables.items():
+        if col != column and col != "variant":
+            mask = mask & (df[col] == value)
+    df_filtered = df[mask]
+
+    for variant in order_dict["variant"]:
+        medians: list[np.floating | float] = []
+        upper_quartiles: list[np.floating | float] = []
+        lower_quartiles: list[np.floating | float] = []
+
+        results = df_filtered[df_filtered["variant"] == variant]["results_dictionary"].values[0]
+        graph_sizes = list(results[module_selector][metric].keys())
+        for size in graph_sizes:
+            try:
+                result_array = np.array(
+                    results[module_selector][metric][size], dtype=np.float64
+                )
+                # Skip if result_array is empty
+                if len(result_array) == 0:
+                    continue
+
+                # Use mean for total_correct metric if requested,
+                # otherwise use median
+                if use_mean_for_total_correct and metric == "total_correct":
+                    median = np.mean(result_array)
+                    std = np.std(result_array)
+                    upper_quartile = median + std
+                    lower_quartile = median - std
+                else:
+                    median = np.median(result_array)
+                    upper_quartile, lower_quartile = np.percentile(
+                        result_array, [75, 25]
+                    )
+            except KeyError:
+                continue
+            except TypeError:
+                print(f"Dumping values: {result_array}")
+                raise
+            medians.append(median)
+            upper_quartiles.append(upper_quartile)
+            lower_quartiles.append(lower_quartile)
+        line = ax.plot(
+            medians,
+            label=VARIANT_NAMES[variant],
+            color=VARIANT_STYLES[variant]["color"],
+            linestyle=VARIANT_STYLES[variant]["linestyle"],
+            marker=VARIANT_STYLES[variant]["marker"],
+            linewidth=VARIANT_STYLES[variant]["linewidth"],
+        )
+        # Only fill between if we have data for all sizes
+        if len(lower_quartiles) == len(graph_sizes) and len(upper_quartiles) == len(
+            graph_sizes
+        ):
+            ax.fill_between(
+                np.arange(len(graph_sizes)),
+                lower_quartiles,
+                upper_quartiles,
+                alpha=0.3,
+                color=VARIANT_STYLES[variant]["color"],
+            )
+        print(variant, medians)
+        # ax.set_title(TITLES[metric])
+        # ax.set_xlabel("Number of Graph Nodes")
+        ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily='serif')        # ax.grid(True, linestyle="--", alpha=0.7)
+        # ax.grid(True, linestyle="--", alpha=0.7)
+        # Show x-axis values as integers.
+        # NOTE: totally hardcoded to only show the first 5 graph sizes (the rest don't have data)
+        max_graph_sizes = 5
+        ax.set_xticks(np.arange(max_graph_sizes))
+        ax.set_xticklabels(graph_sizes[:max_graph_sizes], size=TICK_FONTSIZE[column])
+        # Hardcoding the y-max to be 0.06.
+        ax.set_ylim(0, 0.06)
+        # Explicitly enable x-axis tick labels for all subplots (not just bottom)
+        ax.tick_params(labelbottom=True)
+
+        common_add_arrows(ax)
+
 
 def unified_plot_conditionalacceptance(output_dir: str) -> None:
     """Unified plot that puts multiple plots (for different independent variables) into a single matplotlib figure.
@@ -292,7 +377,7 @@ def unified_plot_conditionalacceptance(output_dir: str) -> None:
             elif row == "querying_algorithms":
                 df = df_original
                 if column == "num_modules":
-                    pass
+                    individual_plot_num_modules_fixed_moduleselector(df, fixed_variables, metric, column, order_dict, ax, graph_size, fixed_module_selector)
                 else:   
                     individual_plot_fixed_moduleselector(df, fixed_variables, metric, column, order_dict, ax, graph_size, fixed_module_selector)
 
