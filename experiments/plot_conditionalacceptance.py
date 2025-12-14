@@ -37,10 +37,10 @@ from modular_query.plot_utils import (
 )
 
 # Constants:
-UNIFIED_PLOT_FIGSIZE = (24, 12)
+UNIFIED_PLOT_FIGSIZE = (24, 8)
 XTICK_OFFSET = 0.5
-TICK_FONTSIZE = {"num_modules":20, "dependency_structure":12, "confidence":16, "c_query":20}
-LEGEND_FONT_SIZE = 20
+TICK_FONTSIZE = {"num_modules":20, "dependency_structure":12, "confidence":18, "c_query":20}
+LEGEND_FONT_SIZE = 16
 
 def individual_plot(df: pd.DataFrame, fixed_variables: dict, metric: str, \
     column: str, order: list, ax: plt.Axes, graph_size: int) -> None:
@@ -126,6 +126,9 @@ def individual_plot(df: pd.DataFrame, fixed_variables: dict, metric: str, \
     #         legend_added.add(algorithm)
 
     ax.set_xticks(np.arange(len(order)) * len(results.keys())+XTICK_OFFSET)
+    # if column is "dependency_structure", replace any underscores with hyphens
+    if column == "dependency_structure":
+        order = [item.replace("_", "-") for item in order]
     ax.set_xticklabels(order, fontsize=TICK_FONTSIZE[column])
     ax.set_ylabel(YLABELS[metric] if metric != "total_correct" else "Total Incorrect", fontsize=18, fontfamily='serif')
 
@@ -219,7 +222,11 @@ def individual_plot_fixed_moduleselector(df: pd.DataFrame, fixed_variables: dict
     #         legend_added.add(variant)
 
     ax.set_xticks(np.arange(len(order_dict[column])) * len(order_dict["variant"])+XTICK_OFFSET)
-    ax.set_xticklabels(order_dict[column], fontsize=TICK_FONTSIZE[column])
+    if column == "dependency_structure":
+        order_to_use = [item.replace("_", "-") for item in order_dict[column]]
+    else:
+        order_to_use = order_dict[column]
+    ax.set_xticklabels(order_to_use, fontsize=TICK_FONTSIZE[column])
     ax.set_ylabel(YLABELS[metric] if metric != "total_correct" else "Total Incorrect", fontsize=18, fontfamily='serif')
     common_add_arrows(ax)
 
@@ -503,7 +510,7 @@ def unified_plot_conditionalacceptance(output_dir: str) -> None:
         module_selector_handles, 
         module_selector_labels, 
         loc='upper center',
-        bbox_to_anchor=(0.5, 0.98),
+        bbox_to_anchor=(0.5, 0.99),
         ncol=len(module_selector_labels),
         fontsize=LEGEND_FONT_SIZE,
         title_fontsize=LEGEND_FONT_SIZE
@@ -514,14 +521,14 @@ def unified_plot_conditionalacceptance(output_dir: str) -> None:
         querying_algorithm_handles, 
         querying_algorithm_labels, 
         loc='upper center',
-        bbox_to_anchor=(0.5, 0.50),
+        bbox_to_anchor=(0.5, 0.5),
         ncol=len(querying_algorithm_labels),
         fontsize=LEGEND_FONT_SIZE,
         title_fontsize=LEGEND_FONT_SIZE
     )
     
     plt.tight_layout()
-    plt.subplots_adjust(top=0.92, hspace=0.3)
+    plt.subplots_adjust(top=0.88, hspace=0.45, bottom=0.08)
 
     # Step 3. Save the figure.
     plt.savefig(
