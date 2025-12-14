@@ -36,9 +36,9 @@ from modular_query.plot_utils import (
 )
 
 # Constants:
-UNIFIED_PLOT_FIGSIZE = (20, 12)
+UNIFIED_PLOT_FIGSIZE = (24, 12)
 XTICK_OFFSET = 0.5
-TICK_FONTSIZE = 18
+TICK_FONTSIZE = {"num_modules":20, "dependency_structure":12, "confidence":16, "c_query":20}
 LEGEND_FONT_SIZE = 20
 
 def individual_plot(df: pd.DataFrame, fixed_variables: dict, metric: str, \
@@ -82,10 +82,91 @@ def individual_plot(df: pd.DataFrame, fixed_variables: dict, metric: str, \
             legend_added.add(algorithm)
 
     ax.set_xticks(np.arange(len(order)) * len(results.keys())+XTICK_OFFSET)
-    ax.set_xticklabels(order, fontsize=TICK_FONTSIZE)
+    ax.set_xticklabels(order, fontsize=TICK_FONTSIZE[column])
     ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily='serif')
 
     common_add_arrows(ax)
+
+def individual_plot_num_modules(df: pd.DataFrame, fixed_variables: dict, metric: str, \
+    column: str, order: list, ax: plt.Axes, graph_size: int) -> None:
+    """
+    Makes an individual plot for the number of modules.
+    """
+    use_mean_for_total_correct = True
+
+    # Extract the appropriate result from the dataframe.
+    mask = True
+    for col, value in fixed_variables.items():
+        if col != column:
+            mask = mask & (df[col] == value)
+    df_filtered = df[mask]
+    results = df_filtered["results_dictionary"].values[0]
+
+    # Infer graph_sizes from the results.
+    graph_sizes = list(results["Brute Force"][metric].keys())
+
+    for strategy_name in results:
+        # Calculate medians, upper quartiles, and lower quartiles for each graph size
+        medians: list[np.floating | float] = []
+        upper_quartiles: list[np.floating | float] = []
+        lower_quartiles: list[np.floating | float] = []
+        for size in graph_sizes:
+            try:
+                result_array = np.array(
+                    results[strategy_name][metric][size], dtype=np.float64
+                )
+                if len(result_array) == 0:
+                    continue
+                # Use mean for total_correct metric if requested,
+                # otherwise use median
+                if use_mean_for_total_correct and metric == "total_correct":
+                    median = np.mean(result_array)
+                    std = np.std(result_array)
+                    upper_quartile = median + std
+                    lower_quartile = median - std
+                else:
+                    median = np.median(result_array)
+                    upper_quartile, lower_quartile = np.percentile(
+                        result_array, [75, 25]
+                    )
+            except KeyError:
+                continue
+            except TypeError:
+                print(f"Dumping values: {result_array}")
+                raise
+            medians.append(median)
+            upper_quartiles.append(upper_quartile)
+            lower_quartiles.append(lower_quartile)
+
+        # Plot the data with strategy-specific styling
+        style = STRATEGY_COLORS[strategy_name]
+        line = ax.plot(
+            graph_sizes[: len(medians)],
+            medians,
+            color=style["color"],
+            linestyle=style["linestyle"],
+            marker=style["marker"],
+            linewidth=style["linewidth"],
+            markersize=8,
+            label=strategy_name,
+        )
+
+        # Plot the interquartile range band
+        ax.fill_between(
+            graph_sizes[: len(medians)],
+            np.array(lower_quartiles),
+            np.array(upper_quartiles),
+            alpha=0.3,
+            label="quartiles",
+            color=style["color"],
+        )
+
+    # Explicitly enable x-axis tick labels for all subplots (not just bottom)
+    ax.tick_params(labelbottom=True)
+    ax.tick_params(labelsize=TICK_FONTSIZE[column], axis='x')
+    ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily='serif')
+
+    common_add_arrows(ax, xaxis_position=-0.005)
 
 
 def unified_plot_conditionalacceptance(output_dir: str) -> None:
@@ -123,22 +204,15 @@ def unified_plot_conditionalacceptance(output_dir: str) -> None:
         "c_query": 0.32
     }
 
-    # metrics = [
-    #     "execution_time_total",
-    #     "total_timesteps",
-    #     "total_correct",
-    #     "total_timesteps"
-    # ]
     metrics = [
+        "execution_time_total",
         "total_timesteps",
         "total_correct",
         "total_timesteps"
     ]
 
-    # rows = ["module_selectors"]
     rows = ["module_selectors", "querying_algorithms"]
-    columns = ["dependency_structure", "confidence", "c_query"]
-    # columns = ["num_modules","redundancy", "confidences", "workloads"]
+    columns = ["num_modules","dependency_structure", "confidence", "c_query"]
     fig, axes = plt.subplots(nrows=len(rows), ncols=len(columns), figsize=UNIFIED_PLOT_FIGSIZE)
 
     # orders for IVs
@@ -150,6 +224,7 @@ def unified_plot_conditionalacceptance(output_dir: str) -> None:
     order_dict["dependency_structure"] = graph_structure_order
     order_dict["confidence"] = confidence_order
     order_dict["c_query"] = query_cost_order
+    order_dict["num_modules"] = None
 
     for i, row in enumerate(rows):
         for j, column in enumerate(columns):
@@ -158,8 +233,10 @@ def unified_plot_conditionalacceptance(output_dir: str) -> None:
             ax = axes[i, j]
             metric = metrics[j]
 
-            print(order_dict[column])
-            individual_plot(df, fixed_variables, metric, column, order_dict[column], ax, graph_size)
+            if column == "num_modules":
+                individual_plot_num_modules(df, fixed_variables, metric, column, order_dict[column], ax, graph_size)
+            else:   
+                individual_plot(df, fixed_variables, metric, column, order_dict[column], ax, graph_size)
 
     # Step 6. Add legend.
     handles, labels = ax.get_legend_handles_labels()
