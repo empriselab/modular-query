@@ -35,7 +35,7 @@ from modular_query.plot_utils import (
 )
 
 # Constants:
-UNIFIED_PLOT_FIGSIZE = (30, 8)
+UNIFIED_PLOT_FIGSIZE = (27.5, 8)
 XTICK_OFFSET = 0.5
 TICK_FONTSIZE = {"num_modules":20, "dependency_structure":12, "confidence":18, "c_query":20, "confidence_2":12}
 LEGEND_FONT_SIZE = 16
@@ -620,7 +620,7 @@ def unified_plot_conditionalacceptance(output_dir: str) -> None:
     for ax in axes[1]:
         handles, labels = ax.get_legend_handles_labels()
         for handle, label in zip(handles, labels):
-            if label and label not in seen_querying_algorithm_labels:
+            if label and label not in seen_querying_algorithm_labels and label not in seen_module_selector_labels:
                 querying_algorithm_handles.append(handle)
                 querying_algorithm_labels.append(label)
                 seen_querying_algorithm_labels.add(label)
@@ -676,9 +676,16 @@ def unified_plot_conditionalacceptance(output_dir: str) -> None:
         clip_on=False
     ))
 
-    # Step 3. Save the figure.
+    # Add subplot labels (a) and (b)
+    axes[0, 0].text(-0.15, 1.25, '(a)', transform=axes[0, 0].transAxes, 
+                    fontsize=18, fontweight='bold', verticalalignment='top',
+                    horizontalalignment='left', fontfamily='serif')
+    axes[0, 4].text(-0.2, 1.25, '(b)', transform=axes[0, 4].transAxes,
+                    fontsize=18, fontweight='bold', verticalalignment='top',
+                    horizontalalignment='left', fontfamily='serif')    # Step 3. Save the figure.
+    
     plt.savefig(
-        f"{output_dir}/plot_conditional_acceptance.png",
+        f"{output_dir}/plot_conditional_acceptance.pdf",
         dpi=300,
         bbox_inches="tight",
     )
