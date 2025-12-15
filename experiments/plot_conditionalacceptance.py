@@ -595,7 +595,6 @@ def unified_plot_conditionalacceptance(output_dir: str) -> None:
                 else:   
                     individual_plot_fixed_moduleselector(df, fixed_variables, metric, column, order_dict, ax, graph_size, fixed_module_selector)
 
-
     # Step 6. Add legend - split into two groups
     # Collect handles and labels separately for each row
     module_selector_handles = []
@@ -649,6 +648,24 @@ def unified_plot_conditionalacceptance(output_dir: str) -> None:
     
     plt.tight_layout()
     plt.subplots_adjust(top=0.88, hspace=0.45, bottom=0.08)
+
+    # Add dashed vertical separator between columns 4 and 5 (after layout adjustments)
+    # Calculate the midpoint between the right edge of column 4 and left edge of column 5
+    bbox_4th_top = axes[0, 3].get_position()  # Top row, 4th column
+    bbox_5th_top = axes[0, 4].get_position()  # Top row, 5th column
+    bbox_5th_bottom = axes[1, 4].get_position()  # Bottom row, 5th column
+    separator_x = (bbox_4th_top.x1 + bbox_5th_top.x0) / 2 - 0.01  # Midpoint between columns
+    
+    # Draw a single dashed vertical line spanning both rows
+    fig.add_artist(plt.Line2D(
+        [separator_x, separator_x],
+        [bbox_5th_bottom.y0, bbox_5th_top.y1],  # From bottom of bottom row to top of top row
+        color='gray',
+        linestyle='--',
+        linewidth=1.5,
+        transform=fig.transFigure,
+        clip_on=False
+    ))
 
     # Step 3. Save the figure.
     plt.savefig(
