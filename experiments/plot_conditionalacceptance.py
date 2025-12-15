@@ -35,11 +35,11 @@ from modular_query.plot_utils import (
 )
 
 # Constants:
-UNIFIED_PLOT_FIGSIZE = (24, 8)
+UNIFIED_PLOT_FIGSIZE = (30, 8)
 XTICK_OFFSET = 0.5
-TICK_FONTSIZE = {"num_modules":20, "dependency_structure":12, "confidence":18, "c_query":20}
+TICK_FONTSIZE = {"num_modules":20, "dependency_structure":12, "confidence":18, "c_query":20, "confidence_2":12}
 LEGEND_FONT_SIZE = 16
-XLABELS = {"num_modules": "Number of Modules", "dependency_structure": "Redundancy", "confidence": "Confidences", "c_query": "Workloads"}
+XLABELS = {"num_modules": "Number of Modules", "dependency_structure": "Redundancy", "confidence": "Confidences", "c_query": "Workloads", "confidence_2": "Confidences"}
 XLABEL_FONTSIZE = 20
 
 STRATEGY_COLORS = {
@@ -120,17 +120,22 @@ VARIANT_STYLES = {
 
 
 def individual_plot(df: pd.DataFrame, fixed_variables: dict, metric: str, \
-    column: str, order: list, ax: plt.Axes, graph_size: int) -> None:
+    column: str, order: list, ax: plt.Axes, graph_size: int, add_x_label: bool = False) -> None:
     """
     Makes an individual plot for a given column (i.e. independent variable)
     """
+
+    if column == "confidence_2":
+        df_column = "confidence"
+    else:
+        df_column = column
 
     # First, df_filtered should have all fixed variables set (except for the one that is varying).
 
     # Create a boolean mask for rows that match the fixed variables.
     mask = True
     for col, value in fixed_variables.items():
-        if col != column:
+        if col != df_column:
             mask = mask & (df[col] == value)
     df_filtered = df[mask]
     results_sample = df_filtered["results_dictionary"].values[0]
@@ -158,7 +163,7 @@ def individual_plot(df: pd.DataFrame, fixed_variables: dict, metric: str, \
     for i, value in enumerate(order):
         # Filter the df for only those run IDs.
         df_filtered_value = df_filtered[
-            df_filtered[column] == value
+            df_filtered[df_column] == value
         ]
         # Extract the results (from the results_dictionary column)
         results = df_filtered_value["results_dictionary"].values[0]
@@ -220,6 +225,9 @@ def individual_plot(df: pd.DataFrame, fixed_variables: dict, metric: str, \
     if column == "dependency_structure":
         order = [item.replace("_", "-") for item in order]
     ax.set_xticklabels(order, fontsize=TICK_FONTSIZE[column])
+    if add_x_label:
+        ax.set_xlabel(XLABELS[column], fontsize=XLABEL_FONTSIZE, fontfamily='serif', labelpad=10)
+        ax.xaxis.set_label_coords(0.5, -0.25)  # x=0.5 means center, y=-0.15 means 15% down from the bottom
     ax.set_ylabel(YLABELS[metric] if metric != "total_correct" else "Total Incorrect", fontsize=18, fontfamily='serif')
 
     common_add_arrows(ax)
@@ -338,7 +346,10 @@ def individual_plot_num_modules(df: pd.DataFrame, fixed_variables: dict, metric:
     results = df_filtered["results_dictionary"].values[0]
 
     # Infer graph_sizes from the results.
-    graph_sizes = list(results["Brute Force"][metric].keys())
+    if "Brute Force" in results:
+        graph_sizes = list(results["Brute Force"][metric].keys())
+    else:
+        graph_sizes = list(results["Confidence Query"][metric].keys())
 
     for strategy_name in results:
         # Calculate medians, upper quartiles, and lower quartiles for each graph size
@@ -515,19 +526,28 @@ def unified_plot_conditionalacceptance(output_dir: str) -> None:
         "execution_time_total",
         "total_timesteps",
         "total_correct",
-        "total_timesteps"
+        "total_timesteps",
+        "total_correct"
     ]
 
     rows = ["module_selectors", "querying_algorithms"]
-    columns = ["num_modules","dependency_structure", "confidence", "c_query"]
+    columns = ["num_modules","dependency_structure", "confidence", "c_query", "confidence_2"]
     fig, axes = plt.subplots(nrows=len(rows), ncols=len(columns), figsize=UNIFIED_PLOT_FIGSIZE)
     data_locations = {"module_selectors": {col: "experiments/results/20251208_hricondaccept/" for col in columns}, \
         "querying_algorithms": {col: "experiments/results/20250929_fixbruteforce/" for col in columns}}
     data_locations["querying_algorithms"]["confidence"] = "experiments/results/20250929_fixbruteforce_varyconfidences/"
 
+    data_locations["module_selectors"]["confidence_2"] = "experiments/results/20251110_finerconfidences_exp2/"
+    # this one is tricky because it's actually not showing querying algorithms; it's showing module selectors.
+    # but it'll be in the second row of the plot.
+    data_locations["querying_algorithms"]["confidence_2"] = "experiments/results/20251110_finerconfidences_exp3/"
+
+
+
     # orders for IVs
     graph_structure_order = ["all_AND", "all_OR", "AND_then_OR", "OR_then_AND"]
     confidence_order = [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)]
+    confidence_2_order = [(0.8, 0.3), (0.75, 0.35), (0.7, 0.4), (0.65, 0.45), (0.6, 0.5)]
     query_cost_order = [0.08, 0.16, 0.32, 0.64]
     variant_order = ["greedy", "balanced", "conservative", "balanced-2"]
 
@@ -537,6 +557,7 @@ def unified_plot_conditionalacceptance(output_dir: str) -> None:
     order_dict["c_query"] = query_cost_order
     order_dict["num_modules"] = None
     order_dict["variant"] = variant_order
+    order_dict["confidence_2"] = confidence_2_order
 
 
     for i, row in enumerate(rows):
@@ -557,6 +578,8 @@ def unified_plot_conditionalacceptance(output_dir: str) -> None:
                 df = df_original[df_original["variant"] == fixed_variant]
                 if column == "num_modules":
                     individual_plot_num_modules(df, fixed_variables, metric, column, order_dict[column], ax, graph_size)
+                elif column == "confidence_2":
+                    individual_plot(df, fixed_variables, metric, column, order_dict[column], ax, graph_size)
                 else:   
                     individual_plot(df, fixed_variables, metric, column, order_dict[column], ax, graph_size)
 
@@ -564,6 +587,8 @@ def unified_plot_conditionalacceptance(output_dir: str) -> None:
                 df = df_original
                 if column == "num_modules":
                     individual_plot_num_modules_fixed_moduleselector(df, fixed_variables, metric, column, order_dict, ax, graph_size, fixed_module_selector)
+                elif column == "confidence_2":
+                    individual_plot(df, fixed_variables, metric, column, order_dict[column], ax, graph_size, add_x_label=True)
                 else:   
                     individual_plot_fixed_moduleselector(df, fixed_variables, metric, column, order_dict, ax, graph_size, fixed_module_selector)
 
