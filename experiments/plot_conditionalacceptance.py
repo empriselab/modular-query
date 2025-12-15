@@ -229,8 +229,11 @@ def individual_plot(df: pd.DataFrame, fixed_variables: dict, metric: str, \
         ax.set_xlabel(XLABELS[column], fontsize=XLABEL_FONTSIZE, fontfamily='serif', labelpad=10)
         ax.xaxis.set_label_coords(0.5, -0.25)  # x=0.5 means center, y=-0.15 means 15% down from the bottom
     ax.set_ylabel(YLABELS[metric] if metric != "total_correct" else "Total Incorrect", fontsize=18, fontfamily='serif')
-
-    common_add_arrows(ax)
+    # just for confidence_2, set the y-tick to start from 0.4 with top at 0.9.
+    if column == "confidence_2":
+        common_add_arrows(ax, y_lim=(0.4, 0.9))
+    else:
+        common_add_arrows(ax)
 
 def individual_plot_fixed_moduleselector(df: pd.DataFrame, fixed_variables: dict, metric: str, \
     column: str, order_dict: dict, ax: plt.Axes, graph_size: int, module_selector: str) -> None:
