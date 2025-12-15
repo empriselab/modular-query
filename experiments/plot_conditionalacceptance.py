@@ -120,7 +120,7 @@ VARIANT_STYLES = {
 
 
 def individual_plot(df: pd.DataFrame, fixed_variables: dict, metric: str, \
-    column: str, order: list, ax: plt.Axes, graph_size: int, add_x_label: bool = False) -> None:
+    column: str, order: list, ax: plt.Axes, graph_size: int, add_x_label: bool = False, title: str = "") -> None:
     """
     Makes an individual plot for a given column (i.e. independent variable)
     """
@@ -228,10 +228,12 @@ def individual_plot(df: pd.DataFrame, fixed_variables: dict, metric: str, \
     if add_x_label:
         ax.set_xlabel(XLABELS[column], fontsize=XLABEL_FONTSIZE, fontfamily='serif', labelpad=10)
         ax.xaxis.set_label_coords(0.5, -0.25)  # x=0.5 means center, y=-0.15 means 15% down from the bottom
+    if title:
+        ax.set_title(title, fontsize=20, fontfamily='serif', fontweight='bold')
     ax.set_ylabel(YLABELS[metric] if metric != "total_correct" else "Total Incorrect", fontsize=18, fontfamily='serif')
     # just for confidence_2, set the y-tick to start from 0.4 with top at 0.9.
     if column == "confidence_2":
-        common_add_arrows(ax, y_lim=(0.4, 0.9))
+        common_add_arrows(ax, y_lim=(0.3, 0.9))
     else:
         common_add_arrows(ax)
 
@@ -582,7 +584,7 @@ def unified_plot_conditionalacceptance(output_dir: str) -> None:
                 if column == "num_modules":
                     individual_plot_num_modules(df, fixed_variables, metric, column, order_dict[column], ax, graph_size)
                 elif column == "confidence_2":
-                    individual_plot(df, fixed_variables, metric, column, order_dict[column], ax, graph_size)
+                    individual_plot(df, fixed_variables, metric, column, order_dict[column], ax, graph_size, title=r"$\beta$ = 0.4")
                 else:   
                     individual_plot(df, fixed_variables, metric, column, order_dict[column], ax, graph_size)
 
@@ -591,7 +593,7 @@ def unified_plot_conditionalacceptance(output_dir: str) -> None:
                 if column == "num_modules":
                     individual_plot_num_modules_fixed_moduleselector(df, fixed_variables, metric, column, order_dict, ax, graph_size, fixed_module_selector)
                 elif column == "confidence_2":
-                    individual_plot(df, fixed_variables, metric, column, order_dict[column], ax, graph_size, add_x_label=True)
+                    individual_plot(df, fixed_variables, metric, column, order_dict[column], ax, graph_size, add_x_label=True, title=r"$\beta$ = 0.6")
                 else:   
                     individual_plot_fixed_moduleselector(df, fixed_variables, metric, column, order_dict, ax, graph_size, fixed_module_selector)
 
