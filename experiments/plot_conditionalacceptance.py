@@ -622,14 +622,23 @@ def unified_plot_conditionalacceptance(output_dir: str) -> None:
                 querying_algorithm_handles.append(handle)
                 querying_algorithm_labels.append(label)
                 seen_querying_algorithm_labels.add(label)
-    
-    # Create two legends side by side
+        
+    plt.tight_layout()
+    plt.subplots_adjust(top=0.88, hspace=0.45, bottom=0.08)
+
+
+    # Calculate the center of the first 4 columns for legend positioning
+    bbox_1st_top = axes[0, 0].get_position()  # Top row, 1st column
+    bbox_4th_top = axes[0, 3].get_position()  # Top row, 4th column
+    center_first_four = (bbox_1st_top.x0 + bbox_4th_top.x1) / 2
+
+    # Create two legends side by side, centered over first 4 columns
     # First legend: Module Selectors (from bottom row)
     legend1 = fig.legend(
         module_selector_handles, 
         module_selector_labels, 
         loc='upper center',
-        bbox_to_anchor=(0.5, 0.99),
+        bbox_to_anchor=(center_first_four, 0.99),
         ncol=len(module_selector_labels),
         fontsize=LEGEND_FONT_SIZE,
         title_fontsize=LEGEND_FONT_SIZE
@@ -640,14 +649,12 @@ def unified_plot_conditionalacceptance(output_dir: str) -> None:
         querying_algorithm_handles, 
         querying_algorithm_labels, 
         loc='upper center',
-        bbox_to_anchor=(0.5, 0.5),
+        bbox_to_anchor=(center_first_four, 0.5),
         ncol=len(querying_algorithm_labels),
         fontsize=LEGEND_FONT_SIZE,
         title_fontsize=LEGEND_FONT_SIZE
     )
-    
-    plt.tight_layout()
-    plt.subplots_adjust(top=0.88, hspace=0.45, bottom=0.08)
+
 
     # Add dashed vertical separator between columns 4 and 5 (after layout adjustments)
     # Calculate the midpoint between the right edge of column 4 and left edge of column 5
