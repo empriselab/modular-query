@@ -29,8 +29,6 @@ from tqdm import tqdm
 from modular_query.plot_utils import (
     VARIANT_NAMES,
     YLABELS,
-    plot_results,
-    plot_results_across_graph_sizes,
     common_add_arrows,
 )
 
@@ -41,49 +39,69 @@ TICK_FONTSIZE = {"num_modules":20, "dependency_structure":12, "confidence":18, "
 LEGEND_FONT_SIZE = 16
 XLABELS = {"num_modules": "Number of Modules", "dependency_structure": "Redundancy", "confidence": "Confidences", "c_query": "Workloads", "confidence_2": "Confidences"}
 XLABEL_FONTSIZE = 20
+MARKER_SIZE = 8
+DEFAULT_ALPHA = 1.0
 
 STRATEGY_COLORS = {
     "Never Query": {
         "color": "gray",
         "linestyle": "--",
-        "marker": "s",
+        "marker": "x",
         "linewidth": 2,
+        "markersize": MARKER_SIZE,
+        "alpha": 0.5,
     },
     "Brute Force": {
         "color": "#006d2c",
+        # "color": "#1f77b4",
+        # "color": "#1b3a57",
         "linestyle": ":",
-        "marker": "^",
+        "marker": "o",
         "linewidth": 2,
+        "markersize": 16,
+        "alpha": 0.25,
     },
     "Graph Query": {
-        "color": "#2ca25f",
+        "color": "#ff7f0e",
+        # "color": "#c0392b",
         "linestyle": "-",
-        "marker": "x",
+        "marker": "s",
         "linewidth": 2,
+        "markersize": MARKER_SIZE,
+        "alpha": 0.5,
     },
     "Binary Tree Query": {
         "color": "gray",
         "linestyle": "-",
         "marker": "v",
         "linewidth": 2,
+        "markersize": MARKER_SIZE,
+        "alpha": 0.5,
     },
     "Confidence Query": {
-        "color": "#984ea3",
+        "color": "#000000",
+        # "color": "#2f2f2f",
         "linestyle": "-",
-        "marker": "s",
+        "marker": "+",
         "linewidth": 2,
+        "markersize": MARKER_SIZE,
+        "alpha": DEFAULT_ALPHA,
     },
         "MIP": {
         "color": "gray",
         "linestyle": "-.",
         "marker": "D",
         "linewidth": 2,
+        "markersize": MARKER_SIZE,
+        "alpha": DEFAULT_ALPHA,
     },
     "Always Query": {
         "color": "gray",
         "linestyle": "-",
         "marker": "o",
         "linewidth": 2,
+        "markersize": MARKER_SIZE,
+        "alpha": DEFAULT_ALPHA,
     },
 }
 
@@ -94,6 +112,8 @@ VARIANT_STYLES = {
         "marker": "o",
         "linewidth": 2,
         "name": "Execute-First",
+        "markersize": MARKER_SIZE,
+        "alpha": 0.5,
     },
     "balanced": {
         "color": "gray",
@@ -101,6 +121,8 @@ VARIANT_STYLES = {
         "marker": "x",
         "linewidth": 2,
         "name": "Query-Then-Execute",
+        "markersize": MARKER_SIZE,
+        "alpha": 0.5,
     },
     "conservative": {
         "color": "#e34a33",
@@ -108,6 +130,8 @@ VARIANT_STYLES = {
         "marker": "s",
         "linewidth": 2,
         "name": "Query-Until-Confident",
+        "markersize": MARKER_SIZE,
+        "alpha": 0.75,
     },
     "balanced-2": {
         "color": "#b30000",
@@ -115,6 +139,8 @@ VARIANT_STYLES = {
         "marker": "^",
         "linewidth": 2,
         "name": "Query-Until-Confident-Workload-Aware",
+        "markersize": MARKER_SIZE,
+        "alpha": DEFAULT_ALPHA,
     },
 }
 
@@ -190,7 +216,8 @@ def individual_plot(df: pd.DataFrame, fixed_variables: dict, metric: str, \
             linestyle=style["linestyle"],
             marker=style["marker"],
             linewidth=style["linewidth"],
-            markersize=8,
+            markersize=style["markersize"],
+            alpha=style["alpha"],
         )
         legend_added.add(algorithm)
 
@@ -291,7 +318,8 @@ def individual_plot_fixed_moduleselector(df: pd.DataFrame, fixed_variables: dict
             linestyle=style["linestyle"],
             marker=style["marker"],
             linewidth=style["linewidth"],
-            markersize=8,
+            markersize=style["markersize"],
+            alpha=style["alpha"],
         )
         legend_added.add(variant)
 
@@ -398,8 +426,9 @@ def individual_plot_num_modules(df: pd.DataFrame, fixed_variables: dict, metric:
             linestyle=style["linestyle"],
             marker=style["marker"],
             linewidth=style["linewidth"],
-            markersize=8,
+            markersize=style["markersize"],
             label=strategy_name,
+            alpha=style["alpha"],
         )
 
         # Plot the interquartile range band
@@ -474,6 +503,8 @@ def individual_plot_num_modules_fixed_moduleselector(df: pd.DataFrame, fixed_var
             linestyle=VARIANT_STYLES[variant]["linestyle"],
             marker=VARIANT_STYLES[variant]["marker"],
             linewidth=VARIANT_STYLES[variant]["linewidth"],
+            markersize=VARIANT_STYLES[variant]["markersize"],
+            alpha=VARIANT_STYLES[variant]["alpha"],
         )
         # Only fill between if we have data for all sizes
         if len(lower_quartiles) == len(graph_sizes) and len(upper_quartiles) == len(
@@ -584,7 +615,7 @@ def unified_plot_conditionalacceptance(output_dir: str) -> None:
                 if column == "num_modules":
                     individual_plot_num_modules(df, fixed_variables, metric, column, order_dict[column], ax, graph_size)
                 elif column == "confidence_2":
-                    individual_plot(df, fixed_variables, metric, column, order_dict[column], ax, graph_size, title=r"$\beta$ = 0.4")
+                    individual_plot(df, fixed_variables, metric, column, order_dict[column], ax, graph_size, title=r"Low Variance ($\beta$ = 0.4)")
                 else:   
                     individual_plot(df, fixed_variables, metric, column, order_dict[column], ax, graph_size)
 
@@ -593,7 +624,7 @@ def unified_plot_conditionalacceptance(output_dir: str) -> None:
                 if column == "num_modules":
                     individual_plot_num_modules_fixed_moduleselector(df, fixed_variables, metric, column, order_dict, ax, graph_size, fixed_module_selector)
                 elif column == "confidence_2":
-                    individual_plot(df, fixed_variables, metric, column, order_dict[column], ax, graph_size, add_x_label=True, title=r"$\beta$ = 0.6")
+                    individual_plot(df, fixed_variables, metric, column, order_dict[column], ax, graph_size, add_x_label=True, title=r"High Variance ($\beta$ = 0.6)")
                 else:   
                     individual_plot_fixed_moduleselector(df, fixed_variables, metric, column, order_dict, ax, graph_size, fixed_module_selector)
 
