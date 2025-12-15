@@ -27,8 +27,6 @@ import pandas as pd
 from tqdm import tqdm
 
 from modular_query.plot_utils import (
-    STRATEGY_COLORS,
-    VARIANT_STYLES,
     VARIANT_NAMES,
     YLABELS,
     plot_results,
@@ -41,6 +39,85 @@ UNIFIED_PLOT_FIGSIZE = (24, 8)
 XTICK_OFFSET = 0.5
 TICK_FONTSIZE = {"num_modules":20, "dependency_structure":12, "confidence":18, "c_query":20}
 LEGEND_FONT_SIZE = 16
+XLABELS = {"num_modules": "Number of Modules", "dependency_structure": "Redundancy", "confidence": "Confidences", "c_query": "Workloads"}
+XLABEL_FONTSIZE = 20
+
+STRATEGY_COLORS = {
+    "Never Query": {
+        "color": "gray",
+        "linestyle": "--",
+        "marker": "s",
+        "linewidth": 2,
+    },
+    "Brute Force": {
+        "color": "#006d2c",
+        "linestyle": ":",
+        "marker": "^",
+        "linewidth": 2,
+    },
+    "Graph Query": {
+        "color": "#2ca25f",
+        "linestyle": "-",
+        "marker": "x",
+        "linewidth": 2,
+    },
+    "Binary Tree Query": {
+        "color": "gray",
+        "linestyle": "-",
+        "marker": "v",
+        "linewidth": 2,
+    },
+    "Confidence Query": {
+        "color": "#984ea3",
+        "linestyle": "-",
+        "marker": "s",
+        "linewidth": 2,
+    },
+        "MIP": {
+        "color": "gray",
+        "linestyle": "-.",
+        "marker": "D",
+        "linewidth": 2,
+    },
+    "Always Query": {
+        "color": "gray",
+        "linestyle": "-",
+        "marker": "o",
+        "linewidth": 2,
+    },
+}
+
+VARIANT_STYLES = {
+    "greedy": {
+        "color": "gray",
+        "linestyle": "-",
+        "marker": "o",
+        "linewidth": 2,
+        "name": "Execute-First",
+    },
+    "balanced": {
+        "color": "gray",
+        "linestyle": "-",
+        "marker": "x",
+        "linewidth": 2,
+        "name": "Query-Then-Execute",
+    },
+    "conservative": {
+        "color": "#e34a33",
+        "linestyle": "--",
+        "marker": "s",
+        "linewidth": 2,
+        "name": "Query-Until-Confident",
+    },
+    "balanced-2": {
+        "color": "#b30000",
+        "linestyle": ":",
+        "marker": "^",
+        "linewidth": 2,
+        "name": "Query-Until-Confident-Workload-Aware",
+    },
+}
+
 
 def individual_plot(df: pd.DataFrame, fixed_variables: dict, metric: str, \
     column: str, order: list, ax: plt.Axes, graph_size: int) -> None:
@@ -56,13 +133,25 @@ def individual_plot(df: pd.DataFrame, fixed_variables: dict, metric: str, \
         if col != column:
             mask = mask & (df[col] == value)
     df_filtered = df[mask]
+    results_sample = df_filtered["results_dictionary"].values[0]
+    x_base = np.arange(len(order)) * len(results_sample.keys())+XTICK_OFFSET
 
     legend_added = set()
+
+    # TOP3 = {"Brute Force", "Graph Query", "Confidence Query"}
+    # others = [algorithm for algorithm in results_sample.keys() if algorithm not in TOP3]
+    # max_jitter = 0.1
+    # if len(others) > 1:
+    #     other_offsets = np.linspace(-max_jitter, max_jitter, len(others))
+    # else:
+    #     other_offsets = [0]
+    # OFFSETS = {algorithm: offset for algorithm, offset in zip(others, other_offsets)}
+    # OFFSETS.update({algorithm: 0 for algorithm in TOP3})
+    OFFSETS = {algorithm: 0 for algorithm in results_sample.keys()}
 
     ## trial 1: line plot code.
     # Collect data for each algorithm across all order values
     algorithm_data = {}
-    results_sample = df_filtered["results_dictionary"].values[0]
     for algorithm in results_sample.keys():
         algorithm_data[algorithm] = []
     
@@ -83,11 +172,11 @@ def individual_plot(df: pd.DataFrame, fixed_variables: dict, metric: str, \
             algorithm_data[algorithm].append(y_value)
     
     # Plot a line for each algorithm
-    x_positions = np.arange(len(order)) * len(results.keys())+XTICK_OFFSET
     for algorithm in algorithm_data.keys():
         # Only add label to legend if we haven't seen this algorithm before
         label = algorithm if algorithm not in legend_added else ""
         style = STRATEGY_COLORS[algorithm]
+        x_positions = x_base + OFFSETS[algorithm]
         ax.plot(
             x_positions,
             algorithm_data[algorithm],
@@ -125,7 +214,8 @@ def individual_plot(df: pd.DataFrame, fixed_variables: dict, metric: str, \
     #         )
     #         legend_added.add(algorithm)
 
-    ax.set_xticks(np.arange(len(order)) * len(results.keys())+XTICK_OFFSET)
+    # ax.set_xticks(np.arange(len(order)) * len(results.keys())+XTICK_OFFSET)
+    ax.set_xticks(x_base)
     # if column is "dependency_structure", replace any underscores with hyphens
     if column == "dependency_structure":
         order = [item.replace("_", "-") for item in order]
@@ -229,7 +319,8 @@ def individual_plot_fixed_moduleselector(df: pd.DataFrame, fixed_variables: dict
     ax.set_xticklabels(order_to_use, fontsize=TICK_FONTSIZE[column])
     ax.set_ylabel(YLABELS[metric] if metric != "total_correct" else "Total Incorrect", fontsize=18, fontfamily='serif')
     common_add_arrows(ax)
-
+    ax.set_xlabel(XLABELS[column], fontsize=XLABEL_FONTSIZE, fontfamily='serif', labelpad=10)
+    ax.xaxis.set_label_coords(0.5, -0.25)  # x=0.5 means center, y=-0.15 means 15% down from the bottom
 
 def individual_plot_num_modules(df: pd.DataFrame, fixed_variables: dict, metric: str, \
     column: str, order: list, ax: plt.Axes, graph_size: int) -> None:
@@ -394,7 +485,8 @@ def individual_plot_num_modules_fixed_moduleselector(df: pd.DataFrame, fixed_var
         ax.tick_params(labelbottom=True)
 
         common_add_arrows(ax)
-
+        ax.set_xlabel(XLABELS[column], fontsize=XLABEL_FONTSIZE, fontfamily='serif', labelpad=10)
+        ax.xaxis.set_label_coords(0.5, -0.25)  # x=0.5 means center, y=-0.2 means 20% down from the bottom
 
 def unified_plot_conditionalacceptance(output_dir: str) -> None:
     """Unified plot that puts multiple plots (for different independent variables) into a single matplotlib figure.
