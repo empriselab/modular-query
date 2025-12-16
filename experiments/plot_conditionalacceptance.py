@@ -130,7 +130,7 @@ VARIANT_STYLES = {
         "marker": "s",
         "linewidth": 2,
         "name": "Query-Until-Confident",
-        "markersize": MARKER_SIZE,
+        "markersize": 12,
         "alpha": 0.75,
     },
     "balanced-2": {
