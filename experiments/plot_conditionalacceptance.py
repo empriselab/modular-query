@@ -22,6 +22,7 @@ import os
 import pickle as pkl
 from pathlib import Path
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
@@ -258,6 +259,8 @@ def individual_plot(df: pd.DataFrame, fixed_variables: dict, metric: str, \
     if title:
         ax.set_title(title, fontsize=20, fontfamily='serif', fontweight='bold')
     ax.set_ylabel(YLABELS[metric] if metric != "total_correct" else "Total Incorrect", fontsize=18, fontfamily='serif')
+    if metric == "total_timesteps":
+        ax.yaxis.set_major_locator(MaxNLocator(integer=True))
     # just for confidence_2, set the y-tick to start from 0.4 with top at 0.9.
     if column == "confidence_2":
         common_add_arrows(ax, y_lim=(0.3, 0.9))
@@ -362,6 +365,8 @@ def individual_plot_fixed_moduleselector(df: pd.DataFrame, fixed_variables: dict
     common_add_arrows(ax)
     ax.set_xlabel(XLABELS[column], fontsize=XLABEL_FONTSIZE, fontfamily='serif', labelpad=10)
     ax.xaxis.set_label_coords(0.5, -0.25)  # x=0.5 means center, y=-0.15 means 15% down from the bottom
+    if metric == "total_timesteps":
+        ax.yaxis.set_major_locator(MaxNLocator(integer=True))
 
 def individual_plot_num_modules(df: pd.DataFrame, fixed_variables: dict, metric: str, \
     column: str, order: list, ax: plt.Axes, graph_size: int) -> None:
@@ -628,6 +633,9 @@ def unified_plot_conditionalacceptance(output_dir: str) -> None:
                 else:   
                     individual_plot_fixed_moduleselector(df, fixed_variables, metric, column, order_dict, ax, graph_size, fixed_module_selector)
 
+    for j in range(axes.shape[1]):
+        fig.align_ylabels(axes[:, j])
+
     # Step 6. Add legend - split into two groups
     # Collect handles and labels separately for each row
     module_selector_handles = []
@@ -656,6 +664,8 @@ def unified_plot_conditionalacceptance(output_dir: str) -> None:
                 querying_algorithm_labels.append(label)
                 seen_querying_algorithm_labels.add(label)
         
+
+
     plt.tight_layout()
     plt.subplots_adjust(top=0.88, hspace=0.45, bottom=0.08)
 
