@@ -349,6 +349,7 @@ def run_experiment(
             computed_values, _, _ = module_graph.compute_values(
                 expert_query_module_names=all_queryable_module_names,
                 expert_values_cache={},
+                disable_expert_noise=True,
             )
             try:
                 ground_truth_output = computed_values[module_graph.leaf]
@@ -1039,6 +1040,7 @@ def exp_grid_search(variant: str, config: dict[str, Any]) -> None:
             correct_module_confidence=correct_confidence,
             incorrect_module_confidence=incorrect_confidence,
             disable_mip=True,
+            expert_query_confidence=expert_query_confidence,
         )
         # Save results to a pickle file.
         # Generate a unique run ID based on current date and time.

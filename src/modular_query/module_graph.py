@@ -157,7 +157,8 @@ class ModuleGraph:
         }
 
     def compute_values(
-        self, expert_query_module_names: set[str], expert_values_cache: dict[str, Any]
+        self, expert_query_module_names: set[str], expert_values_cache: dict[str, Any],
+        disable_expert_noise: bool = False,
     ) -> tuple[dict[Module, Any], dict[Module, float], float]:
         """Recompute values and confidences for all modules.
 
@@ -183,7 +184,8 @@ class ModuleGraph:
                 # Return true expert value with probability expert_query_confidence,
                 # opposite value with probability 1 - expert_query_confidence
                 # NOTE: assumes that value is a boolean or integer in {0,1}.
-                if self.expert_value_rng.random() >= self.expert_query_confidence:
+                if not disable_expert_noise and \
+                    self.expert_value_rng.random() >= self.expert_query_confidence:
                     # Return opposite value
                     if isinstance(value, bool):
                         value = not value
