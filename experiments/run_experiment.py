@@ -27,6 +27,7 @@ from modular_query.modules import Module, StateModule
 from modular_query.plot_utils import plot_results
 from modular_query.query_strategies.binary_tree_query import BinaryTreeQueryStrategy
 from modular_query.query_strategies.brute_force import BruteForceQueryStrategy
+from modular_query.query_strategies.confidence_query import ConfidenceQueryStrategy
 from modular_query.query_strategies.graph_query import GraphQueryStrategy
 from modular_query.query_strategies.mip import MIPQueryStrategy
 from modular_query.query_strategies.never_query import NeverQueryStrategy
@@ -148,6 +149,7 @@ def run_experiment(
     dependency_structure: str = "all_AND",
     disable_mip: bool = False,
     expert_query_confidence: float = 1.0,
+    query_cost_noise_width_fraction: float = 0.1,
 ) -> dict[str, dict[str, dict[int, list[float]]]]:
     """Run experiments with different graph sizes and querying strategies.
 
@@ -197,6 +199,7 @@ def run_experiment(
     # Initialize strategies.
     # (initially with null and_modules and or_modules,
     # which will be set after the module graph is generated.)
+    # NOTE: disabling other strategies for the rebuttal for now.
     strategies = {
         "Never Query": NeverQueryStrategy(correct_answer_cost, incorrect_answer_cost),
         "Brute Force": BruteForceQueryStrategy(
@@ -208,6 +211,10 @@ def run_experiment(
             workload_eps=workload_eps,
         ),
         "Binary Tree Query": BinaryTreeQueryStrategy(
+            correct_answer_cost,
+            incorrect_answer_cost,
+        ),
+        "Confidence Query": ConfidenceQueryStrategy(
             correct_answer_cost,
             incorrect_answer_cost,
         ),
@@ -292,6 +299,7 @@ def run_experiment(
                     incorrect_module_confidence=incorrect_module_confidence,
                     redundancy="AND",
                     expert_query_confidence=expert_query_confidence,
+                    query_cost_noise_width_fraction=query_cost_noise_width_fraction,
                 )
             elif dependency_structure == "all_OR":
                 module_graph = generate_random_module_graph(
@@ -304,6 +312,7 @@ def run_experiment(
                     incorrect_module_confidence=incorrect_module_confidence,
                     redundancy="OR",
                     expert_query_confidence=expert_query_confidence,
+                    query_cost_noise_width_fraction=query_cost_noise_width_fraction,
                 )
             elif dependency_structure == "AND_then_OR":
                 module_graph = generate_random_top_bottom_module_graph(
@@ -317,6 +326,7 @@ def run_experiment(
                     gate_top="AND",
                     gate_bottom="OR",
                     expert_query_confidence=expert_query_confidence,
+                    query_cost_noise_width_fraction=query_cost_noise_width_fraction,
                 )
             elif dependency_structure == "OR_then_AND":
                 module_graph = generate_random_top_bottom_module_graph(
@@ -330,6 +340,7 @@ def run_experiment(
                     gate_top="OR",
                     gate_bottom="AND",
                     expert_query_confidence=expert_query_confidence,
+                    query_cost_noise_width_fraction=query_cost_noise_width_fraction,
                 )
             else:
                 raise ValueError(
@@ -640,10 +651,10 @@ def run_experiment(
                     )
 
     # Print and log the total number of get_action calls.
-    print_and_log(
-        f"Total number of get_action calls: Brute Force, graph size 100:"
-        f"{results['Brute Force']['total_get_action_calls'][100]}"
-    )
+    # print_and_log(
+    #     f"Total number of get_action calls: Brute Force, graph size 100:"
+    #     f"{results['Brute Force']['total_get_action_calls'][100]}"
+    # )
 
     # Print and log the timing info for binary tree query.
     print_and_log("Timing info for binary tree query:")
@@ -749,6 +760,11 @@ def run_single_grid_search_experiment(
     # Use only the graph sizes that are larger than the number of failures.
     graph_sizes_to_use = [size for size in config["graph_sizes"] if size > num_failures]
 
+    # Assume a constant query cost noise width fraction.
+    query_cost_noise_width_fraction = config["query_cost_noise_width_fraction"]
+
+    print_and_log(f"Query cost noise width fraction: {query_cost_noise_width_fraction}")
+
     results = run_experiment(
         graph_sizes=graph_sizes_to_use,
         num_trials=config["num_trials"],
@@ -763,6 +779,7 @@ def run_single_grid_search_experiment(
         incorrect_module_confidence=incorrect_confidence,
         expert_query_confidence=expert_query_confidence,
         disable_mip=True,
+        query_cost_noise_width_fraction=query_cost_noise_width_fraction,
     )
 
     # Run ID is the index of the configuration in the grid.
@@ -778,6 +795,7 @@ def run_single_grid_search_experiment(
         "dependency_structure": redundancy,
         "c_query": c_query,
         "expert_query_confidence": expert_query_confidence,
+        "query_cost_noise_width_fraction": query_cost_noise_width_fraction,
     }
 
     return run_id, results, config_to_save
@@ -1069,6 +1087,44 @@ def exp_grid_search(variant: str, config: dict[str, Any]) -> None:
 
 def main(variant: str) -> None:
     """Run the experiment and generate plots."""
+
+
+    # CONDITIONAL ACCEPTANCE CONFIGURATIONS (same as original paper, but with a new baseline.)
+    # Combining the old grid into one, hopefully this is the best idea.
+    # Running without any noise in the query cost.
+    config = {
+        "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
+        "num_trials": 100,
+        "num_failures_list": [3],
+        "confidences_list": [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)],
+        "redundancy_list": ["all_AND", "all_OR", "AND_then_OR", "OR_then_AND"],
+        "c_query_list": [0.08, 0.16, 0.32, 0.64],
+        "query_cost_noise_width_fraction": 0.0,
+    }
+
+    # REBUTTAL CONFIGURATIONS:
+    # 11/10/2025: increasing query cost noise width fraction to 0.2, then 0.4, 0.6.
+    # config = {
+    #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
+    #     "num_trials": 100,
+    #     "num_failures_list": [3],
+    #     "confidences_list": [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)],
+    #     "redundancy_list": ["all_AND", "all_OR", "AND_then_OR", "OR_then_AND"],
+    #     "c_query_list": [0.32],
+    #     "query_cost_noise_width_fraction": 0.6,
+    # }
+    # 11/10/2025: looking at tigher confidences (close to (0.8, 0.3) and (0.7, 0.4) )
+    # config = {
+    #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
+    #     "num_trials": 100,
+    #     "num_failures_list": [3],
+    #     "confidences_list": [(0.8, 0.3), (0.75, 0.35), (0.7, 0.4), (0.65, 0.45), (0.6, 0.5)],
+    #     "redundancy_list": ["all_AND", "all_OR", "AND_then_OR", "OR_then_AND"],
+    #     "c_query_list": [0.32],
+    #     "query_cost_noise_width_fraction": 0.6,
+    # }
+
+    ### OLD CONFIGURATIONS:
     # Run the experiment with varying query cost.
     # config = {
     #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],

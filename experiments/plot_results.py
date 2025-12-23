@@ -1,4 +1,9 @@
-"""For the three variants (balanced, greedy, conservative), plot results of
+"""
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+Watch out for code duplication! This file is deprecated, should use plot_utils.py instead.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+For the three variants (balanced, greedy, conservative), plot results of
 experiment for a fixed number of failures, fixed graph size, and a fixed
 algorithm (let's say, brute force).
 
@@ -150,7 +155,7 @@ def plot_results(
                 labels.append(strategy_name)
 
         ax.set_title(TITLES[metric])
-        ax.set_xlabel("Number of Graph Nodes")
+        # ax.set_xlabel("Number of Graph Nodes")
         ax.set_ylabel(YLABELS[metric])
         ax.grid(True, linestyle="--", alpha=0.7)
     # Turn off unused subplots.
@@ -400,7 +405,7 @@ def plot_results_across_graph_sizes(
                 color=styles[variant]["color"],
             )
             ax.set_title(TITLES[metric])
-            ax.set_xlabel("Number of Graph Nodes")
+            # ax.set_xlabel("Number of Graph Nodes")
             ax.set_ylabel(YLABELS[metric])
             ax.grid(True, linestyle="--", alpha=0.7)
             # Show x-axis values as integers.
