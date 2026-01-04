@@ -990,7 +990,7 @@ def plot_results_grid_expert_query_confidence(results_dir: str, variant: str, gr
                         else np.median(results[algorithm][metric][graph_size])
                     )
                     ax.bar(
-                        i * len(expert_query_confidence_order) + j,
+                        i * len(results.keys()) + j,
                         value,
                         label=label,
                         color=STRATEGY_COLORS[algorithm]["color"],
@@ -1095,7 +1095,7 @@ def plot_results_grid_expert_query_confidence_fixed_module_selector(results_dir:
                     # Use mean for total_correct metric, median for others
                     value = np.mean(results[module_selector][metric][graph_size]) if metric == "total_correct" else np.median(results[module_selector][metric][graph_size])
                     ax.bar(
-                        i * len(expert_query_confidence_order) + j,
+                        i * len(variant_order) + j,
                         value,
                         label=label,
                         color=VARIANT_STYLES[variant]["color"],
@@ -1171,7 +1171,7 @@ if __name__ == "__main__":
         plot_results_grid_cquery_fixed_module_selector(
             args.results_dir, args.output_dir, fixed_module_selector, fixed_graph_size, df_stem
         )
-    elif args.plot_variable == "expert_confidence"
+    elif args.plot_variable == "expert_confidence":
         plot_results_grid_expert_query_confidence(args.results_dir, fixed_variant, fixed_graph_size, df_stem)
         plot_results_grid_expert_query_confidence_fixed_module_selector(args.results_dir, fixed_module_selector, fixed_graph_size, df_stem)
     else:

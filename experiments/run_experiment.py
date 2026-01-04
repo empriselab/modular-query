@@ -1089,18 +1089,31 @@ def main(variant: str) -> None:
     """Run the experiment and generate plots."""
 
 
-    # CONDITIONAL ACCEPTANCE CONFIGURATIONS (same as original paper, but with a new baseline.)
-    # Combining the old grid into one, hopefully this is the best idea.
-    # Running without any noise in the query cost.
+    # CAMERA-READY NOISY EXPERT CONFIGURATION:
     config = {
         "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
         "num_trials": 100,
         "num_failures_list": [3],
-        "confidences_list": [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)],
-        "redundancy_list": ["all_AND", "all_OR", "AND_then_OR", "OR_then_AND"],
-        "c_query_list": [0.08, 0.16, 0.32, 0.64],
+        "confidences_list": [(1.0, 0.1)],
+        "redundancy_list": ["all_AND"],
+        "c_query_list": [0.32],
+        "expert_query_confidence_list": [1.0, 0.8, 0.6, 0.4],
         "query_cost_noise_width_fraction": 0.0,
     }
+
+
+    # CONDITIONAL ACCEPTANCE CONFIGURATIONS (same as original paper, but with a new baseline.)
+    # Combining the old grid into one, hopefully this is the best idea.
+    # Running without any noise in the query cost.
+    # config = {
+    #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
+    #     "num_trials": 100,
+    #     "num_failures_list": [3],
+    #     "confidences_list": [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)],
+    #     "redundancy_list": ["all_AND", "all_OR", "AND_then_OR", "OR_then_AND"],
+    #     "c_query_list": [0.08, 0.16, 0.32, 0.64],
+    #     "query_cost_noise_width_fraction": 0.0,
+    # }
 
     # REBUTTAL CONFIGURATIONS:
     # 11/10/2025: increasing query cost noise width fraction to 0.2, then 0.4, 0.6.
@@ -1158,15 +1171,15 @@ def main(variant: str) -> None:
     # exp_mixed_failure_population(variant)
 
     # Noisy-experts test: we want to try c_expert = {1, 0.8, 0.6, 0.4}.
-    config = {
-        "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
-        "num_trials": 100,
-        "num_failures_list": [3],
-        "confidences_list": [(1.0, 0.1)],
-        "redundancy_list": ["all_AND"],
-        "c_query_list": [0.32],
-        "expert_query_confidence_list": [1.0, 0.8, 0.6, 0.4],
-    }
+    # config = {
+    #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
+    #     "num_trials": 100,
+    #     "num_failures_list": [3],
+    #     "confidences_list": [(1.0, 0.1)],
+    #     "redundancy_list": ["all_AND"],
+    #     "c_query_list": [0.32],
+    #     "expert_query_confidence_list": [1.0, 0.8, 0.6, 0.4],
+    # }
 
     # Run the FULL grid-search experiment
     # (4 variant x 4 failure counts x 4 confidence counts x
