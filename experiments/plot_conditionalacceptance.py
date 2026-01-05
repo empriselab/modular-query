@@ -43,6 +43,8 @@ XLABEL_FONTSIZE = 20
 MARKER_SIZE = 8
 DEFAULT_ALPHA = 1.0
 
+module_selector_order = ["Never Query", "Graph Query","Brute Force",  "Binary Tree Query", "Confidence Query", "MIP", "Always Query"]
+
 STRATEGY_COLORS = {
     "Never Query": {
         "color": "gray",
@@ -59,7 +61,7 @@ STRATEGY_COLORS = {
         "linestyle": ":",
         "marker": "o",
         "linewidth": 2,
-        "markersize": 16,
+        "markersize": 12,
         "alpha": 0.25,
     },
     "Graph Query": {
@@ -68,8 +70,8 @@ STRATEGY_COLORS = {
         "linestyle": "-",
         "marker": "s",
         "linewidth": 2,
-        "markersize": MARKER_SIZE,
-        "alpha": 0.5,
+        "markersize": 16,
+        "alpha": 0.55,
     },
     "Binary Tree Query": {
         "color": "gray",
@@ -204,23 +206,24 @@ def individual_plot(df: pd.DataFrame, fixed_variables: dict, metric: str, \
             algorithm_data[algorithm].append(y_value)
     
     # Plot a line for each algorithm
-    for algorithm in algorithm_data.keys():
-        # Only add label to legend if we haven't seen this algorithm before
-        label = algorithm if algorithm not in legend_added else ""
-        style = STRATEGY_COLORS[algorithm]
-        x_positions = x_base + OFFSETS[algorithm]
-        ax.plot(
-            x_positions,
-            algorithm_data[algorithm],
-            label=label,
-            color=style["color"],
-            linestyle=style["linestyle"],
-            marker=style["marker"],
-            linewidth=style["linewidth"],
-            markersize=style["markersize"],
-            alpha=style["alpha"],
-        )
-        legend_added.add(algorithm)
+    for algorithm in module_selector_order:
+        if algorithm in algorithm_data.keys():
+            # Only add label to legend if we haven't seen this algorithm before
+            label = algorithm if algorithm not in legend_added else ""
+            style = STRATEGY_COLORS[algorithm]
+            x_positions = x_base + OFFSETS[algorithm]
+            ax.plot(
+                x_positions,
+                algorithm_data[algorithm],
+                label=label,
+                color=style["color"],
+                linestyle=style["linestyle"],
+                marker=style["marker"],
+                linewidth=style["linewidth"],
+                markersize=style["markersize"],
+                alpha=style["alpha"],
+            )
+            legend_added.add(algorithm)
 
     # # OLD BAR PLOT CODE.
     # for i, value in enumerate(order):
