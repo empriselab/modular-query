@@ -219,13 +219,12 @@ class GraphQueryStrategy(QueryStrategy):
         ]
         graphs: dict[int, nx.MultiDiGraph] = {}
         for i in range(len(modules_list)):
-            if modules_list[i] not in self.queried_modules:
-                graph = self.create_query_graph(
-                    module_graph,
-                    computed_confidences,
-                    force_query_for_module=modules_list[i],
-                )
-                graphs[i] = graph
+            graph = self.create_query_graph(
+                module_graph,
+                computed_confidences,
+                force_query_for_module=modules_list[i],
+            )
+            graphs[i] = graph
 
         # Step 2: Run A* in the graphs to return the best path.
         # Edge case: if modules_list is empty, then we return None.
