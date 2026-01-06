@@ -368,7 +368,7 @@ def individual_plot_fixed_moduleselector(df: pd.DataFrame, fixed_variables: dict
     common_add_arrows(ax)
     ax.set_xlabel(XLABELS[column], fontsize=XLABEL_FONTSIZE, fontfamily='serif', labelpad=10)
     ax.xaxis.set_label_coords(0.5, -0.25)  # x=0.5 means center, y=-0.15 means 15% down from the bottom
-    if metric == "total_timesteps":
+    if metric == "total_timesteps" or metric == "total_failed_attempts":
         ax.yaxis.set_major_locator(MaxNLocator(integer=True))
 
 def individual_plot_num_modules(df: pd.DataFrame, fixed_variables: dict, metric: str, \
@@ -456,7 +456,7 @@ def individual_plot_num_modules(df: pd.DataFrame, fixed_variables: dict, metric:
     common_add_arrows(ax, xaxis_position=-0.005)
 
 def individual_plot_num_modules_fixed_moduleselector(df: pd.DataFrame, fixed_variables: dict, metric: str, \
-    column: str, order_dict: dict, ax: plt.Axes, graph_size: int, module_selector: str) -> None:
+    column: str, order_dict: dict, ax: plt.Axes, graph_size: int, module_selector: str, ymax=None) -> None:
     """
     Makes an individual plot for the number of modules, for a fixed module selector.
     """
@@ -534,14 +534,19 @@ def individual_plot_num_modules_fixed_moduleselector(df: pd.DataFrame, fixed_var
         max_graph_sizes = 5
         ax.set_xticks(np.arange(max_graph_sizes))
         ax.set_xticklabels(graph_sizes[:max_graph_sizes], size=TICK_FONTSIZE[column])
-        # Hardcoding the y-max to be 0.06.
-        ax.set_ylim(0, 0.06)
+        # Hardcoding the y-max to be 0.06, if no y-max is provided.
+        if ymax is not None:
+            ax.set_ylim(0, ymax)
         # Explicitly enable x-axis tick labels for all subplots (not just bottom)
         ax.tick_params(labelbottom=True)
 
         common_add_arrows(ax)
         ax.set_xlabel(XLABELS[column], fontsize=XLABEL_FONTSIZE, fontfamily='serif', labelpad=10)
         ax.xaxis.set_label_coords(0.5, -0.25)  # x=0.5 means center, y=-0.2 means 20% down from the bottom
+
+        if metric == "total_timesteps" or metric == "total_failed_attempts":
+            ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+
 
 def unified_plot_conditionalacceptance(output_dir: str) -> None:
     """Unified plot that puts multiple plots (for different independent variables) into a single matplotlib figure.
@@ -630,7 +635,7 @@ def unified_plot_conditionalacceptance(output_dir: str) -> None:
             elif row == "querying_algorithms":
                 df = df_original
                 if column == "num_modules":
-                    individual_plot_num_modules_fixed_moduleselector(df, fixed_variables, metric, column, order_dict, ax, graph_size, fixed_module_selector)
+                    individual_plot_num_modules_fixed_moduleselector(df, fixed_variables, metric, column, order_dict, ax, graph_size, fixed_module_selector, ymax=0.06)
                 elif column == "confidence_2":
                     individual_plot(df, fixed_variables, metric, column, order_dict[column], ax, graph_size, add_x_label=True, title=r"High Variance ($\beta$ = 0.6)")
                 else:   
