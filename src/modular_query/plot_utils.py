@@ -37,7 +37,7 @@ TITLES = {
 
 YLABELS = {
     "query_cost": "Cost",
-    "query_cost_total": "Cost",
+    "query_cost_total": "Query Cost",
     "task_cost": "Cost",
     "total_cost": "Cost",
     "proxy_obj_1": "Cost",

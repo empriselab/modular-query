@@ -262,7 +262,7 @@ def individual_plot(df: pd.DataFrame, fixed_variables: dict, metric: str, \
     if title:
         ax.set_title(title, fontsize=20, fontfamily='serif', fontweight='bold')
     ax.set_ylabel(YLABELS[metric] if metric != "total_correct" else "Total Incorrect", fontsize=18, fontfamily='serif')
-    if metric == "total_timesteps":
+    if metric == "total_timesteps" or metric == "total_failed_attempts":
         ax.yaxis.set_major_locator(MaxNLocator(integer=True))
     # just for confidence_2, set the y-tick to start from 0.4 with top at 0.9.
     if column == "confidence_2":
@@ -454,6 +454,9 @@ def individual_plot_num_modules(df: pd.DataFrame, fixed_variables: dict, metric:
     ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily='serif')
 
     common_add_arrows(ax, xaxis_position=-0.005)
+
+    if metric == "total_timesteps" or metric == "total_failed_attempts":
+        ax.yaxis.set_major_locator(MaxNLocator(integer=True))
 
 def individual_plot_num_modules_fixed_moduleselector(df: pd.DataFrame, fixed_variables: dict, metric: str, \
     column: str, order_dict: dict, ax: plt.Axes, graph_size: int, module_selector: str, ymax=None) -> None:

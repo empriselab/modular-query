@@ -29,7 +29,7 @@ import pandas as pd
 from plot_conditionalacceptance import individual_plot, individual_plot_num_modules, individual_plot_fixed_moduleselector, individual_plot_num_modules_fixed_moduleselector
 
 # Adapted from plot_conditionalacceptance.py.
-def plot_appendix_ivs(output_dir: str, iv: str) -> None:
+def plot_appendix_ivs(output_dir: str, iv: str, plot_index: int) -> None:
     """Plot appendix IVs for all 5 IVs.
     """
     # Constants:
@@ -186,7 +186,7 @@ def plot_appendix_ivs(output_dir: str, iv: str) -> None:
     )
     
     plt.savefig(
-        f"{output_dir}/plot_appendix_ivs_{iv}.pdf",
+        f"{output_dir}/plot_appendix_ivs_{plot_index+1:02d}_{iv}.pdf",
         dpi=300,
         bbox_inches="tight",
     )
@@ -199,6 +199,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     ivs = ["num_modules", "dependency_structure", "confidence", "c_query", "expert_query_confidence"]
-    for iv in ivs:
+    for i,iv in enumerate(ivs):
         print(f"Plotting appendix plot for IV: {iv}...")
-        plot_appendix_ivs(args.output_dir, iv)
+        plot_appendix_ivs(args.output_dir, iv, i)
