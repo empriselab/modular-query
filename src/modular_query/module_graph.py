@@ -74,6 +74,10 @@ class ModuleGraph:
         self.expert_value_rng = expert_value_rng \
             if expert_value_rng is not None else np.random.default_rng()
 
+    def reset_expert_value_rng(self, expert_value_rng: np.random.Generator) -> None:
+        """Reset the expert value rng."""
+        self.expert_value_rng = expert_value_rng
+
     def get_modules(self) -> set[Module]:
         """Get all modules in the graph."""
         return set(self.module_to_parents)

@@ -379,6 +379,8 @@ def run_experiment(
             for strategy_name, strategy in strategies.items():
                 # Reset strategy's internal state.
                 strategy.reset()
+                # Reset the expert value rng for the module graph.
+                module_graph.reset_expert_value_rng(np.random.default_rng(seed))
 
                 # Set the strategy's and_modules and or_modules.
                 if dependency_structure == "all_AND":
