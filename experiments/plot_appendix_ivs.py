@@ -61,8 +61,15 @@ def plot_appendix_ivs(output_dir: str, iv: str) -> None:
     rows = ["module_selectors", "querying_algorithms"]
     columns = metrics
     fig, axes = plt.subplots(nrows=len(rows), ncols=len(columns), figsize=UNIFIED_PLOT_FIGSIZE)
-    data_locations = {"module_selectors": "experiments/results/20251208_hricondaccept/", \
-        "querying_algorithms": "experiments/results/20250929_fixbruteforce_varyconfidences/" if iv == "confidences" else "experiments/results/20250929_fixbruteforce/"}
+    if iv in ["num_modules", "dependency_structure", "c_query"]:
+        data_locations = {"module_selectors": "experiments/results/20251208_hricondaccept/", \
+        "querying_algorithms": "experiments/results/20250929_fixbruteforce/"}
+    elif iv == "confidence":
+        data_locations = {"module_selectors": "experiments/results/20251208_hricondaccept/", \
+        "querying_algorithms": "experiments/results/20250929_fixbruteforce_varyconfidences/"}
+    elif iv == "expert_query_confidence":
+        data_locations = {"module_selectors": "experiments/results/20260105_noisyexpertfinal/", \
+        "querying_algorithms": "experiments/results/20260105_noisyexpertfinal/"}
 
 
     # orders for IVs
@@ -70,6 +77,7 @@ def plot_appendix_ivs(output_dir: str, iv: str) -> None:
     confidence_order = [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)]
     query_cost_order = [0.08, 0.16, 0.32, 0.64]
     variant_order = ["greedy", "balanced", "conservative", "balanced-2"]
+    expert_query_confidence_order = [1.0, 0.8, 0.6, 0.4]
 
     order_dict = {}
     order_dict["dependency_structure"] = graph_structure_order
@@ -77,6 +85,7 @@ def plot_appendix_ivs(output_dir: str, iv: str) -> None:
     order_dict["c_query"] = query_cost_order
     order_dict["num_modules"] = None
     order_dict["variant"] = variant_order
+    order_dict["expert_query_confidence"] = expert_query_confidence_order
 
 
     for i, row in enumerate(rows):
@@ -189,8 +198,7 @@ if __name__ == "__main__":
     parser.add_argument("--output_dir", type=str, default="experiments/results", required=True)
     args = parser.parse_args()
 
-    # ivs = ["num_modules", "graph_structures", "confidences", "query_costs", "expert_confidence"]
-    ivs = ["num_modules"]
+    ivs = ["num_modules", "dependency_structure", "confidence", "c_query", "expert_query_confidence"]
     for iv in ivs:
         print(f"Plotting appendix plot for IV: {iv}...")
         plot_appendix_ivs(args.output_dir, iv)
