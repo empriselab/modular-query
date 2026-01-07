@@ -38,7 +38,8 @@ UNIFIED_PLOT_FIGSIZE = (27.5, 8)
 XTICK_OFFSET = 0.5
 TICK_FONTSIZE = {"num_modules":20, "dependency_structure":12, "confidence":18, "c_query":20, "confidence_2":12, "confidence_finer":12, "expert_query_confidence":20}
 LEGEND_FONT_SIZE = 16
-XLABELS = {"num_modules": "Number of Modules", "dependency_structure": "Redundancy", "confidence": "Confidences", "c_query": "Workloads", "confidence_2": "Confidences", "expert_query_confidence": "Expert Confidence"}
+XLABELS = {"num_modules": "Number of Modules", "dependency_structure": "Redundancy", "confidence": "Confidences", "c_query": "Workloads", "confidence_2": "Confidences", "expert_query_confidence": "Expert Confidence",
+"confidence_finer": "Confidences"}
 XLABEL_FONTSIZE = 20
 MARKER_SIZE = 8
 DEFAULT_ALPHA = 1.0

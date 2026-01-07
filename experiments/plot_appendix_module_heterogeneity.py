@@ -32,7 +32,7 @@ def plot_appendix_module_heterogeneity(output_dir: str) -> None:
     """Plot appendix module heterogeneity plot.
     """
     # Constants:
-    UNIFIED_PLOT_FIGSIZE = (27.5, 8)
+    UNIFIED_PLOT_FIGSIZE = (27.5, 12)
     LEGEND_FONT_SIZE = 16
 
     # Set the fixed variables.
@@ -99,10 +99,14 @@ def plot_appendix_module_heterogeneity(output_dir: str) -> None:
             df_original = df_original.drop(columns=["correct_confidence", "incorrect_confidence"])
 
             df = df_original[df_original["variant"] == fixed_variant]
-            individual_plot(df, fixed_variables, metric, column, order_dict[column], ax, graph_size)
+
+            add_x_label = (row == "beta_0.6")
+
+            individual_plot(df, fixed_variables, metric, column, order_dict[column], ax, graph_size, add_x_label=add_x_label)
 
     for j in range(axes.shape[1]):
         fig.align_ylabels(axes[:, j])
+
 
     # Step 6. Add legend - split into two groups
     # Collect handles and labels separately for each row
@@ -132,6 +136,24 @@ def plot_appendix_module_heterogeneity(output_dir: str) -> None:
                 querying_algorithm_labels.append(label)
                 seen_querying_algorithm_labels.add(label)
         
+    # Position overall y-labels for each row (beta values)
+    row_labels = ["β = 0.2", "β = 0.4", "β = 0.6"]  # Adjust as needed
+
+    for i, label in enumerate(row_labels):
+        # Get the y-position from the middle subplot of each row (or average of leftmost subplots)
+        # Use the y-center of each row's leftmost subplot
+        bbox = axes[i, 0].get_position()
+        y_center = (bbox.y0 + bbox.y1) / 2
+        
+        # Position label on the left edge of the figure (x=0.01 or similar)
+        fig.text(-0.02, y_center, label, 
+                transform=fig.transFigure,
+                fontfamily='serif',
+                fontsize=24,  # Adjust size as needed
+                fontweight='bold',
+                verticalalignment='center',
+                horizontalalignment='left',
+                rotation=90)  # Rotate if you want vertical text
 
 
     plt.tight_layout()
@@ -154,6 +176,33 @@ def plot_appendix_module_heterogeneity(output_dir: str) -> None:
         fontsize=LEGEND_FONT_SIZE,
         title_fontsize=LEGEND_FONT_SIZE
     )
+
+    # Add dashed vertical separator between columns 2 and 3 (after layout adjustments)
+    # Calculate the midpoint between the right edge of column 2 and left edge of column 3
+    bbox_2nd_top = axes[0, 1].get_position()  # Top row, 2nd column
+    bbox_3rd_top = axes[0, 2].get_position()  # Top row, 3rd column
+    bbox_3rd_bottom = axes[2, 2].get_position()  # Bottom row, 3rd column
+    separator_x = (bbox_2nd_top.x1 + bbox_3rd_top.x0) / 2 - 0.005  # Midpoint between columns
+    
+    # Draw a single dashed vertical line spanning both rows
+    fig.add_artist(plt.Line2D(
+        [separator_x, separator_x],
+        [bbox_3rd_bottom.y0, bbox_3rd_top.y1],  # From bottom of 3rd row to top of 3rd row
+        color='gray',
+        linestyle='--',
+        linewidth=1.5,
+        transform=fig.transFigure,
+        clip_on=False
+    ))
+
+    # Add subplot labels (a) and (b)
+    axes[0, 0].text(-0.15, 1.25, '(a)', transform=axes[0, 0].transAxes, 
+                    fontsize=18, fontweight='bold', verticalalignment='top',
+                    horizontalalignment='left', fontfamily='serif')
+    axes[0, 2].text(-0.15, 1.25, '(b)', transform=axes[0, 2].transAxes,
+                    fontsize=18, fontweight='bold', verticalalignment='top',
+                    horizontalalignment='left', fontfamily='serif')    # Step 3. Save the figure.
+
         
     plt.savefig(
         f"{output_dir}/plot_appendix_module_heterogeneity.pdf",
