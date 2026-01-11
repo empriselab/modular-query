@@ -31,6 +31,7 @@ from modular_query.query_strategies.confidence_query import ConfidenceQueryStrat
 from modular_query.query_strategies.graph_query import GraphQueryStrategy
 from modular_query.query_strategies.mip import MIPQueryStrategy
 from modular_query.query_strategies.never_query import NeverQueryStrategy
+from modular_query.query_strategies.topo_query import TopoQueryStrategy
 from modular_query.utils import (
     print_and_log,
     product_of_confidences,
@@ -214,6 +215,10 @@ def run_experiment(
             incorrect_answer_cost,
         ),
         "Confidence Query": ConfidenceQueryStrategy(
+            correct_answer_cost,
+            incorrect_answer_cost,
+        ),
+        "Topo Query": TopoQueryStrategy(
             correct_answer_cost,
             incorrect_answer_cost,
         ),
