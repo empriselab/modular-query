@@ -408,8 +408,8 @@ def individual_plot_num_modules(df: pd.DataFrame, fixed_variables: dict, metric:
                 # Use mean for total_correct metric if requested,
                 # otherwise use median
                 if use_mean_for_total_correct and metric == "total_correct":
-                    median = np.mean(result_array)
-                    std = np.std(result_array)
+                    median = np.mean(1-result_array)
+                    std = np.std(1-result_array)
                     upper_quartile = median + std
                     lower_quartile = median - std
                 else:
@@ -452,7 +452,7 @@ def individual_plot_num_modules(df: pd.DataFrame, fixed_variables: dict, metric:
     # Explicitly enable x-axis tick labels for all subplots (not just bottom)
     ax.tick_params(labelbottom=True)
     ax.tick_params(labelsize=TICK_FONTSIZE[column], axis='x')
-    ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily='serif')
+    ax.set_ylabel(YLABELS[metric] if metric != "total_correct" else "Total Incorrect", fontsize=18, fontfamily='serif')
 
     common_add_arrows(ax, xaxis_position=-0.005)
 
@@ -491,8 +491,8 @@ def individual_plot_num_modules_fixed_moduleselector(df: pd.DataFrame, fixed_var
                 # Use mean for total_correct metric if requested,
                 # otherwise use median
                 if use_mean_for_total_correct and metric == "total_correct":
-                    median = np.mean(result_array)
-                    std = np.std(result_array)
+                    median = np.mean(1-result_array)
+                    std = np.std(1-result_array)
                     upper_quartile = median + std
                     lower_quartile = median - std
                 else:
@@ -531,7 +531,7 @@ def individual_plot_num_modules_fixed_moduleselector(df: pd.DataFrame, fixed_var
             )
         # ax.set_title(TITLES[metric])
         # ax.set_xlabel("Number of Graph Nodes")
-        ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily='serif')        # ax.grid(True, linestyle="--", alpha=0.7)
+        ax.set_ylabel(YLABELS[metric] if metric != "total_correct" else "Total Incorrect", fontsize=18, fontfamily='serif')        # ax.grid(True, linestyle="--", alpha=0.7)
         # ax.grid(True, linestyle="--", alpha=0.7)
         # Show x-axis values as integers.
         # NOTE: totally hardcoded to only show the first 5 graph sizes (the rest don't have data)
