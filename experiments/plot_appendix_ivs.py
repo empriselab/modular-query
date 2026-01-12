@@ -62,21 +62,27 @@ def plot_appendix_ivs(output_dir: str, iv: str, plot_index: int) -> None:
     columns = metrics
     fig, axes = plt.subplots(nrows=len(rows), ncols=len(columns), figsize=UNIFIED_PLOT_FIGSIZE)
     if iv in ["num_modules", "dependency_structure", "c_query"]:
-        data_locations = {"module_selectors": "experiments/results/20251208_hricondaccept/", \
-        "querying_algorithms": "experiments/results/20250929_fixbruteforce/"}
+        # data_locations = {"module_selectors": "experiments/results/20251208_hricondaccept/", \
+        # "querying_algorithms": "experiments/results/20250929_fixbruteforce/"}
+        # Switch to using 20260111_newbaselines.
+        data_locations = {"module_selectors": "experiments/results/20260111_newbaselines/", \
+        "querying_algorithms": "experiments/results/20260111_newbaselines/"}
     elif iv == "confidence":
-        data_locations = {"module_selectors": "experiments/results/20251208_hricondaccept/", \
-        "querying_algorithms": "experiments/results/20250929_fixbruteforce_varyconfidences/"}
+        # data_locations = {"module_selectors": "experiments/results/20251208_hricondaccept/", \
+        # "querying_algorithms": "experiments/results/20250929_fixbruteforce_varyconfidences/"}
+        # Switch to using 20260111_newbaselines.
+        data_locations = {"module_selectors": "experiments/results/20260111_newbaselines/", \
+        "querying_algorithms": "experiments/results/20260111_newbaselines/"}
     elif iv == "expert_query_confidence":
         data_locations = {"module_selectors": "experiments/results/20260105_noisyexpertfinal/", \
         "querying_algorithms": "experiments/results/20260105_noisyexpertfinal/"}
-
+        # TODO once these experiments are done, switch to using 20260111_newbaselines.
 
     # orders for IVs
     graph_structure_order = ["all_AND", "all_OR", "AND_then_OR", "OR_then_AND"]
     confidence_order = [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)]
     query_cost_order = [0.08, 0.16, 0.32, 0.64]
-    variant_order = ["greedy", "balanced", "conservative", "balanced-2"]
+    variant_order = ["greedy", "balanced", "conservative", "balanced-2", "query-all"]
     expert_query_confidence_order = [1.0, 0.8, 0.6, 0.4]
 
     order_dict = {}
