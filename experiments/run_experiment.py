@@ -31,6 +31,7 @@ from modular_query.query_strategies.confidence_query import ConfidenceQueryStrat
 from modular_query.query_strategies.graph_query import GraphQueryStrategy
 from modular_query.query_strategies.mip import MIPQueryStrategy
 from modular_query.query_strategies.never_query import NeverQueryStrategy
+from modular_query.query_strategies.topo_query import TopoQueryStrategy
 from modular_query.utils import (
     print_and_log,
     product_of_confidences,
@@ -189,7 +190,7 @@ def run_experiment(
         pre_make_query_termination_condition = (
             DummyTerminationCondition()
         )  # No longer needed, because checking is done in get_action()
-    elif variant in ("greedy", "balanced"):
+    elif variant in ("greedy", "balanced", "query-all"):
         # Default case - these won't be used for other variants
         loop_termination_condition = DummyTerminationCondition()
         pre_make_query_termination_condition = DummyTerminationCondition()
@@ -215,6 +216,10 @@ def run_experiment(
             incorrect_answer_cost,
         ),
         "Confidence Query": ConfidenceQueryStrategy(
+            correct_answer_cost,
+            incorrect_answer_cost,
+        ),
+        "Topo Query": TopoQueryStrategy(
             correct_answer_cost,
             incorrect_answer_cost,
         ),
@@ -487,7 +492,7 @@ def run_experiment(
                     # Conservative runs this loop multiple times
                     # (until we decide not to query.)
                     start_time = time.perf_counter()
-                    if variant in ("conservative", "balanced-2"):
+                    if variant in ("conservative", "balanced-2", "query-all"):
                         while (
                             queried
                             and queried_module is not None
@@ -1276,7 +1281,7 @@ def main(variant: str) -> None:
     #     "c_query_list": [0.08],
     # }
     if variant == "all-variants":
-        for variant_to_use in ["balanced", "greedy", "conservative", "balanced-2"]:
+        for variant_to_use in ["balanced", "greedy", "conservative", "balanced-2", "query-all"]:
             exp_grid_search_parallel(variant_to_use, config)
     else:
         exp_grid_search_parallel(variant, config)
@@ -1288,7 +1293,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--variant",
         type=str,
-        choices=["balanced", "greedy", "conservative", "balanced-2", "all-variants"],
+        choices=["balanced", "greedy", "conservative", "balanced-2", "query-all", "all-variants"],
         required=True,
     )
     args = parser.parse_args()
