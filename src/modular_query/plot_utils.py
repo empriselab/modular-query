@@ -57,6 +57,7 @@ VARIANT_NAMES = {
     "balanced": "Query-Then-Execute",
     "conservative": "Query-Until-Confident",
     "balanced-2": "Query-Until-Confident-Workload-Aware",
+    "query-all": "Query-For-All",
 }
 
 # Define distinct line styles, markers, and colors for each strategy

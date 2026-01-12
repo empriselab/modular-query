@@ -44,7 +44,7 @@ XLABEL_FONTSIZE = 20
 MARKER_SIZE = 8
 DEFAULT_ALPHA = 1.0
 
-module_selector_order = ["Never Query", "Graph Query","Brute Force",  "Binary Tree Query", "Confidence Query", "MIP", "Always Query"]
+module_selector_order = ["Never Query", "Graph Query","Brute Force",  "Binary Tree Query", "Confidence Query", "Topo Query","MIP", "Always Query"]
 
 STRATEGY_COLORS = {
     "Never Query": {
@@ -52,7 +52,7 @@ STRATEGY_COLORS = {
         "linestyle": "--",
         "marker": "x",
         "linewidth": 2,
-        "markersize": MARKER_SIZE,
+        "markersize": 10,
         "alpha": 0.5,
     },
     "Brute Force": {
@@ -90,6 +90,14 @@ STRATEGY_COLORS = {
         "linewidth": 2,
         "markersize": MARKER_SIZE,
         "alpha": DEFAULT_ALPHA,
+    },
+    "Topo Query": {
+        "color": "gray",
+        "linestyle": "-",
+        "marker": "D",
+        "linewidth": 2,
+        "markersize": MARKER_SIZE,
+        "alpha": 0.75,
     },
         "MIP": {
         "color": "gray",
@@ -143,6 +151,15 @@ VARIANT_STYLES = {
         "marker": "^",
         "linewidth": 2,
         "name": "Query-Until-Confident-Workload-Aware",
+        "markersize": MARKER_SIZE,
+        "alpha": DEFAULT_ALPHA,
+    },
+    "query-all": {
+        "color": "gray",
+        "linestyle": "-",
+        "marker": "D",
+        "linewidth": 2,
+        "name": "Query-For-All",
         "markersize": MARKER_SIZE,
         "alpha": DEFAULT_ALPHA,
     },
@@ -586,9 +603,12 @@ def unified_plot_conditionalacceptance(output_dir: str) -> None:
     rows = ["module_selectors", "querying_algorithms"]
     columns = ["num_modules","dependency_structure", "confidence", "c_query", "confidence_2"]
     fig, axes = plt.subplots(nrows=len(rows), ncols=len(columns), figsize=UNIFIED_PLOT_FIGSIZE)
-    data_locations = {"module_selectors": {col: "experiments/results/20251208_hricondaccept/" for col in columns}, \
-        "querying_algorithms": {col: "experiments/results/20250929_fixbruteforce/" for col in columns}}
-    data_locations["querying_algorithms"]["confidence"] = "experiments/results/20250929_fixbruteforce_varyconfidences/"
+    # data_locations = {"module_selectors": {col: "experiments/results/20251208_hricondaccept/" for col in columns}, \
+    #     "querying_algorithms": {col: "experiments/results/20250929_fixbruteforce/" for col in columns}}
+    # data_locations["querying_algorithms"]["confidence"] = "experiments/results/20250929_fixbruteforce_varyconfidences/"
+    # Switch to using 20260111_newbaselines for all of the above commented-out data locations.
+    data_locations = {"module_selectors": {col: "experiments/results/20260111_newbaselines/" for col in columns}, \
+        "querying_algorithms": {col: "experiments/results/20260111_newbaselines/" for col in columns}}    
 
     data_locations["module_selectors"]["confidence_2"] = "experiments/results/20251110_finerconfidences_exp2/"
     # this one is tricky because it's actually not showing querying algorithms; it's showing module selectors.
@@ -602,7 +622,7 @@ def unified_plot_conditionalacceptance(output_dir: str) -> None:
     confidence_order = [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)]
     confidence_2_order = [(0.8, 0.3), (0.75, 0.35), (0.7, 0.4), (0.65, 0.45), (0.6, 0.5)]
     query_cost_order = [0.08, 0.16, 0.32, 0.64]
-    variant_order = ["greedy", "balanced", "conservative", "balanced-2"]
+    variant_order = ["greedy", "balanced", "conservative", "balanced-2", "query-all"]
 
     order_dict = {}
     order_dict["dependency_structure"] = graph_structure_order
