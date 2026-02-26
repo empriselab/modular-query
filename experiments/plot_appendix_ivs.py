@@ -74,9 +74,10 @@ def plot_appendix_ivs(output_dir: str, iv: str, plot_index: int) -> None:
         data_locations = {"module_selectors": "experiments/results/20260111_newbaselines/", \
         "querying_algorithms": "experiments/results/20260111_newbaselines/"}
     elif iv == "expert_query_confidence":
-        data_locations = {"module_selectors": "experiments/results/20260105_noisyexpertfinal/", \
-        "querying_algorithms": "experiments/results/20260105_noisyexpertfinal/"}
-        # TODO once these experiments are done, switch to using 20260111_newbaselines.
+        # data_locations = {"module_selectors": "experiments/results/20260105_noisyexpertfinal/", \
+        # "querying_algorithms": "experiments/results/20260105_noisyexpertfinal/"}
+        data_locations = {"module_selectors": "experiments/results/20260112_noisyexpert_newbaselines/", \
+        "querying_algorithms": "experiments/results/20260112_noisyexpert_newbaselines/"}
 
     # orders for IVs
     graph_structure_order = ["all_AND", "all_OR", "AND_then_OR", "OR_then_AND"]

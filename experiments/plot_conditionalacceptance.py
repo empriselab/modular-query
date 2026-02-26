@@ -38,7 +38,7 @@ UNIFIED_PLOT_FIGSIZE = (27.5, 8)
 XTICK_OFFSET = 0.5
 TICK_FONTSIZE = {"num_modules":20, "dependency_structure":12, "confidence":18, "c_query":20, "confidence_2":12, "confidence_finer":12, "expert_query_confidence":20}
 LEGEND_FONT_SIZE = 16
-XLABELS = {"num_modules": "Number of Modules", "dependency_structure": "Redundancy", "confidence": "Confidences", "c_query": "Workloads", "confidence_2": "Confidences", "expert_query_confidence": "Expert Confidence",
+XLABELS = {"num_modules": "Number of Modules", "dependency_structure": "Redundancy", "confidence": "Confidences", "c_query": "Query Costs", "confidence_2": "Confidences", "expert_query_confidence": "Expert Confidence",
 "confidence_finer": "Confidences"}
 XLABEL_FONTSIZE = 20
 MARKER_SIZE = 8
@@ -279,7 +279,7 @@ def individual_plot(df: pd.DataFrame, fixed_variables: dict, metric: str, \
         ax.xaxis.set_label_coords(0.5, -0.25)  # x=0.5 means center, y=-0.15 means 15% down from the bottom
     if title:
         ax.set_title(title, fontsize=20, fontfamily='serif', fontweight='bold')
-    ax.set_ylabel(YLABELS[metric] if metric != "total_correct" else "Total Incorrect", fontsize=18, fontfamily='serif')
+    ax.set_ylabel(YLABELS[metric] if metric != "total_correct" else "Task Cost", fontsize=18, fontfamily='serif')
     if metric == "total_timesteps" or metric == "total_failed_attempts":
         ax.yaxis.set_major_locator(MaxNLocator(integer=True))
     # just for confidence_2, set the y-tick to start from 0.4 with top at 0.9.
@@ -382,7 +382,7 @@ def individual_plot_fixed_moduleselector(df: pd.DataFrame, fixed_variables: dict
     else:
         order_to_use = order_dict[column]
     ax.set_xticklabels(order_to_use, fontsize=TICK_FONTSIZE[column])
-    ax.set_ylabel(YLABELS[metric] if metric != "total_correct" else "Total Incorrect", fontsize=18, fontfamily='serif')
+    ax.set_ylabel(YLABELS[metric] if metric != "total_correct" else "Task Cost", fontsize=18, fontfamily='serif')
     common_add_arrows(ax)
     ax.set_xlabel(XLABELS[column], fontsize=XLABEL_FONTSIZE, fontfamily='serif', labelpad=10)
     ax.xaxis.set_label_coords(0.5, -0.25)  # x=0.5 means center, y=-0.15 means 15% down from the bottom
@@ -469,7 +469,7 @@ def individual_plot_num_modules(df: pd.DataFrame, fixed_variables: dict, metric:
     # Explicitly enable x-axis tick labels for all subplots (not just bottom)
     ax.tick_params(labelbottom=True)
     ax.tick_params(labelsize=TICK_FONTSIZE[column], axis='x')
-    ax.set_ylabel(YLABELS[metric] if metric != "total_correct" else "Total Incorrect", fontsize=18, fontfamily='serif')
+    ax.set_ylabel(YLABELS[metric] if metric != "total_correct" else "Task Cost", fontsize=18, fontfamily='serif')
 
     common_add_arrows(ax, xaxis_position=-0.005)
 
@@ -548,7 +548,7 @@ def individual_plot_num_modules_fixed_moduleselector(df: pd.DataFrame, fixed_var
             )
         # ax.set_title(TITLES[metric])
         # ax.set_xlabel("Number of Graph Nodes")
-        ax.set_ylabel(YLABELS[metric] if metric != "total_correct" else "Total Incorrect", fontsize=18, fontfamily='serif')        # ax.grid(True, linestyle="--", alpha=0.7)
+        ax.set_ylabel(YLABELS[metric] if metric != "total_correct" else "Task Cost", fontsize=18, fontfamily='serif')        # ax.grid(True, linestyle="--", alpha=0.7)
         # ax.grid(True, linestyle="--", alpha=0.7)
         # Show x-axis values as integers.
         # NOTE: totally hardcoded to only show the first 5 graph sizes (the rest don't have data)
