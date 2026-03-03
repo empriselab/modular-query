@@ -21,6 +21,7 @@ import json
 import os
 import pickle as pkl
 from pathlib import Path
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import numpy as np
@@ -33,6 +34,8 @@ from modular_query.plot_utils import (
     common_add_arrows,
 )
 
+mpl.rcParams['pdf.fonttype'] = 42  # embed TrueType, not Type 3
+mpl.rcParams['ps.fonttype'] = 42   # embed TrueType, not Type 3
 # Constants:
 UNIFIED_PLOT_FIGSIZE = (27.5, 8)
 XTICK_OFFSET = 0.5
@@ -758,10 +761,16 @@ def unified_plot_conditionalacceptance(output_dir: str) -> None:
                     horizontalalignment='left', fontfamily='serif')    # Step 3. Save the figure.
     
     plt.savefig(
-        f"{output_dir}/plot_conditional_acceptance.pdf",
+        f"{output_dir}/plot_conditional_acceptance_fontfix.pdf",
         dpi=300,
         bbox_inches="tight",
     )
+    plt.savefig(
+        f"{output_dir}/plot_conditional_acceptance_fontfix.png",
+        dpi=300,
+        bbox_inches="tight",
+    )
+
     plt.close()
 
 
