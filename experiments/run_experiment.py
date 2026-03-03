@@ -726,8 +726,8 @@ def run_single_grid_search_experiment(
     Returns:
         Tuple of (run_id, results, config_to_save)
     """
-    (num_failures, confidence, redundancy, c_query) = combo
-    (correct_confidence, incorrect_confidence) = confidence
+    num_failures, confidence, redundancy, c_query = combo
+    correct_confidence, incorrect_confidence = confidence
 
     print_and_log(
         f"Running experiment with num_failures={num_failures},"
@@ -1002,8 +1002,8 @@ def exp_grid_search(variant: str, config: dict[str, Any]) -> None:
         config["c_query_list"],
     )
     for combo in combo_generator:
-        (num_failures, confidence, redundancy, c_query) = combo
-        (correct_confidence, incorrect_confidence) = confidence
+        num_failures, confidence, redundancy, c_query = combo
+        correct_confidence, incorrect_confidence = confidence
         print_and_log(
             f"Running experiment with num_failures={num_failures},"
             f"correct_confidence={correct_confidence},"

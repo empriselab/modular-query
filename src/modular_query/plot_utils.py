@@ -61,28 +61,28 @@ VARIANT_NAMES = {
 
 # Define distinct line styles, markers, and colors for each strategy
 STRATEGY_COLORS = {
-    "Always Query": {
-        "color": "blue",
-        "linestyle": "-",
-        "marker": "o",
-        "linewidth": 2,
-    },
-    "Graph Query": {
-        "color": "purple",
-        "linestyle": "-",
-        "marker": "x",
-        "linewidth": 2,
-    },
     "Never Query": {
-        "color": "red",
+        "color": "#b2e2e2",
         "linestyle": "--",
         "marker": "s",
         "linewidth": 2,
     },
     "Brute Force": {
-        "color": "green",
+        "color": "#006d2c",
         "linestyle": ":",
         "marker": "^",
+        "linewidth": 2,
+    },
+    "Graph Query": {
+        "color": "#2ca25f",
+        "linestyle": "-",
+        "marker": "x",
+        "linewidth": 2,
+    },
+    "Binary Tree Query": {
+        "color": "#66c2a4",
+        "linestyle": "-",
+        "marker": "v",
         "linewidth": 2,
     },
     "MIP": {
@@ -91,10 +91,10 @@ STRATEGY_COLORS = {
         "marker": "D",
         "linewidth": 2,
     },
-    "Binary Tree Query": {
-        "color": "cyan",
+    "Always Query": {
+        "color": "blue",
         "linestyle": "-",
-        "marker": "v",
+        "marker": "o",
         "linewidth": 2,
     },
 }
@@ -102,28 +102,32 @@ STRATEGY_COLORS = {
 # Variant-specific styles.
 VARIANT_STYLES = {
     "greedy": {
-        "color": "blue",
+        "color": "#fdcc8a",
         "linestyle": "-",
         "marker": "o",
         "linewidth": 2,
+        "name": "Execute-First",
     },
     "balanced": {
-        "color": "purple",
+        "color": "#fc8d59",
         "linestyle": "-",
         "marker": "x",
         "linewidth": 2,
+        "name": "Query-Then-Execute",
     },
     "conservative": {
-        "color": "red",
+        "color": "#e34a33",
         "linestyle": "--",
         "marker": "s",
         "linewidth": 2,
+        "name": "Query-Until-Confident",
     },
     "balanced-2": {
-        "color": "green",
+        "color": "#b30000",
         "linestyle": ":",
         "marker": "^",
         "linewidth": 2,
+        "name": "Query-Until-Confident-Workload-Aware",
     },
 }
 
@@ -136,6 +140,8 @@ def plot_results(
     save_dir: str = "experiments/results",
     title: str = "",
     use_mean_for_total_correct: bool = False,
+    tick_fontsize: int = 12,
+    figsize: tuple[int, int] = (24, 12),
 ) -> None:
     """Create plots showing the performance of different querying strategies.
 
@@ -168,47 +174,7 @@ def plot_results(
     # Set up figure
     num_cols = 3
     num_rows = (len(metrics) + num_cols - 1) // num_cols
-    fig, axes = plt.subplots(num_rows, num_cols, figsize=(24, 12), sharex=True)
-
-    # Define distinct line styles, markers, and colors for each strategy
-    styles = {
-        "Always Query": {
-            "color": "blue",
-            "linestyle": "-",
-            "marker": "o",
-            "linewidth": 2,
-        },
-        "Graph Query": {
-            "color": "purple",
-            "linestyle": "-",
-            "marker": "x",
-            "linewidth": 2,
-        },
-        "Never Query": {
-            "color": "red",
-            "linestyle": "--",
-            "marker": "s",
-            "linewidth": 2,
-        },
-        "Brute Force": {
-            "color": "green",
-            "linestyle": ":",
-            "marker": "^",
-            "linewidth": 2,
-        },
-        "MIP": {
-            "color": "orange",
-            "linestyle": "-.",
-            "marker": "D",
-            "linewidth": 2,
-        },
-        "Binary Tree Query": {
-            "color": "cyan",
-            "linestyle": "-",
-            "marker": "v",
-            "linewidth": 2,
-        },
-    }
+    fig, axes = plt.subplots(num_rows, num_cols, figsize=figsize, sharex=True)
 
     # Plot each metric
     lines = []
@@ -250,7 +216,7 @@ def plot_results(
                 lower_quartiles.append(lower_quartile)
 
             # Plot the data with strategy-specific styling
-            style = styles[strategy_name]
+            style = STRATEGY_COLORS[strategy_name]
             line = ax.plot(
                 graph_sizes[: len(medians)],
                 medians,
@@ -278,7 +244,11 @@ def plot_results(
                 labels.append(strategy_name)
 
         ax.set_title(TITLES[metric])
-        ax.set_xlabel("Number of Graph Nodes")
+        # ax.set_xlabel("Number of Graph Nodes")
+        # Explicitly enable x-axis tick labels for all subplots (not just bottom)
+        ax.tick_params(labelbottom=True)
+        # Set x-tick label size (not y-tick label size)
+        ax.tick_params(labelsize=tick_fontsize, axis="x")
         ax.set_ylabel(YLABELS[metric])
         ax.grid(True, linestyle="--", alpha=0.7)
 
@@ -416,9 +386,12 @@ def plot_results_across_graph_sizes(
     algorithm: str,
     pkl_files: list[str],
     data_dir: str,
+    output_dir: str,
     title: str,
     filename: str,
     use_mean_for_total_correct: bool = False,
+    tick_fontsize: int = 12,
+    figsize: tuple[int, int] = (24, 12),
 ) -> None:
     """Plots where x-axis is the number of modules in the graph, and subplots
     correspond to different metrics. Each variant is a separate line.
@@ -456,7 +429,7 @@ def plot_results_across_graph_sizes(
     # Create a figure and axis.
     num_cols = 3
     num_rows = (len(metrics) + num_cols - 1) // num_cols
-    fig, axes = plt.subplots(num_rows, num_cols, figsize=(24, 12), sharex=True)
+    fig, axes = plt.subplots(num_rows, num_cols, figsize=figsize, sharex=True)
 
     # Define distinct line styles, markers, and colors for each strategy
 
@@ -521,15 +494,14 @@ def plot_results_across_graph_sizes(
                     alpha=0.3,
                     color=VARIANT_STYLES[variant]["color"],
                 )
-            print(variant, medians)
             ax.set_title(TITLES[metric])
-            ax.set_xlabel("Number of Graph Nodes")
             ax.set_ylabel(YLABELS[metric])
             ax.grid(True, linestyle="--", alpha=0.7)
             # Show x-axis values as integers.
             ax.set_xticks(np.arange(len(graph_sizes)))
-            ax.set_xticklabels(graph_sizes)
-
+            ax.set_xticklabels(graph_sizes, size=tick_fontsize)
+            # Explicitly enable x-axis tick labels for all subplots (not just bottom)
+            ax.tick_params(labelbottom=True)
     # Turn off unused subplots.
     for j in range(i + 1, num_rows * num_cols):
         axes[j // num_cols][j % num_cols].axis("off")
@@ -556,11 +528,11 @@ def plot_results_across_graph_sizes(
     plt.subplots_adjust(bottom=0.15)
 
     # Create directory if it doesn't exist
-    Path(data_dir).mkdir(exist_ok=True)
+    Path(output_dir).mkdir(exist_ok=True)
 
     # Save the figure
     plt.savefig(
-        Path(data_dir) / filename,
+        Path(output_dir) / filename,
         dpi=300,
         bbox_inches="tight",
     )
