@@ -750,8 +750,8 @@ def run_single_grid_search_experiment(
     Returns:
         Tuple of (run_id, results, config_to_save)
     """
-    (num_failures, confidence, redundancy, c_query, expert_query_confidence) = combo
-    (correct_confidence, incorrect_confidence) = confidence
+    num_failures, confidence, redundancy, c_query, expert_query_confidence = combo
+    correct_confidence, incorrect_confidence = confidence
 
     print_and_log(
         f"Running experiment with num_failures={num_failures},"
@@ -1037,8 +1037,8 @@ def exp_grid_search(variant: str, config: dict[str, Any]) -> None:
         config["expert_query_confidence_list"],
     )
     for combo in combo_generator:
-        (num_failures, confidence, redundancy, c_query, expert_query_confidence) = combo
-        (correct_confidence, incorrect_confidence) = confidence
+        num_failures, confidence, redundancy, c_query, expert_query_confidence = combo
+        correct_confidence, incorrect_confidence = confidence
         print_and_log(
             f"Running experiment with num_failures={num_failures},"
             f"correct_confidence={correct_confidence},"
@@ -1095,7 +1095,6 @@ def exp_grid_search(variant: str, config: dict[str, Any]) -> None:
 def main(variant: str) -> None:
     """Run the experiment and generate plots."""
 
-
     # CAMERA-READY NOISY EXPERT CONFIGURATION:
     config = {
         "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
@@ -1108,10 +1107,7 @@ def main(variant: str) -> None:
         "query_cost_noise_width_fraction": 0.0,
     }
 
-
-    # CONDITIONAL ACCEPTANCE CONFIGURATIONS (same as original paper, but with a new baseline.)
-    # Combining the old grid into one, hopefully this is the best idea.
-    # Running without any noise in the query cost.
+    # # CONFIGURATION (Fig. 4, left).
     # config = {
     #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
     #     "num_trials": 100,
@@ -1122,8 +1118,7 @@ def main(variant: str) -> None:
     #     "query_cost_noise_width_fraction": 0.0,
     # }
 
-    # REBUTTAL CONFIGURATIONS:
-    # 11/10/2025: increasing query cost noise width fraction to 0.2, then 0.4, 0.6.
+    # CONFIGURATIONS (Fig. 4, right).
     # config = {
     #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
     #     "num_trials": 100,
@@ -1133,155 +1128,24 @@ def main(variant: str) -> None:
     #     "c_query_list": [0.32],
     #     "query_cost_noise_width_fraction": 0.6,
     # }
-    # 11/10/2025: looking at tigher confidences (close to (0.8, 0.3) and (0.7, 0.4) )
     # config = {
     #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
     #     "num_trials": 100,
     #     "num_failures_list": [3],
-    #     "confidences_list": [(0.8, 0.3), (0.75, 0.35), (0.7, 0.4), (0.65, 0.45), (0.6, 0.5)],
+    #     "confidences_list":
+    #     [(0.8, 0.3), (0.75, 0.35), (0.7, 0.4), (0.65, 0.45), (0.6, 0.5)],
     #     "redundancy_list": ["all_AND", "all_OR", "AND_then_OR", "OR_then_AND"],
     #     "c_query_list": [0.32],
     #     "query_cost_noise_width_fraction": 0.6,
-    # }
-
-    ### OLD CONFIGURATIONS:
-    # Run the experiment with varying query cost.
-    # config = {
-    #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
-    #     "time_horizon": 5,
-    #     "workload_eps": 1.0,
-    #     "c_query_list": [0.1],
-    #     "num_trials": 100,
-    # }
-    # exp_vary_cquery(variant)
-
-    # Run the experiment with 1 failure.
-    # config = {
-    #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
-    #     "num_trials": 100,
-    #     "c_query": 0.08,
-    #     "num_failures_list": [1],
-    # }
-    # if variant == "all-variants":
-    #     for variant_to_use in ["balanced", "greedy", "conservative", "balanced-2"]:
-    #         exp_vary_num_failures(variant_to_use, config)
-    # else:
-    #     exp_vary_num_failures(variant, config)
-
-    # Run the experiment with a mixed failure population.
-    # config = {
-    #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
-    #     "num_trials": 100,
-    #     "failure_populations":
-    #     [np.array([100, 0]), np.array([0, 100]), np.array([50, 50])],
-    # }
-    # exp_mixed_failure_population(variant)
-
-    # Noisy-experts test: we want to try c_expert = {1, 0.8, 0.6, 0.4}.
-    # config = {
-    #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
-    #     "num_trials": 100,
-    #     "num_failures_list": [3],
-    #     "confidences_list": [(1.0, 0.1)],
-    #     "redundancy_list": ["all_AND"],
-    #     "c_query_list": [0.32],
-    #     "expert_query_confidence_list": [1.0, 0.8, 0.6, 0.4],
-    # }
-
-    # Run the FULL grid-search experiment
-    # (4 variant x 4 failure counts x 4 confidence counts x
-    #  4 redundancy counts x 4 query costs = 1024 runs)
-    # config = {
-    #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
-    #     "num_trials": 100,
-    #     "num_failures_list": [0, 1, 2, 3],
-    #     "confidences_list": [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)],
-    #     "redundancy_list": ["all_AND", "all_OR", "AND_then_OR", "OR_then_AND"],
-    #     "c_query_list": [0.08, 0.16, 0.32, 0.64],
-    # }
-    # 9/29/2025: test with a smaller grid size. Only vary # of modules,
-    # redundancies, and query costs.
-    # (4 variant x 1 failure count x 1 confidence count x
-    # 4 redundancy counts x 4 query costs = 64 runs)
-    # config = {
-    #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
-    #     "num_trials": 100,
-    #     "num_failures_list": [3],
-    #     "confidences_list": [(1.0, 0.1)],
-    #     "redundancy_list": ["all_AND", "all_OR", "AND_then_OR", "OR_then_AND"],
-    #     "c_query_list": [0.08, 0.16, 0.32, 0.64],
-    # }
-    # 9/30/2025: only vary confidences, fix everything else.
-    # config = {
-    #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
-    #     "num_trials": 100,
-    #     "num_failures_list": [3],
-    #     "confidences_list": [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)],
-    #     "redundancy_list": ["all_AND"],
-    #     "c_query_list": [0.32],
-    # }
-    # 9/29/2025: testing varying redundancies.
-    # config = {
-    #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
-    #     "num_trials": 100,
-    #     "num_failures_list": [3],
-    #     "confidences_list": [(1.0, 0.1)],
-    #     "redundancy_list": ["all_AND", "all_OR", "AND_then_OR", "OR_then_AND"],
-    #     "c_query_list": [0.32],
-    # }
-
-    # 9/14/2025: much smaller test, 'canonical' setting for feeding.
-    # config = {
-    #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
-    #     "num_trials": 100,
-    #     "num_failures_list": [3],
-    #     "confidences_list": [(0.7, 0.4)],
-    #     "redundancy_list": ["all_AND"],
-    #     "c_query_list": [0.64],
-    # }
-    # simple test with different redundancies, but everything else fixed.
-    # config = {
-    #     "graph_sizes": [5, 10, 15, 18, 25, 50, 75, 100],
-    #     "num_trials": 100,
-    #     "num_failures_list": [1],
-    #     # "confidences_list": [(1.0, 0.1)],
-    #     "confidences_list": [(0.9, 0.2)],
-    #     # "redundancy_list": ["all_AND"],
-    #     # "redundancy_list": ["all_AND", "all_OR"],
-    #     "redundancy_list": ["AND_then_OR", "OR_then_AND"],
-    #     "c_query_list": [0.08],
-    # }
-    # smaller test.
-    # config = {
-    #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
-    #     "num_trials": 100,
-    #     "num_failures_list": [1,2,3],
-    #     "confidences_list": [(0.9, 0.2)],
-    #     "redundancy_list": ["AND"],
-    #     "c_query_list": [0.08],
-    # }
-    # 8/27: specifically run with only 0.08 query cost and 'AND' networks for now.
-    # will also only run with the balanced variant.
-    # (want to do this as a mini-experiment prior to running the full grid search)
-    # config = {
-    #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
-    #     "num_trials": 100,
-    #     "num_failures_list": [0, 1, 2, 3],
-    #     "confidences_list": [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)],
-    #     "redundancy_list": ["AND"],
-    #     "c_query_list": [0.08],
-    # }
-    # 8/28: run only with the above, but also only num_failures = 0.
-    # config = {
-    #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
-    #     "num_trials": 100,
-    #     "num_failures_list": [0],
-    #     "confidences_list": [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)],
-    #     "redundancy_list": ["AND"],
-    #     "c_query_list": [0.08],
     # }
     if variant == "all-variants":
-        for variant_to_use in ["balanced", "greedy", "conservative", "balanced-2", "query-all"]:
+        for variant_to_use in [
+            "balanced",
+            "greedy",
+            "conservative",
+            "balanced-2",
+            "query-all",
+        ]:
             exp_grid_search_parallel(variant_to_use, config)
     else:
         exp_grid_search_parallel(variant, config)
@@ -1293,7 +1157,14 @@ if __name__ == "__main__":
     parser.add_argument(
         "--variant",
         type=str,
-        choices=["balanced", "greedy", "conservative", "balanced-2", "query-all", "all-variants"],
+        choices=[
+            "balanced",
+            "greedy",
+            "conservative",
+            "balanced-2",
+            "query-all",
+            "all-variants",
+        ],
         required=True,
     )
     args = parser.parse_args()

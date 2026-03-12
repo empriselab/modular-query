@@ -93,7 +93,7 @@ STRATEGY_COLORS = {
         "marker": "s",
         "linewidth": 2,
     },
-        "MIP": {
+    "MIP": {
         "color": "orange",
         "linestyle": "-.",
         "marker": "D",
@@ -168,6 +168,41 @@ def common_add_arrows(ax: plt.Axes, xaxis_position: float = 0.0, y_lim: tuple[fl
     ax.plot(1, arrow_y_position, ">k", transform=ax.get_yaxis_transform(), clip_on=False)
     ax.plot(yaxis_position, 1, "^k", transform=ax.get_xaxis_transform(), clip_on=False)
 
+def common_add_arrows(
+    ax: plt.Axes, xaxis_position: float = 0.0, y_lim: tuple[float, float] | None = None
+) -> None:
+    """Remove top and right spines, and add arrows at the end of the axes.
+
+    Args:
+        ax: The axes to modify
+        xaxis_position: Position for the x-axis arrow
+        (bottom y-limit if y_lim not provided)
+        y_lim: Optional tuple (bottom, top) to set explicit y-axis limits
+    """
+    # Hide top and right spines
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    # Draw arrows at the end of the axes. Sadly, you have to manually set this x-lim,
+    # as automatically extracting it doesn't seem to work.
+    yaxis_position = -0.6
+    ax.set_xlim(left=yaxis_position)
+
+    if y_lim is not None:
+        # Set both bottom and top limits
+        ax.set_ylim(bottom=y_lim[0], top=y_lim[1])
+        arrow_y_position = y_lim[0]  # Arrow at bottom limit
+    else:
+        # Use the default behavior
+        ax.set_ylim(bottom=xaxis_position)
+        arrow_y_position = xaxis_position
+
+    # Place arrows at the end of the axes
+    ax.plot(
+        1, arrow_y_position, ">k", transform=ax.get_yaxis_transform(), clip_on=False
+    )
+    ax.plot(yaxis_position, 1, "^k", transform=ax.get_xaxis_transform(), clip_on=False)
+
+
 def plot_results(
     results: dict[str, dict[str, dict[int, list[float]]]],
     graph_sizes: list[int],
@@ -211,7 +246,10 @@ def plot_results(
     num_cols = 3
     num_rows = (len(metrics) + num_cols - 1) // num_cols
     fig, axes = plt.subplots(num_rows, num_cols, figsize=figsize, sharex=True)
+<<<<<<< HEAD
 
+=======
+>>>>>>> main
 
     # Plot each metric
     lines = []
@@ -280,13 +318,11 @@ def plot_results(
                 lines.append(line[0])
                 labels.append(strategy_name)
 
-        # ax.set_title(TITLES[metric])
-        # ax.set_xlabel("Number of Graph Nodes")
         # Explicitly enable x-axis tick labels for all subplots (not just bottom)
         ax.tick_params(labelbottom=True)
         # Set x-tick label size (not y-tick label size)
-        ax.tick_params(labelsize=tick_fontsize, axis='x')
-        ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily='serif')        # ax.grid(True, linestyle="--", alpha=0.7)
+        ax.tick_params(labelsize=tick_fontsize, axis="x")
+        ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily="serif")
 
         common_add_arrows(ax, xaxis_position=-0.005)
 
@@ -532,17 +568,12 @@ def plot_results_across_graph_sizes(
                     alpha=0.3,
                     color=VARIANT_STYLES[variant]["color"],
                 )
-            print(variant, medians)
-            # ax.set_title(TITLES[metric])
-            # ax.set_xlabel("Number of Graph Nodes")
-            ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily='serif')        # ax.grid(True, linestyle="--", alpha=0.7)
-            # ax.grid(True, linestyle="--", alpha=0.7)
+            ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily="serif")
             # Show x-axis values as integers.
-            # NOTE: totally hardcoded to only show the first 5 graph sizes (the rest don't have data)
+            # Only shows the first 5 graph sizes.
             max_graph_sizes = 5
             ax.set_xticks(np.arange(max_graph_sizes))
             ax.set_xticklabels(graph_sizes[:max_graph_sizes], size=tick_fontsize)
-            # Hardcoding the y-max to be 0.06.
             ax.set_ylim(0, 0.06)
             # Explicitly enable x-axis tick labels for all subplots (not just bottom)
             ax.tick_params(labelbottom=True)

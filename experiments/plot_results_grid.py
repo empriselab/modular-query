@@ -8,6 +8,7 @@ import argparse
 import json
 import os
 import pickle as pkl
+from typing import Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -18,9 +19,9 @@ from modular_query.plot_utils import (
     STRATEGY_COLORS,
     VARIANT_STYLES,
     YLABELS,
+    common_add_arrows,
     plot_results,
     plot_results_across_graph_sizes,
-    common_add_arrows,
 )
 
 # Constants:
@@ -34,7 +35,7 @@ GRAPH_STRUCTURE_XTICK_OFFSET = 1.5
 # Font size for tick labels in confidence plots
 CONFIDENCE_TICK_FONTSIZE = 16
 CONFIDENCE_FIGSIZE = (36, 9)
-CONFIDENCE_XTICK_OFFSET = 0.5 # 0.5: good for rebuttal.
+CONFIDENCE_XTICK_OFFSET = 0.5
 # CONFIDENCE_ORDER = [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)]
 CONFIDENCE_ORDER = [(0.8, 0.3), (0.75, 0.35), (0.7, 0.4), (0.65, 0.45), (0.6, 0.5)]
 # Font size for tick labels in query cost plots
@@ -46,28 +47,34 @@ LEGEND_FONT_SIZE = 20
 
 ## VARIABLE 01: number of modules.
 
-def plot_results_grid(results_dir: str, output_dir: str,\
-     mode='search_results_directory', pkl_file: str = None) -> None:
+
+def plot_results_grid(
+    results_dir: str,
+    output_dir: str,
+    mode="search_results_directory",
+    pkl_file: Optional[str] = None,
+) -> None:
     """Plot results from a grid search experiment.
-    
+
     mode:
     - 'search_results_directory': finds all pkl files in the results directory.
-    - 'single_pkl_file': plots results for a single pkl file in the results directory, specified by the pkl_file parameter.
+    - 'single_pkl_file': plots results for a single pkl file in the results directory,
+    specified by the pkl_file parameter.
     """
     # Look up all pkl files in the results directory.
-    if mode == 'search_results_directory':
+    if mode == "search_results_directory":
         pkl_files = [f for f in os.listdir(results_dir) if f.endswith(".pkl")]
-    elif mode == 'single_pkl_file':
-        pkl_files = [pkl_file]
+    elif mode == "single_pkl_file":
+        pkl_files = [pkl_file] if pkl_file else []
     else:
         raise ValueError(f"Invalid mode: {mode}")
     # filter out combined.pkl if it exists.
     if "combined_df.pkl" in pkl_files:
         pkl_files.remove("combined_df.pkl")
-    for pkl_file in pkl_files:
-        print(f"Plotting {pkl_file}")
+    for pkl_file_iter in pkl_files:
+        print(f"Plotting {pkl_file_iter}")
         # Load pickle file
-        with open(os.path.join(results_dir, pkl_file), "rb") as f:
+        with open(os.path.join(results_dir, pkl_file_iter), "rb") as f:
             results = pkl.load(f)
         # Load the config from the json file.
         # Same name as pkl file, but (1) with .json extension,
@@ -75,7 +82,7 @@ def plot_results_grid(results_dir: str, output_dir: str,\
         with open(
             os.path.join(
                 results_dir,
-                pkl_file.replace(".pkl", ".json").replace("results", "config"),
+                pkl_file_iter.replace(".pkl", ".json").replace("results", "config"),
             ),
             "r",
             encoding="utf-8",
@@ -116,16 +123,22 @@ def plot_results_grid(results_dir: str, output_dir: str,\
 
 
 # Make the plot for varying variants..
-def plot_results_grid_fixed_module_selector(results_dir: str, output_dir: str, module_selector: str,\
-     mode='search_results_directory', run_id: str = None) -> None:
-    """Plot results from a grid search experiment for varying variants,
-    for a fixed module selector.
-    
+def plot_results_grid_fixed_module_selector(
+    results_dir: str,
+    output_dir: str,
+    module_selector: str,
+    mode="search_results_directory",
+    run_id: Optional[str] = None,
+) -> None:
+    """Plot results from a grid search experiment for varying variants, for a
+    fixed module selector.
+
     mode:
     - 'search_results_directory': finds all run IDs in the results directory.
-    - 'single_run_id': plots results for a single run ID, specified by the run_id parameter.
+    - 'single_run_id': plots results for a single run ID,
+    specified by the run_id parameter.
     """
-    if mode == 'search_results_directory':
+    if mode == "search_results_directory":
         # Get all the run IDs that exist in the results directory.
         # (all pkl files have the form results_variant_[variant_name]_run_[run_id].pkl)
         # Print files that end with .pkl.
@@ -136,11 +149,11 @@ def plot_results_grid_fixed_module_selector(results_dir: str, output_dir: str, m
         ]
         # strip out the .pkl extension.
         run_ids = [run_id.split(".")[0] for run_id in run_ids]
-    elif mode == 'single_run_id':
-        run_ids = [run_id]
+    elif mode == "single_run_id":
+        run_ids = [run_id] if run_id else []
     else:
         raise ValueError(f"Invalid mode: {mode}")
-    for run_id in run_ids:
+    for run_id_iter in run_ids:
         # Load all pkl and json files associated with this run_id.
         # print(run_id)
         # print([f for f in os.listdir(results_dir) if f.endswith(".pkl")])
@@ -149,7 +162,7 @@ def plot_results_grid_fixed_module_selector(results_dir: str, output_dir: str, m
             for f in os.listdir(results_dir)
             if f != "combined_df.pkl"
             and f.endswith(".pkl")
-            and f.split("_")[4] == f"{run_id}.pkl"
+            and f.split("_")[4] == f"{run_id_iter}.pkl"
         ]
         # print(pkl_files)
         config_files = [
@@ -157,7 +170,7 @@ def plot_results_grid_fixed_module_selector(results_dir: str, output_dir: str, m
             for f in os.listdir(results_dir)
             if f != "combined_df.json"
             and f.endswith(".json")
-            and f.split("_")[4] == f"{run_id}.json"
+            and f.split("_")[4] == f"{run_id_iter}.json"
         ]
         # print(config_files)
         # open one of the config files to get common parameters.
@@ -179,7 +192,7 @@ def plot_results_grid_fixed_module_selector(results_dir: str, output_dir: str, m
             pkl_files=pkl_files,
             data_dir=results_dir,
             output_dir=output_dir,
-            filename=f"plot_{module_selector}_{run_id}.png",
+            filename=f"plot_{module_selector}_{run_id_iter}.png",
             title=title,
             use_mean_for_total_correct=True,
             tick_fontsize=NUM_MODULES_TICK_FONTSIZE,
@@ -232,7 +245,9 @@ def plot_results_grid_graph_structures(
     # that have that combination
     # (there should be num_graph_structures of these run IDs in total.)
     for _, combination in tqdm(unique_combinations.iterrows()):
-        fig, axes = plt.subplots(ncols=len(metrics), figsize=GRAPH_STRUCTURE_FIGSIZE, sharex=True)
+        fig, axes = plt.subplots(
+            ncols=len(metrics), figsize=GRAPH_STRUCTURE_FIGSIZE, sharex=True
+        )
         for i, metric in enumerate(metrics):
             # Create a boolean mask for rows that match this combination
             mask = True
@@ -285,19 +300,31 @@ def plot_results_grid_graph_structures(
             # Step 4. Add x-axis labels.
             # ax.set_xlabel("Algorithms")
             # Tick labels are the graph structures.
-            ax.set_xticks(np.arange(len(graph_structure_order)) * len(results.keys())+GRAPH_STRUCTURE_XTICK_OFFSET)
-            ax.set_xticklabels(graph_structure_order, fontsize=GRAPH_STRUCTURE_TICK_FONTSIZE)
+            ax.set_xticks(
+                np.arange(len(graph_structure_order)) * len(results.keys())
+                + GRAPH_STRUCTURE_XTICK_OFFSET
+            )
+            ax.set_xticklabels(
+                graph_structure_order, fontsize=GRAPH_STRUCTURE_TICK_FONTSIZE
+            )
             # Step 5. Add y-axis labels.
-            ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily='serif')
-        
+            ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily="serif")
+
             common_add_arrows(ax)
 
             # Step 6. Add legend.
             # but I don't want it to repeatedly display the same algorithm names.
             # ax.legend()
             handles, labels = ax.get_legend_handles_labels()
-            
-        fig.legend(handles, labels, loc='lower center',bbox_to_anchor=(0.5, -0.1),ncol=len(labels),fontsize=LEGEND_FONT_SIZE)
+
+        fig.legend(
+            handles,
+            labels,
+            loc="lower center",
+            bbox_to_anchor=(0.5, -0.1),
+            ncol=len(labels),
+            fontsize=LEGEND_FONT_SIZE,
+        )
         # Add title before tight_layout to avoid overlap
         plt.suptitle(f"Graph Structure Comparison for Graph Size {graph_size}")
         plt.tight_layout()
@@ -315,7 +342,11 @@ def plot_results_grid_graph_structures(
 # Analogous function to above,
 # but we fix the module selector/strategy, and vary the variant.
 def plot_results_grid_graph_structures_fixed_module_selector(
-    results_dir: str, output_dir: str, module_selector: str, graph_size: int, pickle_name: str
+    results_dir: str,
+    output_dir: str,
+    module_selector: str,
+    graph_size: int,
+    pickle_name: str,
 ) -> None:
     """Plot results from a grid search experiment for varying graph structures,
     for a fixed set of metrics.
@@ -355,7 +386,9 @@ def plot_results_grid_graph_structures_fixed_module_selector(
     # we need to collect the run IDs that have that combination
     # (there should be num_graph_structures of these run IDs in total.)
     for _, combination in tqdm(unique_combinations.iterrows()):
-        fig, axes = plt.subplots(ncols=len(metrics), figsize=GRAPH_STRUCTURE_FIGSIZE, sharex=True)
+        fig, axes = plt.subplots(
+            ncols=len(metrics), figsize=GRAPH_STRUCTURE_FIGSIZE, sharex=True
+        )
         for i, metric in enumerate(metrics):
             # Create a boolean mask for rows that match this combination
             mask = True
@@ -386,7 +419,11 @@ def plot_results_grid_graph_structures_fixed_module_selector(
                 # want bars of the same algorithm to have the same color.
                 for j, variant in enumerate(variant_order):
                     # Only add label to legend if we haven't seen this algorithm before
-                    label = VARIANT_STYLES[variant]["name"] if variant not in legend_added else ""
+                    label = (
+                        VARIANT_STYLES[variant]["name"]
+                        if variant not in legend_added
+                        else ""
+                    )
                     # Extract the row for this variant.
                     row = df_filtered_graph_structure[
                         df_filtered_graph_structure["variant"] == variant
@@ -411,17 +448,29 @@ def plot_results_grid_graph_structures_fixed_module_selector(
             # Step 4. Add x-axis labels.
             # ax.set_xlabel("Variants")
             # Tick labels are the graph structures.
-            ax.set_xticks(np.arange(len(graph_structure_order)) * len(variant_order)+GRAPH_STRUCTURE_XTICK_OFFSET)
-            ax.set_xticklabels(graph_structure_order, fontsize=GRAPH_STRUCTURE_TICK_FONTSIZE)
+            ax.set_xticks(
+                np.arange(len(graph_structure_order)) * len(variant_order)
+                + GRAPH_STRUCTURE_XTICK_OFFSET
+            )
+            ax.set_xticklabels(
+                graph_structure_order, fontsize=GRAPH_STRUCTURE_TICK_FONTSIZE
+            )
             # Step 5. Add y-axis labels.
-            ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily='serif')
+            ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily="serif")
             common_add_arrows(ax)
             # Step 6. Add legend.
             # but I don't want it to repeatedly display the same algorithm names.
             # ax.legend()
             handles, labels = ax.get_legend_handles_labels()
 
-        fig.legend(handles, labels, loc='lower center',bbox_to_anchor=(0.5, -0.1),ncol=len(labels),fontsize=LEGEND_FONT_SIZE)
+        fig.legend(
+            handles,
+            labels,
+            loc="lower center",
+            bbox_to_anchor=(0.5, -0.1),
+            ncol=len(labels),
+            fontsize=LEGEND_FONT_SIZE,
+        )
         # Add title before tight_layout to avoid overlap
         plt.suptitle(f"Variant Comparison for Graph Size {graph_size}")
         plt.tight_layout()
@@ -437,7 +486,6 @@ def plot_results_grid_graph_structures_fixed_module_selector(
 
 
 ## VARIABLE 03: confidence settings.
-
 
 
 def plot_results_grid_confidences(
@@ -485,7 +533,9 @@ def plot_results_grid_confidences(
     # we need to collect the run IDs that have that combination
     # (there should be num_confidences of these run IDs in total.)
     for _, combination in tqdm(unique_combinations.iterrows()):
-        fig, axes = plt.subplots(ncols=len(metrics), figsize=CONFIDENCE_FIGSIZE, sharex=True)
+        fig, axes = plt.subplots(
+            ncols=len(metrics), figsize=CONFIDENCE_FIGSIZE, sharex=True
+        )
         for i, metric in enumerate(metrics):
             # Create a boolean mask for rows that match this combination
             mask = True
@@ -535,17 +585,27 @@ def plot_results_grid_confidences(
             # Step 4. Add x-axis labels.
             # ax.set_xlabel("Confidences")
             # Tick labels are the (correct_confidence, incorrect_confidence) pairs.
-            ax.set_xticks(np.arange(len(confidence_order)) * len(results.keys())+CONFIDENCE_XTICK_OFFSET)
+            ax.set_xticks(
+                np.arange(len(confidence_order)) * len(results.keys())
+                + CONFIDENCE_XTICK_OFFSET
+            )
             ax.set_xticklabels(confidence_order, fontsize=CONFIDENCE_TICK_FONTSIZE)
             # Step 5. Add y-axis labels.
-            ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily='serif')
+            ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily="serif")
             common_add_arrows(ax)
             # Step 6. Add legend.
             # but I don't want it to repeatedly display the same variant names.
             # ax.legend()
             handles, labels = ax.get_legend_handles_labels()
 
-        fig.legend(handles, labels, loc='lower center',bbox_to_anchor=(0.5, -0.1),ncol=len(labels),fontsize=LEGEND_FONT_SIZE)
+        fig.legend(
+            handles,
+            labels,
+            loc="lower center",
+            bbox_to_anchor=(0.5, -0.1),
+            ncol=len(labels),
+            fontsize=LEGEND_FONT_SIZE,
+        )
         # Add title before tight_layout to avoid overlap
         plt.suptitle(f"Confidence Comparison for Graph Size {graph_size}")
         plt.tight_layout()
@@ -561,7 +621,11 @@ def plot_results_grid_confidences(
 
 
 def plot_results_grid_confidences_fixed_module_selector(
-    results_dir: str, output_dir: str, module_selector: str, graph_size: int, pickle_name: str
+    results_dir: str,
+    output_dir: str,
+    module_selector: str,
+    graph_size: int,
+    pickle_name: str,
 ) -> None:
     """Plot results from a grid search experiment for varying confidences, for
     a fixed set of metrics.
@@ -608,7 +672,9 @@ def plot_results_grid_confidences_fixed_module_selector(
     # we need to collect the run IDs that have that combination
     # (there should be num_confidences of these run IDs in total.)
     for _, combination in tqdm(unique_combinations.iterrows()):
-        fig, axes = plt.subplots(ncols=len(metrics), figsize=CONFIDENCE_FIGSIZE, sharex=True)
+        fig, axes = plt.subplots(
+            ncols=len(metrics), figsize=CONFIDENCE_FIGSIZE, sharex=True
+        )
         for i, metric in enumerate(metrics):
             # Create a boolean mask for rows that match this combination
             mask = True
@@ -623,7 +689,8 @@ def plot_results_grid_confidences_fixed_module_selector(
             ax = axes[i]
             # Step 2. Iterate over the confidences, in a particular order
             confidence_order = CONFIDENCE_ORDER
-            # confidence_order = [(0.8, 0.3), (0.75, 0.35), (0.7, 0.4), (0.65, 0.45), (0.6, 0.5)]
+            # confidence_order =
+            # [(0.8, 0.3), (0.75, 0.35), (0.7, 0.4), (0.65, 0.45), (0.6, 0.5)]
             # need to handle x offsets carefully here.
             # Track which algorithms we've already added to legend
             legend_added = set()
@@ -636,7 +703,11 @@ def plot_results_grid_confidences_fixed_module_selector(
                 results = df_filtered_confidence["results_dictionary"].values[0]
                 for j, variant in enumerate(variant_order):
                     # Only add label to legend if we haven't seen this algorithm before
-                    label = VARIANT_STYLES[variant]["name"] if variant not in legend_added else ""
+                    label = (
+                        VARIANT_STYLES[variant]["name"]
+                        if variant not in legend_added
+                        else ""
+                    )
                     # Extract the row for this variant.
                     row = df_filtered_confidence[
                         df_filtered_confidence["variant"] == variant
@@ -661,16 +732,26 @@ def plot_results_grid_confidences_fixed_module_selector(
             # Step 4. Add x-axis labels.
             # ax.set_xlabel("Confidences")
             # Tick labels are the (correct_confidence, incorrect_confidence) pairs.
-            ax.set_xticks(np.arange(len(confidence_order)) * len(variant_order)+CONFIDENCE_XTICK_OFFSET)
+            ax.set_xticks(
+                np.arange(len(confidence_order)) * len(variant_order)
+                + CONFIDENCE_XTICK_OFFSET
+            )
             ax.set_xticklabels(confidence_order, fontsize=CONFIDENCE_TICK_FONTSIZE)
             # Step 5. Add y-axis labels.
-            ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily='serif')
+            ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily="serif")
             common_add_arrows(ax)
             # Step 6. Add legend.
             # but I don't want it to repeatedly display the same variant names.
             # ax.legend()
             handles, labels = ax.get_legend_handles_labels()
-        fig.legend(handles, labels, loc='lower center',bbox_to_anchor=(0.5, -0.1),ncol=len(labels),fontsize=LEGEND_FONT_SIZE)
+        fig.legend(
+            handles,
+            labels,
+            loc="lower center",
+            bbox_to_anchor=(0.5, -0.1),
+            ncol=len(labels),
+            fontsize=LEGEND_FONT_SIZE,
+        )
         # Add title before tight_layout to avoid overlap
         plt.suptitle(f"Confidence Comparison for Graph Size {graph_size}")
         plt.tight_layout()
@@ -730,7 +811,9 @@ def plot_results_grid_cquery(
     # that have that combination
     # (there should be num_graph_structures of these run IDs in total.)
     for _, combination in tqdm(unique_combinations.iterrows()):
-        fig, axes = plt.subplots(ncols=len(metrics), figsize=QUERY_COST_FIGSIZE, sharex=True)
+        fig, axes = plt.subplots(
+            ncols=len(metrics), figsize=QUERY_COST_FIGSIZE, sharex=True
+        )
         for i, metric in enumerate(metrics):
             # Create a boolean mask for rows that match this combination
             mask = True
@@ -776,17 +859,27 @@ def plot_results_grid_cquery(
             # Step 4. Add x-axis labels.
             # ax.set_xlabel("Query Costs")
             # Tick labels are the query costs.
-            ax.set_xticks(np.arange(len(query_cost_order)) * len(results.keys())+QUERY_COST_XTICK_OFFSET)
+            ax.set_xticks(
+                np.arange(len(query_cost_order)) * len(results.keys())
+                + QUERY_COST_XTICK_OFFSET
+            )
             ax.set_xticklabels(query_cost_order, fontsize=QUERY_COST_TICK_FONTSIZE)
             # Step 5. Add y-axis labels.
-            ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily='serif')
+            ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily="serif")
             common_add_arrows(ax)
             # Step 6. Add legend.
             # but I don't want it to repeatedly display the same algorithm names.
             # ax.legend()
             handles, labels = ax.get_legend_handles_labels()
-        
-        fig.legend(handles, labels, loc='lower center',bbox_to_anchor=(0.5, -0.1),ncol=len(labels),fontsize=LEGEND_FONT_SIZE)
+
+        fig.legend(
+            handles,
+            labels,
+            loc="lower center",
+            bbox_to_anchor=(0.5, -0.1),
+            ncol=len(labels),
+            fontsize=LEGEND_FONT_SIZE,
+        )
         # Add title before tight_layout to avoid overlap
         plt.suptitle(f"Query Cost Comparison for Graph Size {graph_size}")
         plt.tight_layout()
@@ -802,7 +895,11 @@ def plot_results_grid_cquery(
 
 
 def plot_results_grid_cquery_fixed_module_selector(
-    results_dir: str, output_dir: str, module_selector: str, graph_size: int, pickle_name: str
+    results_dir: str,
+    output_dir: str,
+    module_selector: str,
+    graph_size: int,
+    pickle_name: str,
 ) -> None:
     """Plot results from a grid search experiment for varying query costs, for
     a fixed set of metrics.
@@ -840,7 +937,9 @@ def plot_results_grid_cquery_fixed_module_selector(
     # that have that combination
     # (there should be num_graph_structures of these run IDs in total.)
     for _, combination in tqdm(unique_combinations.iterrows()):
-        fig, axes = plt.subplots(ncols=len(metrics), figsize=QUERY_COST_FIGSIZE, sharex=True)
+        fig, axes = plt.subplots(
+            ncols=len(metrics), figsize=QUERY_COST_FIGSIZE, sharex=True
+        )
         for i, metric in enumerate(metrics):
             # Create a boolean mask for rows that match this combination
             mask = True
@@ -867,7 +966,11 @@ def plot_results_grid_cquery_fixed_module_selector(
                 results = df_filtered_query_cost["results_dictionary"].values[0]
                 for j, variant in enumerate(variant_order):
                     # Only add label to legend if we haven't seen this algorithm before
-                    label = VARIANT_STYLES[variant]["name"] if variant not in legend_added else ""
+                    label = (
+                        VARIANT_STYLES[variant]["name"]
+                        if variant not in legend_added
+                        else ""
+                    )
                     # Extract the row for this variant.
                     row = df_filtered_query_cost[
                         df_filtered_query_cost["variant"] == variant
@@ -892,16 +995,26 @@ def plot_results_grid_cquery_fixed_module_selector(
             # Step 4. Add x-axis labels.
             # ax.set_xlabel("Query Costs")
             # Tick labels are the query costs.
-            ax.set_xticks(np.arange(len(query_cost_order)) * len(results.keys())+QUERY_COST_XTICK_OFFSET)
+            ax.set_xticks(
+                np.arange(len(query_cost_order)) * len(results.keys())
+                + QUERY_COST_XTICK_OFFSET
+            )
             ax.set_xticklabels(query_cost_order, fontsize=QUERY_COST_TICK_FONTSIZE)
             # Step 5. Add y-axis labels.
-            ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily='serif')
+            ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily="serif")
             common_add_arrows(ax)
             # Step 6. Add legend.
             # but I don't want it to repeatedly display the same algorithm names.
             # ax.legend()
             handles, labels = ax.get_legend_handles_labels()
-        fig.legend(handles, labels, loc='lower center',bbox_to_anchor=(0.5, -0.1),ncol=len(labels),fontsize=LEGEND_FONT_SIZE)
+        fig.legend(
+            handles,
+            labels,
+            loc="lower center",
+            bbox_to_anchor=(0.5, -0.1),
+            ncol=len(labels),
+            fontsize=LEGEND_FONT_SIZE,
+        )
         # Add title before tight_layout to avoid overlap
         plt.suptitle(f"Query Cost Comparison for Graph Size {graph_size}")
         plt.tight_layout()
@@ -1133,7 +1246,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--results_dir", type=str, default="experiments/results", required=True
     )
-    parser.add_argument("--output_dir", type=str, default="experiments/results/", required=True, help="Directory to save the plots to.")
+    parser.add_argument(
+        "--output_dir",
+        type=str,
+        default="experiments/results/",
+        required=True,
+        help="Directory to save the plots to.",
+    )
     parser.add_argument("--fixed_graph_size", type=int, default=10, required=False)
     parser.add_argument(
         "--fixed_variant", type=str, default="balanced-2", required=True
@@ -1141,8 +1260,20 @@ if __name__ == "__main__":
     parser.add_argument(
         "--fixed_module_selector", type=str, default="Graph Query", required=True
     )
-    parser.add_argument("--pkl_file", type=str, default=None, required=False, help="PKL file to plot results for [variable 01 only.]")
-    parser.add_argument("--run_id", type=str, default=None, required=False, help="Run ID to plot results for [variable 01 only.]")
+    parser.add_argument(
+        "--pkl_file",
+        type=str,
+        default=None,
+        required=False,
+        help="PKL file to plot results for [variable 01 only.]",
+    )
+    parser.add_argument(
+        "--run_id",
+        type=str,
+        default=None,
+        required=False,
+        help="Run ID to plot results for [variable 01 only.]",
+    )
     args = parser.parse_args()
 
     fixed_graph_size = args.fixed_graph_size

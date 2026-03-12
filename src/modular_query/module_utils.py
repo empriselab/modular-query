@@ -369,7 +369,6 @@ def generate_random_top_bottom_module_graph(
     rng_for_query_costs = rng.spawn(1)[0]
     # query cost will be sampled from [(1-frac)*query_cost, (1+frac)*query_cost]
 
-
     # Create the state module.
     state_module = StateModule()
     # Create the "top" gate type.
