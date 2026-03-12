@@ -27,9 +27,11 @@ from modular_query.modules import Module, StateModule
 from modular_query.plot_utils import plot_results
 from modular_query.query_strategies.binary_tree_query import BinaryTreeQueryStrategy
 from modular_query.query_strategies.brute_force import BruteForceQueryStrategy
+from modular_query.query_strategies.confidence_query import ConfidenceQueryStrategy
 from modular_query.query_strategies.graph_query import GraphQueryStrategy
 from modular_query.query_strategies.mip import MIPQueryStrategy
 from modular_query.query_strategies.never_query import NeverQueryStrategy
+from modular_query.query_strategies.topo_query import TopoQueryStrategy
 from modular_query.utils import (
     print_and_log,
     product_of_confidences,
@@ -147,6 +149,7 @@ def run_experiment(
     variant: str = "balanced",
     dependency_structure: str = "all_AND",
     disable_mip: bool = False,
+    query_cost_noise_width_fraction: float = 0.1,
 ) -> dict[str, dict[str, dict[int, list[float]]]]:
     """Run experiments with different graph sizes and querying strategies.
 
@@ -186,7 +189,7 @@ def run_experiment(
         pre_make_query_termination_condition = (
             DummyTerminationCondition()
         )  # No longer needed, because checking is done in get_action()
-    elif variant in ("greedy", "balanced"):
+    elif variant in ("greedy", "balanced", "query-all"):
         # Default case - these won't be used for other variants
         loop_termination_condition = DummyTerminationCondition()
         pre_make_query_termination_condition = DummyTerminationCondition()
@@ -207,6 +210,14 @@ def run_experiment(
             workload_eps=workload_eps,
         ),
         "Binary Tree Query": BinaryTreeQueryStrategy(
+            correct_answer_cost,
+            incorrect_answer_cost,
+        ),
+        "Confidence Query": ConfidenceQueryStrategy(
+            correct_answer_cost,
+            incorrect_answer_cost,
+        ),
+        "Topo Query": TopoQueryStrategy(
             correct_answer_cost,
             incorrect_answer_cost,
         ),
@@ -290,6 +301,7 @@ def run_experiment(
                     correct_module_confidence=correct_module_confidence,
                     incorrect_module_confidence=incorrect_module_confidence,
                     redundancy="AND",
+                    query_cost_noise_width_fraction=query_cost_noise_width_fraction,
                 )
             elif dependency_structure == "all_OR":
                 module_graph = generate_random_module_graph(
@@ -301,6 +313,7 @@ def run_experiment(
                     correct_module_confidence=correct_module_confidence,
                     incorrect_module_confidence=incorrect_module_confidence,
                     redundancy="OR",
+                    query_cost_noise_width_fraction=query_cost_noise_width_fraction,
                 )
             elif dependency_structure == "AND_then_OR":
                 module_graph = generate_random_top_bottom_module_graph(
@@ -313,6 +326,7 @@ def run_experiment(
                     incorrect_module_confidence=incorrect_module_confidence,
                     gate_top="AND",
                     gate_bottom="OR",
+                    query_cost_noise_width_fraction=query_cost_noise_width_fraction,
                 )
             elif dependency_structure == "OR_then_AND":
                 module_graph = generate_random_top_bottom_module_graph(
@@ -325,6 +339,7 @@ def run_experiment(
                     incorrect_module_confidence=incorrect_module_confidence,
                     gate_top="OR",
                     gate_bottom="AND",
+                    query_cost_noise_width_fraction=query_cost_noise_width_fraction,
                 )
             else:
                 raise ValueError(
@@ -468,7 +483,7 @@ def run_experiment(
                     # Conservative runs this loop multiple times
                     # (until we decide not to query.)
                     start_time = time.perf_counter()
-                    if variant in ("conservative", "balanced-2"):
+                    if variant in ("conservative", "balanced-2", "query-all"):
                         while (
                             queried
                             and queried_module is not None
@@ -634,10 +649,10 @@ def run_experiment(
                     )
 
     # Print and log the total number of get_action calls.
-    print_and_log(
-        f"Total number of get_action calls: Brute Force, graph size 100:"
-        f"{results['Brute Force']['total_get_action_calls'][100]}"
-    )
+    # print_and_log(
+    #     f"Total number of get_action calls: Brute Force, graph size 100:"
+    #     f"{results['Brute Force']['total_get_action_calls'][100]}"
+    # )
 
     # Print and log the timing info for binary tree query.
     print_and_log("Timing info for binary tree query:")
@@ -743,6 +758,11 @@ def run_single_grid_search_experiment(
     # Use only the graph sizes that are larger than the number of failures.
     graph_sizes_to_use = [size for size in config["graph_sizes"] if size > num_failures]
 
+    # Assume a constant query cost noise width fraction.
+    query_cost_noise_width_fraction = config["query_cost_noise_width_fraction"]
+
+    print_and_log(f"Query cost noise width fraction: {query_cost_noise_width_fraction}")
+
     results = run_experiment(
         graph_sizes=graph_sizes_to_use,
         num_trials=config["num_trials"],
@@ -756,6 +776,7 @@ def run_single_grid_search_experiment(
         correct_module_confidence=correct_confidence,
         incorrect_module_confidence=incorrect_confidence,
         disable_mip=True,
+        query_cost_noise_width_fraction=query_cost_noise_width_fraction,
     )
 
     # Run ID is the index of the configuration in the grid.
@@ -770,6 +791,7 @@ def run_single_grid_search_experiment(
         "incorrect_confidence": incorrect_confidence,
         "dependency_structure": redundancy,
         "c_query": c_query,
+        "query_cost_noise_width_fraction": query_cost_noise_width_fraction,
     }
 
     return run_id, results, config_to_save
@@ -1057,132 +1079,46 @@ def exp_grid_search(variant: str, config: dict[str, Any]) -> None:
 
 def main(variant: str) -> None:
     """Run the experiment and generate plots."""
-    # Run the experiment with varying query cost.
-    # config = {
-    #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
-    #     "time_horizon": 5,
-    #     "workload_eps": 1.0,
-    #     "c_query_list": [0.1],
-    #     "num_trials": 100,
-    # }
-    # exp_vary_cquery(variant)
 
-    # Run the experiment with 1 failure.
-    # config = {
-    #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
-    #     "num_trials": 100,
-    #     "c_query": 0.08,
-    #     "num_failures_list": [1],
-    # }
-    # if variant == "all-variants":
-    #     for variant_to_use in ["balanced", "greedy", "conservative", "balanced-2"]:
-    #         exp_vary_num_failures(variant_to_use, config)
-    # else:
-    #     exp_vary_num_failures(variant, config)
-
-    # Run the experiment with a mixed failure population.
-    # config = {
-    #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
-    #     "num_trials": 100,
-    #     "failure_populations":
-    #     [np.array([100, 0]), np.array([0, 100]), np.array([50, 50])],
-    # }
-    # exp_mixed_failure_population(variant)
-
-    # Run the FULL grid-search experiment
-    # (4 variant x 4 failure counts x 4 confidence counts x
-    #  4 redundancy counts x 4 query costs = 1024 runs)
-    # config = {
-    #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
-    #     "num_trials": 100,
-    #     "num_failures_list": [0, 1, 2, 3],
-    #     "confidences_list": [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)],
-    #     "redundancy_list": ["all_AND", "all_OR", "AND_then_OR", "OR_then_AND"],
-    #     "c_query_list": [0.08, 0.16, 0.32, 0.64],
-    # }
-    # 9/29/2025: test with a smaller grid size. Only vary # of modules,
-    # redundancies, and query costs.
-    # (4 variant x 1 failure count x 1 confidence count x
-    # 4 redundancy counts x 4 query costs = 64 runs)
-    # config = {
-    #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
-    #     "num_trials": 100,
-    #     "num_failures_list": [3],
-    #     "confidences_list": [(1.0, 0.1)],
-    #     "redundancy_list": ["all_AND", "all_OR", "AND_then_OR", "OR_then_AND"],
-    #     "c_query_list": [0.08, 0.16, 0.32, 0.64],
-    # }
-    # 9/30/2025: only vary confidences, fix everything else.
+    # CONFIGURATION (Fig. 4, left).
     config = {
         "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
         "num_trials": 100,
         "num_failures_list": [3],
         "confidences_list": [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)],
-        "redundancy_list": ["all_AND"],
-        "c_query_list": [0.32],
+        "redundancy_list": ["all_AND", "all_OR", "AND_then_OR", "OR_then_AND"],
+        "c_query_list": [0.08, 0.16, 0.32, 0.64],
+        "query_cost_noise_width_fraction": 0.0,
     }
-    # 9/29/2025: testing varying redundancies.
+
+    # CONFIGURATIONS (Fig. 4, right).
     # config = {
     #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
     #     "num_trials": 100,
     #     "num_failures_list": [3],
-    #     "confidences_list": [(1.0, 0.1)],
+    #     "confidences_list": [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)],
     #     "redundancy_list": ["all_AND", "all_OR", "AND_then_OR", "OR_then_AND"],
     #     "c_query_list": [0.32],
+    #     "query_cost_noise_width_fraction": 0.6,
     # }
-
-    # 9/14/2025: much smaller test, 'canonical' setting for feeding.
     # config = {
     #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
     #     "num_trials": 100,
     #     "num_failures_list": [3],
-    #     "confidences_list": [(0.7, 0.4)],
-    #     "redundancy_list": ["all_AND"],
-    #     "c_query_list": [0.64],
-    # }
-    # simple test with different redundancies, but everything else fixed.
-    # config = {
-    #     "graph_sizes": [5, 10, 15, 18, 25, 50, 75, 100],
-    #     "num_trials": 100,
-    #     "num_failures_list": [1],
-    #     # "confidences_list": [(1.0, 0.1)],
-    #     "confidences_list": [(0.9, 0.2)],
-    #     # "redundancy_list": ["all_AND"],
-    #     # "redundancy_list": ["all_AND", "all_OR"],
-    #     "redundancy_list": ["AND_then_OR", "OR_then_AND"],
-    #     "c_query_list": [0.08],
-    # }
-    # smaller test.
-    # config = {
-    #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
-    #     "num_trials": 100,
-    #     "num_failures_list": [1,2,3],
-    #     "confidences_list": [(0.9, 0.2)],
-    #     "redundancy_list": ["AND"],
-    #     "c_query_list": [0.08],
-    # }
-    # 8/27: specifically run with only 0.08 query cost and 'AND' networks for now.
-    # will also only run with the balanced variant.
-    # (want to do this as a mini-experiment prior to running the full grid search)
-    # config = {
-    #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
-    #     "num_trials": 100,
-    #     "num_failures_list": [0, 1, 2, 3],
-    #     "confidences_list": [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)],
-    #     "redundancy_list": ["AND"],
-    #     "c_query_list": [0.08],
-    # }
-    # 8/28: run only with the above, but also only num_failures = 0.
-    # config = {
-    #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
-    #     "num_trials": 100,
-    #     "num_failures_list": [0],
-    #     "confidences_list": [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)],
-    #     "redundancy_list": ["AND"],
-    #     "c_query_list": [0.08],
+    #     "confidences_list":
+    #     [(0.8, 0.3), (0.75, 0.35), (0.7, 0.4), (0.65, 0.45), (0.6, 0.5)],
+    #     "redundancy_list": ["all_AND", "all_OR", "AND_then_OR", "OR_then_AND"],
+    #     "c_query_list": [0.32],
+    #     "query_cost_noise_width_fraction": 0.6,
     # }
     if variant == "all-variants":
-        for variant_to_use in ["balanced", "greedy", "conservative", "balanced-2"]:
+        for variant_to_use in [
+            "balanced",
+            "greedy",
+            "conservative",
+            "balanced-2",
+            "query-all",
+        ]:
             exp_grid_search_parallel(variant_to_use, config)
     else:
         exp_grid_search_parallel(variant, config)
@@ -1194,7 +1130,14 @@ if __name__ == "__main__":
     parser.add_argument(
         "--variant",
         type=str,
-        choices=["balanced", "greedy", "conservative", "balanced-2", "all-variants"],
+        choices=[
+            "balanced",
+            "greedy",
+            "conservative",
+            "balanced-2",
+            "query-all",
+            "all-variants",
+        ],
         required=True,
     )
     args = parser.parse_args()

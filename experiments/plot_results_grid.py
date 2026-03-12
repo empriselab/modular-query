@@ -18,6 +18,8 @@ from tqdm import tqdm
 from modular_query.plot_utils import (
     STRATEGY_COLORS,
     VARIANT_STYLES,
+    YLABELS,
+    common_add_arrows,
     plot_results,
     plot_results_across_graph_sizes,
 )
@@ -31,13 +33,15 @@ GRAPH_STRUCTURE_TICK_FONTSIZE = 14
 GRAPH_STRUCTURE_FIGSIZE = (36, 9)
 GRAPH_STRUCTURE_XTICK_OFFSET = 1.5
 # Font size for tick labels in confidence plots
-CONFIDENCE_TICK_FONTSIZE = 20
+CONFIDENCE_TICK_FONTSIZE = 16
 CONFIDENCE_FIGSIZE = (36, 9)
-CONFIDENCE_XTICK_OFFSET = 1.5
+CONFIDENCE_XTICK_OFFSET = 0.5
+# CONFIDENCE_ORDER = [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)]
+CONFIDENCE_ORDER = [(0.8, 0.3), (0.75, 0.35), (0.7, 0.4), (0.65, 0.45), (0.6, 0.5)]
 # Font size for tick labels in query cost plots
 QUERY_COST_TICK_FONTSIZE = 20
 QUERY_COST_FIGSIZE = (36, 9)
-QUERY_COST_XTICK_OFFSET = 1.5
+QUERY_COST_XTICK_OFFSET = 0.5
 # Legend font size
 LEGEND_FONT_SIZE = 20
 
@@ -304,7 +308,10 @@ def plot_results_grid_graph_structures(
                 graph_structure_order, fontsize=GRAPH_STRUCTURE_TICK_FONTSIZE
             )
             # Step 5. Add y-axis labels.
-            ax.set_ylabel(metric)
+            ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily="serif")
+
+            common_add_arrows(ax)
+
             # Step 6. Add legend.
             # but I don't want it to repeatedly display the same algorithm names.
             # ax.legend()
@@ -449,7 +456,8 @@ def plot_results_grid_graph_structures_fixed_module_selector(
                 graph_structure_order, fontsize=GRAPH_STRUCTURE_TICK_FONTSIZE
             )
             # Step 5. Add y-axis labels.
-            ax.set_ylabel(metric)
+            ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily="serif")
+            common_add_arrows(ax)
             # Step 6. Add legend.
             # but I don't want it to repeatedly display the same algorithm names.
             # ax.legend()
@@ -543,7 +551,7 @@ def plot_results_grid_confidences(
             ax = axes[i]
             # Step 2. Iterate over the confidences, in a particular order
 
-            confidence_order = [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)]
+            confidence_order = CONFIDENCE_ORDER
             # need to handle x offsets carefully here.
             # Track which algorithms we've already added to legend
             legend_added = set()
@@ -583,7 +591,8 @@ def plot_results_grid_confidences(
             )
             ax.set_xticklabels(confidence_order, fontsize=CONFIDENCE_TICK_FONTSIZE)
             # Step 5. Add y-axis labels.
-            ax.set_ylabel(metric)
+            ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily="serif")
+            common_add_arrows(ax)
             # Step 6. Add legend.
             # but I don't want it to repeatedly display the same variant names.
             # ax.legend()
@@ -679,7 +688,9 @@ def plot_results_grid_confidences_fixed_module_selector(
             # Step 1. Create a figure and axis.
             ax = axes[i]
             # Step 2. Iterate over the confidences, in a particular order
-            confidence_order = [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)]
+            confidence_order = CONFIDENCE_ORDER
+            # confidence_order =
+            # [(0.8, 0.3), (0.75, 0.35), (0.7, 0.4), (0.65, 0.45), (0.6, 0.5)]
             # need to handle x offsets carefully here.
             # Track which algorithms we've already added to legend
             legend_added = set()
@@ -727,7 +738,8 @@ def plot_results_grid_confidences_fixed_module_selector(
             )
             ax.set_xticklabels(confidence_order, fontsize=CONFIDENCE_TICK_FONTSIZE)
             # Step 5. Add y-axis labels.
-            ax.set_ylabel(metric)
+            ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily="serif")
+            common_add_arrows(ax)
             # Step 6. Add legend.
             # but I don't want it to repeatedly display the same variant names.
             # ax.legend()
@@ -819,7 +831,7 @@ def plot_results_grid_cquery(
             # need to handle x offsets carefully here.
             # Track which algorithms we've already added to legend
             legend_added = set()
-            for i, query_cost in enumerate(query_cost_order):
+            for k, query_cost in enumerate(query_cost_order):
                 # Filter the df for only those run IDs.
                 df_filtered_query_cost = df_filtered[
                     df_filtered["c_query"] == query_cost
@@ -836,7 +848,7 @@ def plot_results_grid_cquery(
                         else np.median(results[algorithm][metric][graph_size])
                     )
                     ax.bar(
-                        i * len(query_cost_order) + j,
+                        k * len(results.keys()) + j,
                         value,
                         label=label,
                         color=STRATEGY_COLORS[algorithm]["color"],
@@ -853,7 +865,8 @@ def plot_results_grid_cquery(
             )
             ax.set_xticklabels(query_cost_order, fontsize=QUERY_COST_TICK_FONTSIZE)
             # Step 5. Add y-axis labels.
-            ax.set_ylabel(metric)
+            ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily="serif")
+            common_add_arrows(ax)
             # Step 6. Add legend.
             # but I don't want it to repeatedly display the same algorithm names.
             # ax.legend()
@@ -988,7 +1001,8 @@ def plot_results_grid_cquery_fixed_module_selector(
             )
             ax.set_xticklabels(query_cost_order, fontsize=QUERY_COST_TICK_FONTSIZE)
             # Step 5. Add y-axis labels.
-            ax.set_ylabel(metric)
+            ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily="serif")
+            common_add_arrows(ax)
             # Step 6. Add legend.
             # but I don't want it to repeatedly display the same algorithm names.
             # ax.legend()
