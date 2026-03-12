@@ -3,10 +3,11 @@
 from collections import deque
 from typing import Any
 
+import numpy as np
+
 from modular_query.modules import Module
 from modular_query.utils import print_and_log
 
-import numpy as np
 
 class ModuleGraph:
     """A graph of modules."""
@@ -71,8 +72,11 @@ class ModuleGraph:
         self.expert_query_confidence = expert_query_confidence
 
         # RNG for sampling expert values.
-        self.expert_value_rng = expert_value_rng \
-            if expert_value_rng is not None else np.random.default_rng()
+        self.expert_value_rng = (
+            expert_value_rng
+            if expert_value_rng is not None
+            else np.random.default_rng()
+        )
 
     def reset_expert_value_rng(self, expert_value_rng: np.random.Generator) -> None:
         """Reset the expert value rng."""
@@ -161,7 +165,9 @@ class ModuleGraph:
         }
 
     def compute_values(
-        self, expert_query_module_names: set[str], expert_values_cache: dict[str, Any],
+        self,
+        expert_query_module_names: set[str],
+        expert_values_cache: dict[str, Any],
         disable_expert_noise: bool = False,
     ) -> tuple[dict[Module, Any], dict[Module, float], float]:
         """Recompute values and confidences for all modules.
@@ -188,8 +194,10 @@ class ModuleGraph:
                 # Return true expert value with probability expert_query_confidence,
                 # opposite value with probability 1 - expert_query_confidence
                 # NOTE: assumes that value is a boolean or integer in {0,1}.
-                if not disable_expert_noise and \
-                    self.expert_value_rng.random() >= self.expert_query_confidence:
+                if (
+                    not disable_expert_noise
+                    and self.expert_value_rng.random() >= self.expert_query_confidence
+                ):
                     # Return opposite value
                     if isinstance(value, bool):
                         value = not value

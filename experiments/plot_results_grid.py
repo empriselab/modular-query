@@ -1030,10 +1030,11 @@ def plot_results_grid_cquery_fixed_module_selector(
 
 
 # Two analogous plots for expert query confidence.
-def plot_results_grid_expert_query_confidence(results_dir: str, variant: str, graph_size: int, pickle_name: str) -> None:
-    """Plot results from a grid search experiment for varying expert query confidence, for
-    a fixed set of metrics.
-    """
+def plot_results_grid_expert_query_confidence(
+    results_dir: str, variant: str, graph_size: int, pickle_name: str
+) -> None:
+    """Plot results from a grid search experiment for varying expert query
+    confidence, for a fixed set of metrics."""
     # Load the dataframe.
     df = pd.read_pickle(os.path.join(results_dir, f"{pickle_name}.pkl"))
     # The general structure is as follows:
@@ -1114,7 +1115,9 @@ def plot_results_grid_expert_query_confidence(results_dir: str, variant: str, gr
             # Step 4. Add x-axis labels.
             ax.set_xlabel("Expert Query Confidence")
             # Tick labels are the query costs.
-            ax.set_xticks(np.arange(len(expert_query_confidence_order)) * len(results.keys()))
+            ax.set_xticks(
+                np.arange(len(expert_query_confidence_order)) * len(results.keys())
+            )
             ax.set_xticklabels(expert_query_confidence_order)
             # Step 5. Add y-axis labels.
             ax.set_ylabel(metric)
@@ -1134,10 +1137,12 @@ def plot_results_grid_expert_query_confidence(results_dir: str, variant: str, gr
         )
         plt.close()
 
-def plot_results_grid_expert_query_confidence_fixed_module_selector(results_dir: str, module_selector: str, graph_size: int, pickle_name: str) -> None:
-    """Plot results from a grid search experiment for varying expert query confidence, for
-    a fixed set of metrics.
-    """
+
+def plot_results_grid_expert_query_confidence_fixed_module_selector(
+    results_dir: str, module_selector: str, graph_size: int, pickle_name: str
+) -> None:
+    """Plot results from a grid search experiment for varying expert query
+    confidence, for a fixed set of metrics."""
     # Load the dataframe.
     df = pd.read_pickle(os.path.join(results_dir, f"{pickle_name}.pkl"))
     # The general structure is as follows:
@@ -1161,7 +1166,7 @@ def plot_results_grid_expert_query_confidence_fixed_module_selector(results_dir:
         "total_correct",
         "total_timesteps",
     ]
-    
+
     variant_order = ["greedy", "balanced", "conservative", "balanced-2"]
 
     # For each unique combination of IVs, we need to collect the run IDs
@@ -1192,10 +1197,17 @@ def plot_results_grid_expert_query_confidence_fixed_module_selector(results_dir:
                     df_filtered["expert_query_confidence"] == expert_query_confidence
                 ]
                 # Extract the results (from the results_dictionary column)
-                if len(df_filtered_expert_query_confidence["results_dictionary"].values) == 0:
+                if (
+                    len(
+                        df_filtered_expert_query_confidence["results_dictionary"].values
+                    )
+                    == 0
+                ):
                     print("No results found for this combination.")
                     continue
-                results = df_filtered_expert_query_confidence["results_dictionary"].values[0]
+                results = df_filtered_expert_query_confidence[
+                    "results_dictionary"
+                ].values[0]
                 for j, variant in enumerate(variant_order):
                     # Only add label to legend if we haven't seen this algorithm before
                     label = variant if variant not in legend_added else ""
@@ -1206,7 +1218,11 @@ def plot_results_grid_expert_query_confidence_fixed_module_selector(results_dir:
                     # Extract the results (from the results_dictionary column)
                     results = row["results_dictionary"].values[0]
                     # Use mean for total_correct metric, median for others
-                    value = np.mean(results[module_selector][metric][graph_size]) if metric == "total_correct" else np.median(results[module_selector][metric][graph_size])
+                    value = (
+                        np.mean(results[module_selector][metric][graph_size])
+                        if metric == "total_correct"
+                        else np.median(results[module_selector][metric][graph_size])
+                    )
                     ax.bar(
                         i * len(variant_order) + j,
                         value,
@@ -1219,7 +1235,9 @@ def plot_results_grid_expert_query_confidence_fixed_module_selector(results_dir:
             # Step 4. Add x-axis labels.
             ax.set_xlabel("Expert Query Confidence")
             # Tick labels are the expert query confidence.
-            ax.set_xticks(np.arange(len(expert_query_confidence_order)) * len(results.keys()))
+            ax.set_xticks(
+                np.arange(len(expert_query_confidence_order)) * len(results.keys())
+            )
             ax.set_xticklabels(expert_query_confidence_order)
             # Step 5. Add y-axis labels.
             ax.set_ylabel(metric)
@@ -1242,7 +1260,18 @@ def plot_results_grid_expert_query_confidence_fixed_module_selector(results_dir:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--plot_variable", type=str, choices=["num_modules", "graph_structures", "confidences", "query_costs", "expert_confidence"], required=True)
+    parser.add_argument(
+        "--plot_variable",
+        type=str,
+        choices=[
+            "num_modules",
+            "graph_structures",
+            "confidences",
+            "query_costs",
+            "expert_confidence",
+        ],
+        required=True,
+    )
     parser.add_argument(
         "--results_dir", type=str, default="experiments/results", required=True
     )
@@ -1284,26 +1313,61 @@ if __name__ == "__main__":
 
     # Variable 01: number of modules.
     if args.plot_variable == "num_modules":
-        print("Ignoring fixed_graph_size, fixed_variant, and fixed_module_selector, and plotting a fixed pkl file and run ID.")
-        plot_results_grid(args.results_dir, args.output_dir, mode='single_pkl_file', pkl_file=args.pkl_file)
-        plot_results_grid_fixed_module_selector(args.results_dir, args.output_dir, fixed_module_selector, mode='single_run_id', run_id=args.run_id)
+        print(
+            "Ignoring fixed_graph_size, fixed_variant, and fixed_module_selector, and plotting a fixed pkl file and run ID."
+        )
+        plot_results_grid(
+            args.results_dir,
+            args.output_dir,
+            mode="single_pkl_file",
+            pkl_file=args.pkl_file,
+        )
+        plot_results_grid_fixed_module_selector(
+            args.results_dir,
+            args.output_dir,
+            fixed_module_selector,
+            mode="single_run_id",
+            run_id=args.run_id,
+        )
     elif args.plot_variable == "graph_structures":
-        plot_results_grid_graph_structures(args.results_dir, args.output_dir, fixed_variant, fixed_graph_size, df_stem)
+        plot_results_grid_graph_structures(
+            args.results_dir, args.output_dir, fixed_variant, fixed_graph_size, df_stem
+        )
         plot_results_grid_graph_structures_fixed_module_selector(
-            args.results_dir, args.output_dir, fixed_module_selector, fixed_graph_size, df_stem
+            args.results_dir,
+            args.output_dir,
+            fixed_module_selector,
+            fixed_graph_size,
+            df_stem,
         )
     elif args.plot_variable == "confidences":
-        plot_results_grid_confidences(args.results_dir, args.output_dir, fixed_variant, fixed_graph_size, df_stem)
+        plot_results_grid_confidences(
+            args.results_dir, args.output_dir, fixed_variant, fixed_graph_size, df_stem
+        )
         plot_results_grid_confidences_fixed_module_selector(
-            args.results_dir, args.output_dir, fixed_module_selector, fixed_graph_size, df_stem
+            args.results_dir,
+            args.output_dir,
+            fixed_module_selector,
+            fixed_graph_size,
+            df_stem,
         )
     elif args.plot_variable == "query_costs":
-        plot_results_grid_cquery(args.results_dir, args.output_dir, fixed_variant, fixed_graph_size, df_stem)
+        plot_results_grid_cquery(
+            args.results_dir, args.output_dir, fixed_variant, fixed_graph_size, df_stem
+        )
         plot_results_grid_cquery_fixed_module_selector(
-            args.results_dir, args.output_dir, fixed_module_selector, fixed_graph_size, df_stem
+            args.results_dir,
+            args.output_dir,
+            fixed_module_selector,
+            fixed_graph_size,
+            df_stem,
         )
     elif args.plot_variable == "expert_confidence":
-        plot_results_grid_expert_query_confidence(args.results_dir, fixed_variant, fixed_graph_size, df_stem)
-        plot_results_grid_expert_query_confidence_fixed_module_selector(args.results_dir, fixed_module_selector, fixed_graph_size, df_stem)
+        plot_results_grid_expert_query_confidence(
+            args.results_dir, fixed_variant, fixed_graph_size, df_stem
+        )
+        plot_results_grid_expert_query_confidence_fixed_module_selector(
+            args.results_dir, fixed_module_selector, fixed_graph_size, df_stem
+        )
     else:
         raise ValueError(f"Invalid plot variable: {args.plot_variable}")

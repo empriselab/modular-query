@@ -66,7 +66,7 @@ class ModularPolicy:
         whether we queried for a module, as well as the post-query
         confidences."""
 
-        # Passing through with the expert cache 
+        # Passing through with the expert cache
         # (where we know that expert cached values will have a confidence of p_expert)
         self.module_graph.root.set_state(state)
         computed_values, computed_confidences, total_query_cost = (
@@ -120,7 +120,9 @@ class ModularPolicy:
             query_cost = queried_module.get_expert_query_cost()
 
             # Check if confidence gain is less than query cost
-            confidence_gain = self.module_graph.expert_query_confidence - current_confidence
+            confidence_gain = (
+                self.module_graph.expert_query_confidence - current_confidence
+            )
             if confidence_gain < query_cost:
                 # Don't query - set expert_query_module_names to empty set
                 # Also, set queried to False.

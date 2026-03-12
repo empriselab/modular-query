@@ -78,7 +78,11 @@ def construct_graph(
         leaves.add(module)
 
     # Create the module graph.
-    module_graph = ModuleGraph(module_to_parents, expert_query_confidence=expert_query_confidence, expert_value_rng=None)
+    module_graph = ModuleGraph(
+        module_to_parents,
+        expert_query_confidence=expert_query_confidence,
+        expert_value_rng=None,
+    )
 
     return module_graph
 
@@ -179,7 +183,11 @@ def construct_graph_top_bottom(
         leaves.add(module)
 
     # Create the module graph.
-    module_graph = ModuleGraph(module_to_parents, expert_query_confidence=expert_query_confidence, expert_value_rng=None)
+    module_graph = ModuleGraph(
+        module_to_parents,
+        expert_query_confidence=expert_query_confidence,
+        expert_value_rng=None,
+    )
     return module_graph
 
 
@@ -486,6 +494,7 @@ def generate_random_top_bottom_module_graph(
 
 ##### NOT ACTIVELY USED #####
 
+
 def generate_random_polynomial_module_graph(
     num_modules: int,
     edge_probability: float,
@@ -645,7 +654,9 @@ def generate_random_logic_gate_module_graph(
     )
     return module_graph
 
+
 #### HELPFUL UTILITIES ####
+
 
 def task_cost_proxy(
     computed_confidences: dict[Module, float],
