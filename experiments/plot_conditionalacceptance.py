@@ -1,33 +1,33 @@
 """
-Created: 12/13/2025 for the conditional acceptance.
+Created: 12/13/2025.
 
-Unified plot that puts multiple plots (for different independent variables) into a single matplotlib figure.
+Unified plot that puts multiple plots (for different independent variables)
+into a single matplotlib figure.
 
 General layout is as follows:
-- First row (module selectors): Number of Modules (metric: Computation Time), Redundancy (metric: Total Timesteps), Confidences (metric: Total Correct)
+- First row (module selectors): Number of Modules (metric: Computation Time),
+Redundancy (metric: Total Timesteps), Confidences (metric: Total Correct)
 Workloads (metric: Total Timesteps)
-- Second row (querying algorithms): Number of Modules (metric: Computation Time), Redundancy (metric: Total Timesteps), Confidences (metric: Total Correct)
+- Second row (querying algorithms): Number of Modules (metric: Computation Time),
+Redundancy (metric: Total Timesteps), Confidences (metric: Total Correct)
 Workloads (metric: Total Timesteps)
 
 Structured as a 2 x 4 matplotlib grid (this way we can enforce equal sizes for plots.)
 
 
 Usage
-- python experiments/plot_conditionalacceptance.py  --output_dir experiments/results
+- python experiments/plot_unified_grid.py  --output_dir experiments/results
 """
 
 import argparse
-import json
-import os
-import pickle as pkl
 from pathlib import Path
+from typing import Any
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib.ticker import MaxNLocator
-from tqdm import tqdm
 
 from modular_query.plot_utils import (
     VARIANT_NAMES,
@@ -213,7 +213,8 @@ def individual_plot(
     else:
         df_column = column
 
-    # First, df_filtered should have all fixed variables set (except for the one that is varying).
+    # First, df_filtered should have all fixed variables set
+    # (except for the one that is varying).
 
     # Create a boolean mask for rows that match the fixed variables.
     mask = True
@@ -226,24 +227,15 @@ def individual_plot(
 
     legend_added = set()
 
-    # TOP3 = {"Brute Force", "Graph Query", "Confidence Query"}
-    # others = [algorithm for algorithm in results_sample.keys() if algorithm not in TOP3]
-    # max_jitter = 0.1
-    # if len(others) > 1:
-    #     other_offsets = np.linspace(-max_jitter, max_jitter, len(others))
-    # else:
-    #     other_offsets = [0]
-    # OFFSETS = {algorithm: offset for algorithm, offset in zip(others, other_offsets)}
-    # OFFSETS.update({algorithm: 0 for algorithm in TOP3})
     OFFSETS = {algorithm: 0 for algorithm in results_sample.keys()}
 
     ## trial 1: line plot code.
     # Collect data for each algorithm across all order values
-    algorithm_data = {}
+    algorithm_data: dict[str, list[float]] = {}
     for algorithm in results_sample.keys():
         algorithm_data[algorithm] = []
 
-    for i, value in enumerate(order):
+    for value in order:
         # Filter the df for only those run IDs.
         df_filtered_value = df_filtered[df_filtered[df_column] == value]
         # Extract the results (from the results_dictionary column)
@@ -259,7 +251,7 @@ def individual_plot(
 
     # Plot a line for each algorithm
     for algorithm in module_selector_order:
-        if algorithm in algorithm_data.keys():
+        if algorithm in algorithm_data:
             # Only add label to legend if we haven't seen this algorithm before
             label = algorithm if algorithm not in legend_added else ""
             style = STRATEGY_COLORS[algorithm]
@@ -277,32 +269,6 @@ def individual_plot(
             )
             legend_added.add(algorithm)
 
-    # # OLD BAR PLOT CODE.
-    # for i, value in enumerate(order):
-    #     # Filter the df for only those run IDs.
-    #     df_filtered_value = df_filtered[
-    #         df_filtered[column] == value
-    #     ]
-    #     # Extract the results (from the results_dictionary column)
-    #     results = df_filtered_value["results_dictionary"].values[0]
-    #     for k, algorithm in enumerate(results.keys()):
-    #         # Only add label to legend if we haven't seen this algorithm before
-    #         label = algorithm if algorithm not in legend_added else ""
-    #         # Use mean for total_correct metric, median for others
-    #         value = (
-    #             1-np.mean(results[algorithm][metric][graph_size])
-    #             if metric == "total_correct"
-    #             else np.median(results[algorithm][metric][graph_size])
-    #         )
-    #         ax.bar(
-    #             i * len(results.keys()) + k,
-    #             value,
-    #             label=label,
-    #             color=STRATEGY_COLORS[algorithm]["color"],
-    #         )
-    #         legend_added.add(algorithm)
-
-    # ax.set_xticks(np.arange(len(order)) * len(results.keys())+XTICK_OFFSET)
     ax.set_xticks(x_base)
     # if column is "dependency_structure", replace any underscores with hyphens
     if column == "dependency_structure":
@@ -312,9 +278,7 @@ def individual_plot(
         ax.set_xlabel(
             XLABELS[column], fontsize=XLABEL_FONTSIZE, fontfamily="serif", labelpad=10
         )
-        ax.xaxis.set_label_coords(
-            0.5, -0.25
-        )  # x=0.5 means center, y=-0.15 means 15% down from the bottom
+        ax.xaxis.set_label_coords(0.5, -0.25)
     if title:
         ax.set_title(title, fontsize=20, fontfamily="serif", fontweight="bold")
     ax.set_ylabel(
@@ -324,7 +288,6 @@ def individual_plot(
     )
     if metric == "total_timesteps" or metric == "total_failed_attempts":
         ax.yaxis.set_major_locator(MaxNLocator(integer=True))
-    # just for confidence_2, set the y-tick to start from 0.4 with top at 0.9.
     if column == "confidence_2":
         common_add_arrows(ax, y_lim=(0.3, 0.9))
     else:
@@ -345,7 +308,7 @@ def individual_plot_fixed_moduleselector(
     # Create a boolean mask for rows that match this combination
     mask = True
     for col, value in fixed_variables.items():
-        if col != column and col != "variant":
+        if col not in (column, "variant"):
             mask = mask & (df[col] == value)
     df_filtered = df[mask]
 
@@ -353,11 +316,11 @@ def individual_plot_fixed_moduleselector(
 
     ## TRIAL 1: LINE PLOT CODE.
     # Collect data for each variant across all order values
-    variant_data = {}
+    variant_data: dict[str, list[float]] = {}
     for variant in order_dict["variant"]:
         variant_data[variant] = []
 
-    for i, value in enumerate(order_dict[column]):
+    for value in order_dict[column]:
         # Filter the df for only those run IDs.
         df_filtered_value = df_filtered[df_filtered[column] == value]
         for variant in order_dict["variant"]:
@@ -377,13 +340,13 @@ def individual_plot_fixed_moduleselector(
     x_positions = (
         np.arange(len(order_dict[column])) * len(order_dict["variant"]) + XTICK_OFFSET
     )
-    for variant in variant_data.keys():
+    for variant, data in variant_data.items():
         # Only add label to legend if we haven't seen this variant before
         label = VARIANT_STYLES[variant]["name"] if variant not in legend_added else ""
         style = VARIANT_STYLES[variant]
         ax.plot(
             x_positions,
-            variant_data[variant],
+            data,
             label=label,
             color=style["color"],
             linestyle=style["linestyle"],
@@ -393,35 +356,6 @@ def individual_plot_fixed_moduleselector(
             alpha=style["alpha"],
         )
         legend_added.add(variant)
-
-    ## ORIGINAL BAR PLOT CODE.
-    # for i, value in enumerate(order_dict[column]):
-    #     # Filter the df for only those run IDs.
-    #     df_filtered_value = df_filtered[
-    #         df_filtered[column] == value
-    #     ]
-    #     for j, variant in enumerate(order_dict["variant"]):
-    #         # Only add label to legend if we haven't seen this algorithm before
-    #         label = VARIANT_STYLES[variant]["name"] if variant not in legend_added else ""
-    #         # Extract the row for this variant.
-    #         row = df_filtered_value[
-    #             df_filtered_value["variant"] == variant
-    #         ]
-    #         # Extract the results (from the results_dictionary column)
-    #         results = row["results_dictionary"].values[0]
-    #         # Use mean for total_correct metric, median for others
-    #         value = (
-    #             1-np.mean(results[module_selector][metric][graph_size])
-    #             if metric == "total_correct"
-    #             else np.median(results[module_selector][metric][graph_size])
-    #         )
-    #         ax.bar(
-    #             i * len(order_dict["variant"]) + j,
-    #             value,
-    #             label=label,
-    #             color=VARIANT_STYLES[variant]["color"],
-    #         )
-    #         legend_added.add(variant)
 
     ax.set_xticks(
         np.arange(len(order_dict[column])) * len(order_dict["variant"]) + XTICK_OFFSET
@@ -440,9 +374,7 @@ def individual_plot_fixed_moduleselector(
     ax.set_xlabel(
         XLABELS[column], fontsize=XLABEL_FONTSIZE, fontfamily="serif", labelpad=10
     )
-    ax.xaxis.set_label_coords(
-        0.5, -0.25
-    )  # x=0.5 means center, y=-0.15 means 15% down from the bottom
+    ax.xaxis.set_label_coords(0.5, -0.25)
     if metric == "total_timesteps" or metric == "total_failed_attempts":
         ax.yaxis.set_major_locator(MaxNLocator(integer=True))
 
@@ -452,9 +384,7 @@ def individual_plot_num_modules(
     fixed_variables: dict,
     metric: str,
     column: str,
-    order: list,
     ax: plt.Axes,
-    graph_size: int,
 ) -> None:
     """Makes an individual plot for the number of modules."""
     use_mean_for_total_correct = True
@@ -508,9 +438,9 @@ def individual_plot_num_modules(
 
         # Plot the data with strategy-specific styling
         style = STRATEGY_COLORS[strategy_name]
-        line = ax.plot(
+        ax.plot(
             graph_sizes[: len(medians)],
-            medians,
+            np.array(medians),
             color=style["color"],
             linestyle=style["linestyle"],
             marker=style["marker"],
@@ -551,7 +481,6 @@ def individual_plot_num_modules_fixed_moduleselector(
     column: str,
     order_dict: dict,
     ax: plt.Axes,
-    graph_size: int,
     module_selector: str,
     ymax=None,
 ) -> None:
@@ -561,7 +490,7 @@ def individual_plot_num_modules_fixed_moduleselector(
     # Extract the appropriate result from the dataframe.
     mask = True
     for col, value in fixed_variables.items():
-        if col != column and col != "variant":
+        if col not in (column, "variant"):
             mask = mask & (df[col] == value)
     df_filtered = df[mask]
 
@@ -603,8 +532,8 @@ def individual_plot_num_modules_fixed_moduleselector(
             medians.append(median)
             upper_quartiles.append(upper_quartile)
             lower_quartiles.append(lower_quartile)
-        line = ax.plot(
-            medians,
+        ax.plot(
+            np.array(medians),
             label=VARIANT_NAMES[variant],
             color=VARIANT_STYLES[variant]["color"],
             linestyle=VARIANT_STYLES[variant]["linestyle"],
@@ -619,25 +548,21 @@ def individual_plot_num_modules_fixed_moduleselector(
         ):
             ax.fill_between(
                 np.arange(len(graph_sizes)),
-                lower_quartiles,
-                upper_quartiles,
+                np.array(lower_quartiles),
+                np.array(upper_quartiles),
                 alpha=0.3,
                 color=VARIANT_STYLES[variant]["color"],
             )
-        # ax.set_title(TITLES[metric])
-        # ax.set_xlabel("Number of Graph Nodes")
         ax.set_ylabel(
             YLABELS[metric] if metric != "total_correct" else "Task Cost",
             fontsize=18,
             fontfamily="serif",
-        )  # ax.grid(True, linestyle="--", alpha=0.7)
-        # ax.grid(True, linestyle="--", alpha=0.7)
+        )
         # Show x-axis values as integers.
-        # NOTE: totally hardcoded to only show the first 5 graph sizes (the rest don't have data)
+        # Only shows the first 5 graph sizes.
         max_graph_sizes = 5
         ax.set_xticks(np.arange(max_graph_sizes))
         ax.set_xticklabels(graph_sizes[:max_graph_sizes], size=TICK_FONTSIZE[column])
-        # Hardcoding the y-max to be 0.06, if no y-max is provided.
         if ymax is not None:
             ax.set_ylim(0, ymax)
         # Explicitly enable x-axis tick labels for all subplots (not just bottom)
@@ -647,24 +572,25 @@ def individual_plot_num_modules_fixed_moduleselector(
         ax.set_xlabel(
             XLABELS[column], fontsize=XLABEL_FONTSIZE, fontfamily="serif", labelpad=10
         )
-        ax.xaxis.set_label_coords(
-            0.5, -0.25
-        )  # x=0.5 means center, y=-0.2 means 20% down from the bottom
+        ax.xaxis.set_label_coords(0.5, -0.25)
 
         if metric == "total_timesteps" or metric == "total_failed_attempts":
             ax.yaxis.set_major_locator(MaxNLocator(integer=True))
 
 
-def unified_plot_conditionalacceptance(output_dir: str) -> None:
+def unified_plot(output_dir: str) -> None:
     """Unified plot that puts multiple plots (for different independent
     variables) into a single matplotlib figure.
 
     General layout is as follows:
-    - First row (module selectors): Number of Modules (metric: Computation Time), Redundancy (metric: Total Timesteps), Confidences (metric: Total Correct)
+    - First row (module selectors): Number of Modules (metric: Computation Time),
+    Redundancy (metric: Total Timesteps), Confidences (metric: Total Correct)
     Workloads (metric: Total Timesteps)
-    - Second row (querying algorithms): Number of Modules (metric: Computation Time), Redundancy (metric: Total Timesteps), Confidences (metric: Total Correct)
+    - Second row (querying algorithms): Number of Modules (metric: Computation Time),
+    Redundancy (metric: Total Timesteps), Confidences (metric: Total Correct)
     Workloads (metric: Total Timesteps)
-    Structured as a 2 x 4 matplotlib grid (this way we can enforce equal sizes for plots.)
+    Structured as a 2 x 4 matplotlib grid
+    (this way we can enforce equal sizes for plots.)
     """
     # Set the fixed variables.
     fixed_variant = "balanced-2"
@@ -699,10 +625,6 @@ def unified_plot_conditionalacceptance(output_dir: str) -> None:
     fig, axes = plt.subplots(
         nrows=len(rows), ncols=len(columns), figsize=UNIFIED_PLOT_FIGSIZE
     )
-    # data_locations = {"module_selectors": {col: "experiments/results/20251208_hricondaccept/" for col in columns}, \
-    #     "querying_algorithms": {col: "experiments/results/20250929_fixbruteforce/" for col in columns}}
-    # data_locations["querying_algorithms"]["confidence"] = "experiments/results/20250929_fixbruteforce_varyconfidences/"
-    # Switch to using 20260111_newbaselines for all of the above commented-out data locations.
     data_locations = {
         "module_selectors": {
             col: "experiments/results/20260111_newbaselines/" for col in columns
@@ -715,7 +637,8 @@ def unified_plot_conditionalacceptance(output_dir: str) -> None:
     data_locations["module_selectors"][
         "confidence_2"
     ] = "experiments/results/20251110_finerconfidences_exp2/"
-    # this one is tricky because it's actually not showing querying algorithms; it's showing module selectors.
+    # this one is tricky because it's actually not showing querying algorithms;
+    # it's showing module selectors.
     # but it'll be in the second row of the plot.
     data_locations["querying_algorithms"][
         "confidence_2"
@@ -734,11 +657,11 @@ def unified_plot_conditionalacceptance(output_dir: str) -> None:
     query_cost_order = [0.08, 0.16, 0.32, 0.64]
     variant_order = ["greedy", "balanced", "conservative", "balanced-2", "query-all"]
 
-    order_dict = {}
+    order_dict: dict[str, list[Any]] = {}
     order_dict["dependency_structure"] = graph_structure_order
     order_dict["confidence"] = confidence_order
     order_dict["c_query"] = query_cost_order
-    order_dict["num_modules"] = None
+    order_dict["num_modules"] = []
     order_dict["variant"] = variant_order
     order_dict["confidence_2"] = confidence_2_order
 
@@ -751,7 +674,8 @@ def unified_plot_conditionalacceptance(output_dir: str) -> None:
             results_dir = Path(data_locations[row][column])
             df_original = pd.read_pickle(results_dir / "combined_df.pkl")
 
-            # Add a new column confidence which has the correct and incorrect confidence paired into a tuple.
+            # Add a new column confidence which has the correct
+            # and incorrect confidence paired into a tuple.
             # Drop the original correct and incorrect confidence columns.
             df_original["confidence"] = df_original.apply(
                 lambda row: (row["correct_confidence"], row["incorrect_confidence"]),
@@ -769,9 +693,7 @@ def unified_plot_conditionalacceptance(output_dir: str) -> None:
                         fixed_variables,
                         metric,
                         column,
-                        order_dict[column],
                         ax,
-                        graph_size,
                     )
                 elif column == "confidence_2":
                     individual_plot(
@@ -805,7 +727,6 @@ def unified_plot_conditionalacceptance(output_dir: str) -> None:
                         column,
                         order_dict,
                         ax,
-                        graph_size,
                         fixed_module_selector,
                         ymax=0.06,
                     )
@@ -878,7 +799,7 @@ def unified_plot_conditionalacceptance(output_dir: str) -> None:
 
     # Create two legends side by side, centered over first 4 columns
     # First legend: Module Selectors (from bottom row)
-    legend1 = fig.legend(
+    fig.legend(
         module_selector_handles,
         module_selector_labels,
         loc="upper center",
@@ -889,7 +810,7 @@ def unified_plot_conditionalacceptance(output_dir: str) -> None:
     )
 
     # Second legend: Querying Algorithms (from top row)
-    legend2 = fig.legend(
+    fig.legend(
         querying_algorithm_handles,
         querying_algorithm_labels,
         loc="upper center",
@@ -949,12 +870,12 @@ def unified_plot_conditionalacceptance(output_dir: str) -> None:
     )  # Step 3. Save the figure.
 
     plt.savefig(
-        f"{output_dir}/plot_conditional_acceptance_fontfix.pdf",
+        f"{output_dir}/plot_unified_grid.pdf",
         dpi=300,
         bbox_inches="tight",
     )
     plt.savefig(
-        f"{output_dir}/plot_conditional_acceptance_fontfix.png",
+        f"{output_dir}/plot_unified_grid.png",
         dpi=300,
         bbox_inches="tight",
     )
@@ -968,4 +889,4 @@ if __name__ == "__main__":
         "--output_dir", type=str, default="experiments/results", required=True
     )
     args = parser.parse_args()
-    unified_plot_conditionalacceptance(args.output_dir)
+    unified_plot(args.output_dir)
