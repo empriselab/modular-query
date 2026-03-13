@@ -200,7 +200,6 @@ def run_experiment(
     # Initialize strategies.
     # (initially with null and_modules and or_modules,
     # which will be set after the module graph is generated.)
-    # NOTE: disabling other strategies for the rebuttal for now.
     strategies = {
         "Never Query": NeverQueryStrategy(correct_answer_cost, incorrect_answer_cost),
         "Brute Force": BruteForceQueryStrategy(
