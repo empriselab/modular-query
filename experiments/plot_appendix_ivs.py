@@ -20,11 +20,13 @@ import json
 import os
 import pickle as pkl
 from pathlib import Path
+from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from plot_conditionalacceptance import (
+
+from experiments.plot_conditionalacceptance import (
     individual_plot,
     individual_plot_fixed_moduleselector,
     individual_plot_num_modules,
@@ -97,11 +99,11 @@ def plot_appendix_ivs(output_dir: str, iv: str, plot_index: int) -> None:
     variant_order = ["greedy", "balanced", "conservative", "balanced-2", "query-all"]
     expert_query_confidence_order = [1.0, 0.8, 0.6, 0.4]
 
-    order_dict = {}
+    order_dict: dict[str, list[Any]] = {}
     order_dict["dependency_structure"] = graph_structure_order
     order_dict["confidence"] = confidence_order
     order_dict["c_query"] = query_cost_order
-    order_dict["num_modules"] = None
+    order_dict["num_modules"] = []
     order_dict["variant"] = variant_order
     order_dict["expert_query_confidence"] = expert_query_confidence_order
 
