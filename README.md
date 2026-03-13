@@ -24,7 +24,7 @@ To generate the main paper plot (Fig. 4):
 
 **1. Running simulation experiments:**
 ```bash
-python run_experiment.py --variant all_variants
+python experiments/run_experiment.py --variant all_variants
 ```
 
 **2. Create data directory:**
@@ -35,7 +35,7 @@ mv experiments/results/* experiments/results/[data_dir]
 
 **3. Create dataframes:**
 ```bash
-python pickles_to_df.py --data_dir experiments/results/[data_dir]
+python experiments/pickles_to_df.py --data_dir experiments/results/[data_dir]
 ```
 
 Note - you will need to run steps 1-3 _4_ times in total, one for each of the configurations
@@ -44,14 +44,14 @@ are written in the comments.
 
 **Generate main paper plot (Fig. 4):**
 ```bash
-python plot_unified_grid.py --output_dir [output_dir]
+python experiments/plot_unified_grid.py --output_dir [output_dir]
 ```
 
 **Generate appendix plots**
 
 ```bash
-python plot_appendix_ivs.py --output_dir [output_dir]
-python plot_appendix_module_heterogeneity.py --output_dir [output_dir]
+python experiments/plot_appendix_ivs.py --output_dir [output_dir]
+python experiments/plot_appendix_module_heterogeneity.py --output_dir [output_dir]
 ```
 
 
