@@ -23,6 +23,7 @@ import argparse
 from pathlib import Path
 from typing import Any
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -34,6 +35,8 @@ from modular_query.plot_utils import (
     common_add_arrows,
 )
 
+mpl.rcParams["pdf.fonttype"] = 42  # embed TrueType, not Type 3
+mpl.rcParams["ps.fonttype"] = 42  # embed TrueType, not Type 3
 # Constants:
 UNIFIED_PLOT_FIGSIZE = (27.5, 8)
 XTICK_OFFSET = 0.5
@@ -49,12 +52,23 @@ XLABELS = {
     "num_modules": "Number of Modules",
     "dependency_structure": "Redundancy",
     "confidence": "Confidences",
-    "c_query": "Workloads",
+    "c_query": "Query Costs",
     "confidence_2": "Confidences",
 }
 XLABEL_FONTSIZE = 20
 MARKER_SIZE = 8
 DEFAULT_ALPHA = 1.0
+
+module_selector_order = [
+    "Never Query",
+    "Graph Query",
+    "Brute Force",
+    "Binary Tree Query",
+    "Confidence Query",
+    "Topo Query",
+    "MIP",
+    "Always Query",
+]
 
 STRATEGY_COLORS = {
     "Never Query": {
@@ -62,7 +76,7 @@ STRATEGY_COLORS = {
         "linestyle": "--",
         "marker": "x",
         "linewidth": 2,
-        "markersize": MARKER_SIZE,
+        "markersize": 10,
         "alpha": 0.5,
     },
     "Brute Force": {
@@ -72,7 +86,7 @@ STRATEGY_COLORS = {
         "linestyle": ":",
         "marker": "o",
         "linewidth": 2,
-        "markersize": 16,
+        "markersize": 12,
         "alpha": 0.25,
     },
     "Graph Query": {
@@ -81,8 +95,8 @@ STRATEGY_COLORS = {
         "linestyle": "-",
         "marker": "s",
         "linewidth": 2,
-        "markersize": MARKER_SIZE,
-        "alpha": 0.5,
+        "markersize": 16,
+        "alpha": 0.55,
     },
     "Binary Tree Query": {
         "color": "gray",
@@ -100,6 +114,14 @@ STRATEGY_COLORS = {
         "linewidth": 2,
         "markersize": MARKER_SIZE,
         "alpha": DEFAULT_ALPHA,
+    },
+    "Topo Query": {
+        "color": "gray",
+        "linestyle": "-",
+        "marker": "D",
+        "linewidth": 2,
+        "markersize": MARKER_SIZE,
+        "alpha": 0.75,
     },
     "MIP": {
         "color": "gray",
@@ -153,6 +175,15 @@ VARIANT_STYLES = {
         "marker": "^",
         "linewidth": 2,
         "name": "Query-Until-Confident-Workload-Aware",
+        "markersize": MARKER_SIZE,
+        "alpha": DEFAULT_ALPHA,
+    },
+    "query-all": {
+        "color": "gray",
+        "linestyle": "-",
+        "marker": "D",
+        "linewidth": 2,
+        "name": "Query-For-All",
         "markersize": MARKER_SIZE,
         "alpha": DEFAULT_ALPHA,
     },
@@ -215,23 +246,24 @@ def individual_plot(
             algorithm_data[algorithm].append(y_value)
 
     # Plot a line for each algorithm
-    for algorithm, data in algorithm_data.items():
-        # Only add label to legend if we haven't seen this algorithm before
-        label = algorithm if algorithm not in legend_added else ""
-        style = STRATEGY_COLORS[algorithm]
-        x_positions = x_base + OFFSETS[algorithm]
-        ax.plot(
-            x_positions,
-            data,
-            label=label,
-            color=style["color"],
-            linestyle=style["linestyle"],
-            marker=style["marker"],
-            linewidth=style["linewidth"],
-            markersize=style["markersize"],
-            alpha=style["alpha"],
-        )
-        legend_added.add(algorithm)
+    for algorithm in module_selector_order:
+        if algorithm in algorithm_data:
+            # Only add label to legend if we haven't seen this algorithm before
+            label = algorithm if algorithm not in legend_added else ""
+            style = STRATEGY_COLORS[algorithm]
+            x_positions = x_base + OFFSETS[algorithm]
+            ax.plot(
+                x_positions,
+                algorithm_data[algorithm],
+                label=label,
+                color=style["color"],
+                linestyle=style["linestyle"],
+                marker=style["marker"],
+                linewidth=style["linewidth"],
+                markersize=style["markersize"],
+                alpha=style["alpha"],
+            )
+            legend_added.add(algorithm)
 
     ax.set_xticks(x_base)
     # if column is "dependency_structure", replace any underscores with hyphens
@@ -246,11 +278,11 @@ def individual_plot(
     if title:
         ax.set_title(title, fontsize=20, fontfamily="serif", fontweight="bold")
     ax.set_ylabel(
-        YLABELS[metric] if metric != "total_correct" else "Total Incorrect",
+        YLABELS[metric] if metric != "total_correct" else "Task Cost",
         fontsize=18,
         fontfamily="serif",
     )
-    if metric == "total_timesteps":
+    if metric in ("total_timesteps", "total_failed_attempts"):
         ax.yaxis.set_major_locator(MaxNLocator(integer=True))
     if column == "confidence_2":
         common_add_arrows(ax, y_lim=(0.3, 0.9))
@@ -330,7 +362,7 @@ def individual_plot_fixed_moduleselector(
         order_to_use = order_dict[column]
     ax.set_xticklabels(order_to_use, fontsize=TICK_FONTSIZE[column])
     ax.set_ylabel(
-        YLABELS[metric] if metric != "total_correct" else "Total Incorrect",
+        YLABELS[metric] if metric != "total_correct" else "Task Cost",
         fontsize=18,
         fontfamily="serif",
     )
@@ -339,7 +371,7 @@ def individual_plot_fixed_moduleselector(
         XLABELS[column], fontsize=XLABEL_FONTSIZE, fontfamily="serif", labelpad=10
     )
     ax.xaxis.set_label_coords(0.5, -0.25)
-    if metric == "total_timesteps":
+    if metric in ("total_timesteps", "total_failed_attempts"):
         ax.yaxis.set_major_locator(MaxNLocator(integer=True))
 
 
@@ -382,8 +414,8 @@ def individual_plot_num_modules(
                 # Use mean for total_correct metric if requested,
                 # otherwise use median
                 if use_mean_for_total_correct and metric == "total_correct":
-                    median = np.mean(result_array)
-                    std = np.std(result_array)
+                    median = np.mean(1 - result_array)
+                    std = np.std(1 - result_array)
                     upper_quartile = median + std
                     lower_quartile = median - std
                 else:
@@ -426,9 +458,16 @@ def individual_plot_num_modules(
     # Explicitly enable x-axis tick labels for all subplots (not just bottom)
     ax.tick_params(labelbottom=True)
     ax.tick_params(labelsize=TICK_FONTSIZE[column], axis="x")
-    ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily="serif")
+    ax.set_ylabel(
+        YLABELS[metric] if metric != "total_correct" else "Task Cost",
+        fontsize=18,
+        fontfamily="serif",
+    )
 
     common_add_arrows(ax, xaxis_position=-0.005)
+
+    if metric in ("total_timesteps", "total_failed_attempts"):
+        ax.yaxis.set_major_locator(MaxNLocator(integer=True))
 
 
 def individual_plot_num_modules_fixed_moduleselector(
@@ -439,6 +478,7 @@ def individual_plot_num_modules_fixed_moduleselector(
     order_dict: dict,
     ax: plt.Axes,
     module_selector: str,
+    ymax=None,
 ) -> None:
     """Makes an individual plot for the number of modules, for a fixed module
     selector."""
@@ -471,8 +511,8 @@ def individual_plot_num_modules_fixed_moduleselector(
                 # Use mean for total_correct metric if requested,
                 # otherwise use median
                 if use_mean_for_total_correct and metric == "total_correct":
-                    median = np.mean(result_array)
-                    std = np.std(result_array)
+                    median = np.mean(1 - result_array)
+                    std = np.std(1 - result_array)
                     upper_quartile = median + std
                     lower_quartile = median - std
                 else:
@@ -488,7 +528,6 @@ def individual_plot_num_modules_fixed_moduleselector(
             medians.append(median)
             upper_quartiles.append(upper_quartile)
             lower_quartiles.append(lower_quartile)
-
         ax.plot(
             np.array(medians),
             label=VARIANT_NAMES[variant],
@@ -510,13 +549,18 @@ def individual_plot_num_modules_fixed_moduleselector(
                 alpha=0.3,
                 color=VARIANT_STYLES[variant]["color"],
             )
-        ax.set_ylabel(YLABELS[metric], fontsize=18, fontfamily="serif")
+        ax.set_ylabel(
+            YLABELS[metric] if metric != "total_correct" else "Task Cost",
+            fontsize=18,
+            fontfamily="serif",
+        )
         # Show x-axis values as integers.
         # Only shows the first 5 graph sizes.
         max_graph_sizes = 5
         ax.set_xticks(np.arange(max_graph_sizes))
         ax.set_xticklabels(graph_sizes[:max_graph_sizes], size=TICK_FONTSIZE[column])
-        ax.set_ylim(0, 0.06)
+        if ymax is not None:
+            ax.set_ylim(0, ymax)
         # Explicitly enable x-axis tick labels for all subplots (not just bottom)
         ax.tick_params(labelbottom=True)
 
@@ -525,6 +569,9 @@ def individual_plot_num_modules_fixed_moduleselector(
             XLABELS[column], fontsize=XLABEL_FONTSIZE, fontfamily="serif", labelpad=10
         )
         ax.xaxis.set_label_coords(0.5, -0.25)
+
+        if metric in ("total_timesteps", "total_failed_attempts"):
+            ax.yaxis.set_major_locator(MaxNLocator(integer=True))
 
 
 def unified_plot(output_dir: str) -> None:
@@ -576,15 +623,12 @@ def unified_plot(output_dir: str) -> None:
     )
     data_locations = {
         "module_selectors": {
-            col: "experiments/results/20251208_hricondaccept/" for col in columns
+            col: "experiments/results/20260111_newbaselines/" for col in columns
         },
         "querying_algorithms": {
-            col: "experiments/results/20250929_fixbruteforce/" for col in columns
+            col: "experiments/results/20260111_newbaselines/" for col in columns
         },
     }
-    data_locations["querying_algorithms"][
-        "confidence"
-    ] = "experiments/results/20250929_fixbruteforce_varyconfidences/"
 
     data_locations["module_selectors"][
         "confidence_2"
@@ -607,7 +651,7 @@ def unified_plot(output_dir: str) -> None:
         (0.6, 0.5),
     ]
     query_cost_order = [0.08, 0.16, 0.32, 0.64]
-    variant_order = ["greedy", "balanced", "conservative", "balanced-2"]
+    variant_order = ["greedy", "balanced", "conservative", "balanced-2", "query-all"]
 
     order_dict: dict[str, list[Any]] = {}
     order_dict["dependency_structure"] = graph_structure_order
@@ -680,6 +724,7 @@ def unified_plot(output_dir: str) -> None:
                         order_dict,
                         ax,
                         fixed_module_selector,
+                        ymax=0.06,
                     )
                 elif column == "confidence_2":
                     individual_plot(
@@ -825,6 +870,12 @@ def unified_plot(output_dir: str) -> None:
         dpi=300,
         bbox_inches="tight",
     )
+    plt.savefig(
+        f"{output_dir}/plot_unified_grid.png",
+        dpi=300,
+        bbox_inches="tight",
+    )
+
     plt.close()
 
 

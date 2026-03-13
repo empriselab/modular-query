@@ -37,7 +37,7 @@ TITLES = {
 
 YLABELS = {
     "query_cost": "Cost",
-    "query_cost_total": "Cost",
+    "query_cost_total": "Query Cost",
     "task_cost": "Cost",
     "total_cost": "Cost",
     "proxy_obj_1": "Cost",
@@ -57,6 +57,7 @@ VARIANT_NAMES = {
     "balanced": "Query-Then-Execute",
     "conservative": "Query-Until-Confident",
     "balanced-2": "Query-Until-Confident-Workload-Aware",
+    "query-all": "Query-For-All",
 }
 
 # Define distinct line styles, markers, and colors for each strategy
