@@ -80,10 +80,8 @@ def plot_appendix_ivs(output_dir: str, iv: str, plot_index: int) -> None:
         }
     elif iv == "expert_query_confidence":
         data_locations = {
-            "module_selectors": \
-                "experiments/results/20260112_noisyexpert_newbaselines/",
-            "querying_algorithms": \
-                "experiments/results/20260112_noisyexpert_newbaselines/",
+            "module_selectors": "experiments/results/20260112_noisyexpert_newbaselines/",
+            "querying_algorithms": "experiments/results/20260112_noisyexpert_newbaselines/",  # pylint: disable=line-too-long
         }
 
     # orders for IVs
