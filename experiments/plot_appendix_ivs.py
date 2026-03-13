@@ -25,7 +25,7 @@ from typing import Any
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from experiments.plot_unified_grid import (
+from modular_query.plot_utils_unified import (
     individual_plot,
     individual_plot_fixed_moduleselector,
     individual_plot_num_modules,
@@ -70,18 +70,18 @@ def plot_appendix_ivs(output_dir: str, iv: str, plot_index: int) -> None:
     data_locations: dict[str, str] = {}
     if iv in ["num_modules", "dependency_structure", "c_query"]:
         data_locations = {
-            "module_selectors": "experiments/results/20260111_newbaselines/",
-            "querying_algorithms": "experiments/results/20260111_newbaselines/",
+            "module_selectors": "experiments/results/core_ivs/",
+            "querying_algorithms": "experiments/results/core_ivs/",
         }
     elif iv == "confidence":
         data_locations = {
-            "module_selectors": "experiments/results/20260111_newbaselines/",
-            "querying_algorithms": "experiments/results/20260111_newbaselines/",
+            "module_selectors": "experiments/results/core_ivs/",
+            "querying_algorithms": "experiments/results/core_ivs/",
         }
     elif iv == "expert_query_confidence":
         data_locations = {
-            "module_selectors": "experiments/results/20260112_noisyexpert_newbaselines/",
-            "querying_algorithms": "experiments/results/20260112_noisyexpert_newbaselines/",  # pylint: disable=line-too-long
+            "module_selectors": "experiments/results/noisy_expert/",
+            "querying_algorithms": "experiments/results/noisy_expert/",  # pylint: disable=line-too-long
         }
 
     # orders for IVs

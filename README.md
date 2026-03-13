@@ -38,7 +38,7 @@ mv experiments/results/* experiments/results/[data_dir]
 python pickles_to_df.py --data_dir experiments/results/[data_dir]
 ```
 
-Note - you will need to run steps 1-3 3 times in total, one for each of the configurations
+Note - you will need to run steps 1-3 _4_ times in total, one for each of the configurations
 in the `main()` method of `experiments/run_experiment.py`, where the required `[data_dir]` values
 are written in the comments.
 
@@ -47,7 +47,13 @@ are written in the comments.
 python plot_unified_grid.py --output_dir [output_dir]
 ```
 
-To generate the appendix plots, please checkout the `feature/noisy-experts` branch.
+**Generate appendix plots**
+
+```bash
+python plot_appendix_ivs.py --output_dir [output_dir]
+python plot_appendix_module_heterogeneity.py --output_dir [output_dir]
+```
+
 
 ## 📚 Citation
 ```bibtex

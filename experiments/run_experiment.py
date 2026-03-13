@@ -1096,7 +1096,9 @@ def exp_grid_search(variant: str, config: dict[str, Any]) -> None:
 def main(variant: str) -> None:
     """Run the experiment and generate plots."""
 
-    # CAMERA-READY NOISY EXPERT CONFIGURATION:
+    # NOISY EXPERT CONFIGURATION:
+    # NOTE: when creating a data directory for this experiment,
+    # call it experiments/results/noisy_expert/
     config = {
         "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
         "num_trials": 100,
