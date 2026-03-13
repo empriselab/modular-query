@@ -1081,6 +1081,8 @@ def main(variant: str) -> None:
     """Run the experiment and generate plots."""
 
     # CONFIGURATION (Fig. 4, left).
+    # NOTE: when creating a data directory for this experiment,
+    # call it experiments/results/core_ivs
     config = {
         "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
         "num_trials": 100,
@@ -1092,6 +1094,8 @@ def main(variant: str) -> None:
     }
 
     # CONFIGURATIONS (Fig. 4, right).
+    # NOTE: when creating a data directory for this experiment,
+    # call it experiments/results/finer_conf_1
     # config = {
     #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
     #     "num_trials": 100,
@@ -1101,6 +1105,8 @@ def main(variant: str) -> None:
     #     "c_query_list": [0.32],
     #     "query_cost_noise_width_fraction": 0.6,
     # }
+    # NOTE: when creating a data directory for this experiment,
+    # call it experiments/results/finer_conf_2
     # config = {
     #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
     #     "num_trials": 100,
