@@ -4,26 +4,25 @@ row: compares querying algorithms. ## Each row has 5 plots in it (one for each
 metric.)
 
 General layout is as follows:
-- First row (module selectors): Query Cost, Total Failed Attempts, Computation Time, Total Correct, Total Timesteps
-- Second row (querying algorithms): Query Cost, Total Failed Attempts, Computation Time, Total Correct, Total Timesteps
+- First row (module selectors): Query Cost, Total Failed Attempts,
+Computation Time, Total Correct, Total Timesteps
+- Second row (querying algorithms): Query Cost, Total Failed Attempts,
+Computation Time, Total Correct, Total Timesteps
 
 Structured as a 2 x 5 matplotlib grid (this way we can enforce equal sizes for plots.)
 
 Usage:
 - python experiments/plot_appendix_ivs.py  --output_dir experiments/results
 
-will produce 5 PDFs, one for each IV (num modules, graph structures, confidences, query costs, expert confidence).
+will produce 5 PDFs, one for each IV
+(num modules, graph structures, confidences, query costs, expert confidence).
 """
 
 import argparse
-import json
-import os
-import pickle as pkl
 from pathlib import Path
 from typing import Any
 
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 
 from experiments.plot_unified_grid import (
@@ -68,28 +67,23 @@ def plot_appendix_ivs(output_dir: str, iv: str, plot_index: int) -> None:
     fig, axes = plt.subplots(
         nrows=len(rows), ncols=len(columns), figsize=UNIFIED_PLOT_FIGSIZE
     )
+    data_locations: dict[str, str] = {}
     if iv in ["num_modules", "dependency_structure", "c_query"]:
-        # data_locations = {"module_selectors": "experiments/results/20251208_hricondaccept/", \
-        # "querying_algorithms": "experiments/results/20250929_fixbruteforce/"}
-        # Switch to using 20260111_newbaselines.
         data_locations = {
             "module_selectors": "experiments/results/20260111_newbaselines/",
             "querying_algorithms": "experiments/results/20260111_newbaselines/",
         }
     elif iv == "confidence":
-        # data_locations = {"module_selectors": "experiments/results/20251208_hricondaccept/", \
-        # "querying_algorithms": "experiments/results/20250929_fixbruteforce_varyconfidences/"}
-        # Switch to using 20260111_newbaselines.
         data_locations = {
             "module_selectors": "experiments/results/20260111_newbaselines/",
             "querying_algorithms": "experiments/results/20260111_newbaselines/",
         }
     elif iv == "expert_query_confidence":
-        # data_locations = {"module_selectors": "experiments/results/20260105_noisyexpertfinal/", \
-        # "querying_algorithms": "experiments/results/20260105_noisyexpertfinal/"}
         data_locations = {
-            "module_selectors": "experiments/results/20260112_noisyexpert_newbaselines/",
-            "querying_algorithms": "experiments/results/20260112_noisyexpert_newbaselines/",
+            "module_selectors": \
+                "experiments/results/20260112_noisyexpert_newbaselines/",
+            "querying_algorithms": \
+                "experiments/results/20260112_noisyexpert_newbaselines/",
         }
 
     # orders for IVs
@@ -107,16 +101,17 @@ def plot_appendix_ivs(output_dir: str, iv: str, plot_index: int) -> None:
     order_dict["variant"] = variant_order
     order_dict["expert_query_confidence"] = expert_query_confidence_order
 
-    for i, row in enumerate(rows):
+    for ii, row in enumerate(rows):
         for j, column in enumerate(columns):
-            ax = axes[i, j]
+            ax = axes[ii, j]
             metric = column
 
             # Data loading.
             results_dir = Path(data_locations[row])
             df_original = pd.read_pickle(results_dir / "combined_df.pkl")
 
-            # Add a new column confidence which has the correct and incorrect confidence paired into a tuple.
+            # Add a new column confidence
+            # which has the correct and incorrect confidence paired into a tuple.
             # Drop the original correct and incorrect confidence columns.
             df_original["confidence"] = df_original.apply(
                 lambda row: (row["correct_confidence"], row["incorrect_confidence"]),
@@ -209,7 +204,7 @@ def plot_appendix_ivs(output_dir: str, iv: str, plot_index: int) -> None:
 
     # Create two legends side by side, centered over first 4 columns
     # First legend: Module Selectors (from bottom row)
-    legend1 = fig.legend(
+    fig.legend(
         module_selector_handles,
         module_selector_labels,
         loc="upper center",
@@ -220,7 +215,7 @@ def plot_appendix_ivs(output_dir: str, iv: str, plot_index: int) -> None:
     )
 
     # Second legend: Querying Algorithms (from top row)
-    legend2 = fig.legend(
+    fig.legend(
         querying_algorithm_handles,
         querying_algorithm_labels,
         loc="upper center",
@@ -252,6 +247,6 @@ if __name__ == "__main__":
         "c_query",
         "expert_query_confidence",
     ]
-    for i, iv in enumerate(ivs):
-        print(f"Plotting appendix plot for IV: {iv}...")
-        plot_appendix_ivs(args.output_dir, iv, i)
+    for i, iv_iter in enumerate(ivs):
+        print(f"Plotting appendix plot for IV: {iv_iter}...")
+        plot_appendix_ivs(args.output_dir, iv_iter, i)

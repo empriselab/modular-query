@@ -5,33 +5,26 @@ spacing) ## The last 2 columsn correspond to another set of confidence levels
 (narrower spacing) ## So we'll have a dashed line separating the first and
 second sets of columns.
 
-There are two columns because we are showing 2 metrics: Total Failed Attempts and Total Incorrect.
+There are two columns because we are showing 2 metrics:
+Total Failed Attempts and Total Incorrect.
 
 Structured as a 3 x 4 matplotlib grid (this way we can enforce equal sizes for plots.)
 
 Usage:
-- python experiments/plot_appendix_module_heterogeneity.py  --output_dir experiments/results
+- python experiments/plot_appendix_module_heterogeneity.py
+--output_dir experiments/results
 
 will produce 1 PDF.
 """
 
 import argparse
-import json
-import os
-import pickle as pkl
 from pathlib import Path
 from typing import Any
 
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 
-from experiments.plot_unified_grid import (
-    individual_plot,
-    individual_plot_fixed_moduleselector,
-    individual_plot_num_modules,
-    individual_plot_num_modules_fixed_moduleselector,
-)
+from experiments.plot_unified_grid import individual_plot
 
 
 def plot_appendix_module_heterogeneity(output_dir: str) -> None:
@@ -42,7 +35,6 @@ def plot_appendix_module_heterogeneity(output_dir: str) -> None:
 
     # Set the fixed variables.
     fixed_variant = "balanced-2"
-    fixed_module_selector = "Graph Query"
     graph_size = 10
 
     # Fixed variables.
@@ -113,7 +105,8 @@ def plot_appendix_module_heterogeneity(output_dir: str) -> None:
             results_dir = Path(data_locations[row][column])
             df_original = pd.read_pickle(results_dir / "combined_df.pkl")
 
-            # Add a new column confidence which has the correct and incorrect confidence paired into a tuple.
+            # Add a new column confidence which has
+            # the correct and incorrect confidence paired into a tuple.
             # Drop the original correct and incorrect confidence columns.
             df_original["confidence"] = df_original.apply(
                 lambda row: (row["correct_confidence"], row["incorrect_confidence"]),
@@ -177,7 +170,8 @@ def plot_appendix_module_heterogeneity(output_dir: str) -> None:
     row_labels = ["β = 0.2", "β = 0.4", "β = 0.6"]  # Adjust as needed
 
     for i, label in enumerate(row_labels):
-        # Get the y-position from the middle subplot of each row (or average of leftmost subplots)
+        # Get the y-position from the middle subplot
+        # of each row (or average of leftmost subplots)
         # Use the y-center of each row's leftmost subplot
         bbox = axes[i, 0].get_position()
         y_center = (bbox.y0 + bbox.y1) / 2
@@ -206,7 +200,7 @@ def plot_appendix_module_heterogeneity(output_dir: str) -> None:
 
     # Create two legends side by side, centered over first 4 columns
     # First legend: Module Selectors (from bottom row)
-    legend1 = fig.legend(
+    fig.legend(
         module_selector_handles,
         module_selector_labels,
         loc="upper center",

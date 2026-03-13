@@ -1131,7 +1131,8 @@ def plot_results_grid_expert_query_confidence(
         plt.subplots_adjust(top=0.9)
         # Step 3. Save the figure.
         plt.savefig(
-            f"{results_dir}/plot_{combination.to_dict()}_expert_query_confidence_{variant}.png",
+            f"{results_dir}/plot_{combination.to_dict()}_"
+            f"expert_query_confidence_{variant}.png",
             dpi=300,
             bbox_inches="tight",
         )
@@ -1251,7 +1252,8 @@ def plot_results_grid_expert_query_confidence_fixed_module_selector(
         plt.subplots_adjust(top=0.9)
         # Step 3. Save the figure.
         plt.savefig(
-            f"{results_dir}/plot_{combination.to_dict()}_expert_query_confidence_{module_selector}.png",
+            f"{results_dir}/plot_{combination.to_dict()}_"
+            f"expert_query_confidence_{module_selector}.png",
             dpi=300,
             bbox_inches="tight",
         )
@@ -1314,7 +1316,8 @@ if __name__ == "__main__":
     # Variable 01: number of modules.
     if args.plot_variable == "num_modules":
         print(
-            "Ignoring fixed_graph_size, fixed_variant, and fixed_module_selector, and plotting a fixed pkl file and run ID."
+            "Ignoring fixed_graph_size, fixed_variant, and fixed_module_selector, "
+            "and plotting a fixed pkl file and run ID."
         )
         plot_results_grid(
             args.results_dir,

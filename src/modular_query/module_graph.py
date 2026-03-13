@@ -203,7 +203,8 @@ class ModuleGraph:
                         value = not value
                     elif isinstance(value, (int, float)):
                         value = 1 - value
-                # Use the expert's value, and set confidence to self.expert_query_confidence.
+                # Use the expert's value,
+                # and set confidence to self.expert_query_confidence.
                 computed_values[module] = value
                 computed_confidences[module] = self.expert_query_confidence
                 # Add the expert query cost for this module.
@@ -212,13 +213,15 @@ class ModuleGraph:
                     query_cost > 0
                 ), f"Module {module.get_name()}: Query cost must be positive."
                 total_query_cost += query_cost
-            # This check comes after the first one now. Because we want our system to potentially
+            # This check comes after the first one now.
+            # Because we want our system to potentially
             # query for a module, even if it has already been queried for.
             elif (
                 module.get_name() in expert_values_cache
                 and expert_values_cache[module.get_name()] is not None
             ):
-                # Use the cached expert value, and set confidence to self.expert_query_confidence.
+                # Use the cached expert value,
+                # and set confidence to self.expert_query_confidence.
                 value = expert_values_cache[module.get_name()]
                 computed_values[module] = value
                 computed_confidences[module] = self.expert_query_confidence

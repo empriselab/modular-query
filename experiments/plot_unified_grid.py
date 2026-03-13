@@ -208,7 +208,7 @@ def individual_plot(
     """Makes an individual plot for a given column (i.e. independent
     variable)"""
 
-    if column == "confidence_2" or column == "confidence_finer":
+    if column in ("confidence_2", "confidence_finer"):
         df_column = "confidence"
     else:
         df_column = column
@@ -286,7 +286,7 @@ def individual_plot(
         fontsize=18,
         fontfamily="serif",
     )
-    if metric == "total_timesteps" or metric == "total_failed_attempts":
+    if metric in ("total_timesteps", "total_failed_attempts"):
         ax.yaxis.set_major_locator(MaxNLocator(integer=True))
     if column == "confidence_2":
         common_add_arrows(ax, y_lim=(0.3, 0.9))
@@ -375,7 +375,7 @@ def individual_plot_fixed_moduleselector(
         XLABELS[column], fontsize=XLABEL_FONTSIZE, fontfamily="serif", labelpad=10
     )
     ax.xaxis.set_label_coords(0.5, -0.25)
-    if metric == "total_timesteps" or metric == "total_failed_attempts":
+    if metric in ("total_timesteps", "total_failed_attempts"):
         ax.yaxis.set_major_locator(MaxNLocator(integer=True))
 
 
@@ -470,7 +470,7 @@ def individual_plot_num_modules(
 
     common_add_arrows(ax, xaxis_position=-0.005)
 
-    if metric == "total_timesteps" or metric == "total_failed_attempts":
+    if metric in ("total_timesteps", "total_failed_attempts"):
         ax.yaxis.set_major_locator(MaxNLocator(integer=True))
 
 
@@ -574,7 +574,7 @@ def individual_plot_num_modules_fixed_moduleselector(
         )
         ax.xaxis.set_label_coords(0.5, -0.25)
 
-        if metric == "total_timesteps" or metric == "total_failed_attempts":
+        if metric in ("total_timesteps", "total_failed_attempts"):
             ax.yaxis.set_major_locator(MaxNLocator(integer=True))
 
 

@@ -757,7 +757,8 @@ def run_single_grid_search_experiment(
         f"Running experiment with num_failures={num_failures},"
         f"correct_confidence={correct_confidence},"
         f"incorrect_confidence={incorrect_confidence},"
-        f"redundancy={redundancy}, c_query={c_query}, expert_query_confidence={expert_query_confidence}"
+        f"redundancy={redundancy}, c_query={c_query}, "
+        f"expert_query_confidence={expert_query_confidence}"
     )
 
     # Convert num_failures to a one-hot vector.
@@ -1043,7 +1044,8 @@ def exp_grid_search(variant: str, config: dict[str, Any]) -> None:
             f"Running experiment with num_failures={num_failures},"
             f"correct_confidence={correct_confidence},"
             f"incorrect_confidence={incorrect_confidence},"
-            f"redundancy={redundancy}, c_query={c_query}, expert_query_confidence={expert_query_confidence}"
+            f"redundancy={redundancy}, c_query={c_query}, "
+            f"expert_query_confidence={expert_query_confidence}"
         )
         # Convert num_failures to a one-hot vector.
         incorrect_module_count = np.zeros(num_failures + 1)
