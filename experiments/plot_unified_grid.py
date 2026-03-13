@@ -25,19 +25,20 @@ from typing import Any
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 
-from modular_query.plot_utils import (
-    VARIANT_NAMES,
-    YLABELS,
-    common_add_arrows,
+from modular_query.plot_utils_unified import (
+    LEGEND_FONT_SIZE,
+    UNIFIED_PLOT_FIGSIZE,
+    individual_plot,
+    individual_plot_fixed_moduleselector,
+    individual_plot_num_modules,
+    individual_plot_num_modules_fixed_moduleselector,
 )
 
 mpl.rcParams["pdf.fonttype"] = 42  # embed TrueType, not Type 3
 mpl.rcParams["ps.fonttype"] = 42  # embed TrueType, not Type 3
-# Constants:
-UNIFIED_PLOT_FIGSIZE = (27.5, 8)
+
 
 def unified_plot(output_dir: str) -> None:
     """Unified plot that puts multiple plots (for different independent

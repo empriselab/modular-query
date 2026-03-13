@@ -1,6 +1,9 @@
+"""Plot utilities for unified grid plots."""
+
 import matplotlib.pyplot as plt
-import pandas as pd
 import numpy as np
+import pandas as pd
+from matplotlib.ticker import MaxNLocator
 
 from modular_query.plot_utils import (
     VARIANT_NAMES,
@@ -8,8 +11,8 @@ from modular_query.plot_utils import (
     common_add_arrows,
 )
 
-from matplotlib.ticker import MaxNLocator
-
+# Constants:
+UNIFIED_PLOT_FIGSIZE = (27.5, 8)
 
 XTICK_OFFSET = 0.5
 TICK_FONTSIZE = {
