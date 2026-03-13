@@ -626,23 +626,21 @@ def unified_plot(output_dir: str) -> None:
         nrows=len(rows), ncols=len(columns), figsize=UNIFIED_PLOT_FIGSIZE
     )
     data_locations = {
-        "module_selectors": {
-            col: "experiments/results/20260111_newbaselines/" for col in columns
-        },
+        "module_selectors": {col: "experiments/results/core_ivs/" for col in columns},
         "querying_algorithms": {
-            col: "experiments/results/20260111_newbaselines/" for col in columns
+            col: "experiments/results/core_ivs/" for col in columns
         },
     }
 
     data_locations["module_selectors"][
         "confidence_2"
-    ] = "experiments/results/20251110_finerconfidences_exp2/"
+    ] = "experiments/results/finer_conf_1/"
     # this one is tricky because it's actually not showing querying algorithms;
     # it's showing module selectors.
     # but it'll be in the second row of the plot.
     data_locations["querying_algorithms"][
         "confidence_2"
-    ] = "experiments/results/20251110_finerconfidences_exp3/"
+    ] = "experiments/results/finer_conf_2/"
 
     # orders for IVs
     graph_structure_order = ["all_AND", "all_OR", "AND_then_OR", "OR_then_AND"]
