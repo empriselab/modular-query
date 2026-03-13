@@ -1,7 +1,7 @@
 """## Camera-ready plot for appendix IVs. ## We generate a plot that is 3 rows
 x 4 columns. ## Each row corresponds to a different heterogeneity level (beta).
 ## The first 2 columns correspond to one set of confidence levels (broader
-spacing) ## The last 2 columsn correspond to another set of confidence levels
+spacing) ## The last 2 columns correspond to another set of confidence levels
 (narrower spacing) ## So we'll have a dashed line separating the first and
 second sets of columns.
 
