@@ -567,6 +567,7 @@ def generate_random_polynomial_module_graph(
         num_modules=num_modules,
         edge_probability=edge_probability,
         rng=rng,
+        expert_query_confidence=1.0,
     )
     return module_graph
 
@@ -651,6 +652,7 @@ def generate_random_logic_gate_module_graph(
         num_modules=num_modules,
         edge_probability=edge_probability,
         rng=rng,
+        expert_query_confidence=1.0,
     )
     return module_graph
 

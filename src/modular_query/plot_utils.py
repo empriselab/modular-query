@@ -147,40 +147,6 @@ def common_add_arrows(
 
     Args:
         ax: The axes to modify
-        xaxis_position: Position for the x-axis arrow (bottom y-limit if y_lim not provided)
-        y_lim: Optional tuple (bottom, top) to set explicit y-axis limits
-    """
-    # Hide top and right spines
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    # Draw arrows at the end of the axes. Sadly, you have to manually set this x-lim,
-    # as automatically extracting it doesn't seem to work.
-    yaxis_position = -0.6
-    ax.set_xlim(left=yaxis_position)
-
-    if y_lim is not None:
-        # Set both bottom and top limits
-        ax.set_ylim(bottom=y_lim[0], top=y_lim[1])
-        arrow_y_position = y_lim[0]  # Arrow at bottom limit
-    else:
-        # Use the default behavior
-        ax.set_ylim(bottom=xaxis_position)
-        arrow_y_position = xaxis_position
-
-    # Place arrows at the end of the axes
-    ax.plot(
-        1, arrow_y_position, ">k", transform=ax.get_yaxis_transform(), clip_on=False
-    )
-    ax.plot(yaxis_position, 1, "^k", transform=ax.get_xaxis_transform(), clip_on=False)
-
-
-def common_add_arrows(
-    ax: plt.Axes, xaxis_position: float = 0.0, y_lim: tuple[float, float] | None = None
-) -> None:
-    """Remove top and right spines, and add arrows at the end of the axes.
-
-    Args:
-        ax: The axes to modify
         xaxis_position: Position for the x-axis arrow
         (bottom y-limit if y_lim not provided)
         y_lim: Optional tuple (bottom, top) to set explicit y-axis limits

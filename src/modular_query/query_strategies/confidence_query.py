@@ -31,4 +31,4 @@ class ConfidenceQueryStrategy(QueryStrategy):
             all_modules,
             key=lambda x: computed_confidences[x],
         )
-        return lowest_confidence_module, {}, {}
+        return lowest_confidence_module.get_name(), {}, {}
