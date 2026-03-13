@@ -630,13 +630,13 @@ def unified_plot(output_dir: str) -> None:
 
     data_locations["module_selectors"][
         "confidence_2"
-    ] = "experiments/results/finer_conf_1/"
+    ] = "experiments/results/finer_conf_2/"
     # this one is tricky because it's actually not showing querying algorithms;
     # it's showing module selectors.
     # but it'll be in the second row of the plot.
     data_locations["querying_algorithms"][
         "confidence_2"
-    ] = "experiments/results/finer_conf_2/"
+    ] = "experiments/results/finer_conf_3/"
 
     # orders for IVs
     graph_structure_order = ["all_AND", "all_OR", "AND_then_OR", "OR_then_AND"]
