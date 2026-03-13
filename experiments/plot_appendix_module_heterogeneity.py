@@ -24,7 +24,7 @@ from typing import Any
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from experiments.plot_unified_grid import individual_plot
+from modular_query.plot_utils_unified import individual_plot
 
 
 def plot_appendix_module_heterogeneity(output_dir: str) -> None:
@@ -60,16 +60,16 @@ def plot_appendix_module_heterogeneity(output_dir: str) -> None:
     )
     data_locations = {
         "beta_0.2": {
-            "confidence": "experiments/results/20251110_exp1",
-            "confidence_finer": "experiments/results/20251110_finerconfidences_exp1",
+            "confidence": "experiments/results/conf_1",
+            "confidence_finer": "experiments/results/finer_conf_1",
         },
         "beta_0.4": {
-            "confidence": "experiments/results/20251110_exp2",
-            "confidence_finer": "experiments/results/20251110_finerconfidences_exp2",
+            "confidence": "experiments/results/conf_2",
+            "confidence_finer": "experiments/results/finer_conf_2",
         },
         "beta_0.6": {
-            "confidence": "experiments/results/20251110_exp3",
-            "confidence_finer": "experiments/results/20251110_finerconfidences_exp3",
+            "confidence": "experiments/results/conf_3",
+            "confidence_finer": "experiments/results/finer_conf_3",
         },
     }
 

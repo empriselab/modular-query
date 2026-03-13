@@ -38,7 +38,7 @@ mv experiments/results/* experiments/results/[data_dir]
 python experiments/pickles_to_df.py --data_dir experiments/results/[data_dir]
 ```
 
-Note - you will need to run steps 1-3 _4_ times in total, one for each of the configurations
+Note - you will need to run steps 1-3 _8_ times in total, one for each of the configurations
 in the `main()` method of `experiments/run_experiment.py`, where the required `[data_dir]` values
 are written in the comments.
 

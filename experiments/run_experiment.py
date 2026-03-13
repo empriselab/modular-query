@@ -1096,7 +1096,7 @@ def exp_grid_search(variant: str, config: dict[str, Any]) -> None:
 def main(variant: str) -> None:
     """Run the experiment and generate plots."""
 
-    # NOISY EXPERT CONFIGURATION:
+    # NOISY EXPERT CONFIGURATION (appendix figures):
     # NOTE: when creating a data directory for this experiment,
     # call it experiments/results/noisy_expert/
     config = {
@@ -1123,9 +1123,31 @@ def main(variant: str) -> None:
     #     "query_cost_noise_width_fraction": 0.0,
     # }
 
-    # CONFIGURATIONS (Fig. 4, right).
+    # CONFIGURATIONS (Fig. 4, right; appendix figures).
     # NOTE: when creating a data directory for this experiment,
-    # call it experiments/results/finer_conf_1
+    # call it experiments/results/conf_1
+    # config = {
+    #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
+    #     "num_trials": 100,
+    #     "num_failures_list": [3],
+    #     "confidences_list": [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)],
+    #     "redundancy_list": ["all_AND", "all_OR", "AND_then_OR", "OR_then_AND"],
+    #     "c_query_list": [0.32],
+    #     "query_cost_noise_width_fraction": 0.2,
+    # }
+    # NOTE: when creating a data directory for this experiment,
+    # call it experiments/results/conf_2
+    # config = {
+    #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
+    #     "num_trials": 100,
+    #     "num_failures_list": [3],
+    #     "confidences_list": [(1.0, 0.1), (0.9, 0.2), (0.8, 0.3), (0.7, 0.4)],
+    #     "redundancy_list": ["all_AND", "all_OR", "AND_then_OR", "OR_then_AND"],
+    #     "c_query_list": [0.32],
+    #     "query_cost_noise_width_fraction": 0.4,
+    # }
+    # NOTE: when creating a data directory for this experiment,
+    # call it experiments/results/conf_3
     # config = {
     #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
     #     "num_trials": 100,
@@ -1134,6 +1156,19 @@ def main(variant: str) -> None:
     #     "redundancy_list": ["all_AND", "all_OR", "AND_then_OR", "OR_then_AND"],
     #     "c_query_list": [0.32],
     #     "query_cost_noise_width_fraction": 0.6,
+    # }
+
+    # NOTE: when creating a data directory for this experiment,
+    # call it experiments/results/finer_conf_1
+    # config = {
+    #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
+    #     "num_trials": 100,
+    #     "num_failures_list": [3],
+    #     "confidences_list":
+    #     [(0.8, 0.3), (0.75, 0.35), (0.7, 0.4), (0.65, 0.45), (0.6, 0.5)],
+    #     "redundancy_list": ["all_AND", "all_OR", "AND_then_OR", "OR_then_AND"],
+    #     "c_query_list": [0.32],
+    #     "query_cost_noise_width_fraction": 0.2,
     # }
     # NOTE: when creating a data directory for this experiment,
     # call it experiments/results/finer_conf_2
@@ -1145,8 +1180,21 @@ def main(variant: str) -> None:
     #     [(0.8, 0.3), (0.75, 0.35), (0.7, 0.4), (0.65, 0.45), (0.6, 0.5)],
     #     "redundancy_list": ["all_AND", "all_OR", "AND_then_OR", "OR_then_AND"],
     #     "c_query_list": [0.32],
+    #     "query_cost_noise_width_fraction": 0.4,
+    # }
+    # NOTE: when creating a data directory for this experiment,
+    # call it experiments/results/finer_conf_3
+    # config = {
+    #     "graph_sizes": [3, 5, 10, 15, 18, 25, 50, 75, 100],
+    #     "num_trials": 100,
+    #     "num_failures_list": [3],
+    #     "confidences_list":
+    #     [(0.8, 0.3), (0.75, 0.35), (0.7, 0.4), (0.65, 0.45), (0.6, 0.5)],
+    #     "redundancy_list": ["all_AND", "all_OR", "AND_then_OR", "OR_then_AND"],
+    #     "c_query_list": [0.32],
     #     "query_cost_noise_width_fraction": 0.6,
     # }
+
     if variant == "all-variants":
         for variant_to_use in [
             "balanced",
