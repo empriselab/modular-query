@@ -1,6 +1,6 @@
 # A Human-in-the-loop Confidence-Aware Failure Recovery Framework for Modular Robot Policies
 
-![workflow](https://github.com/tomsilver/modular-query/actions/workflows/ci.yml/badge.svg)
+![workflow](https://github.com/empriselab/modular-query/actions/workflows/ci.yml/badge.svg)
 
 Simulation framework implementation for the paper [**A Human-in-the-loop Confidence-Aware Failure Recovery Framework for Modular Robot Policies**](https://emprise.cs.cornell.edu/modularhil/).
 
