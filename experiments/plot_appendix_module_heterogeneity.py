@@ -26,7 +26,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from experiments.plot_conditionalacceptance import (
+from experiments.plot_unified_grid import (
     individual_plot,
     individual_plot_fixed_moduleselector,
     individual_plot_num_modules,

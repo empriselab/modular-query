@@ -26,7 +26,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from experiments.plot_conditionalacceptance import (
+from experiments.plot_unified_grid import (
     individual_plot,
     individual_plot_fixed_moduleselector,
     individual_plot_num_modules,
@@ -34,7 +34,7 @@ from experiments.plot_conditionalacceptance import (
 )
 
 
-# Adapted from plot_conditionalacceptance.py.
+# Adapted from plot_unified_grid.py.
 def plot_appendix_ivs(output_dir: str, iv: str, plot_index: int) -> None:
     """Plot appendix IVs for all 5 IVs."""
     # Constants:
@@ -129,9 +129,7 @@ def plot_appendix_ivs(output_dir: str, iv: str, plot_index: int) -> None:
             if row == "module_selectors":
                 df = df_original[df_original["variant"] == fixed_variant]
                 if iv == "num_modules":
-                    individual_plot_num_modules(
-                        df, fixed_variables, metric, iv, order_dict[iv], ax, graph_size
-                    )
+                    individual_plot_num_modules(df, fixed_variables, metric, iv, ax)
                 else:
                     individual_plot(
                         df, fixed_variables, metric, iv, order_dict[iv], ax, graph_size
@@ -151,7 +149,6 @@ def plot_appendix_ivs(output_dir: str, iv: str, plot_index: int) -> None:
                         iv,
                         order_dict,
                         ax,
-                        graph_size,
                         fixed_module_selector,
                         ymax=ymax,
                     )
